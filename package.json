@@ -1,0 +1,41 @@
+{
+  "name": "www-what-web-was",
+  "version": "1.0.0",
+  "description": "WWW — What Web Was: Y2K retro browser experience",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --mac --arm64 --x64",
+    "dist-mac": "electron-builder --mac",
+    "dist-all": "electron-builder -mwl"
+  },
+  "build": {
+    "appId": "com.whatwebwas.www",
+    "productName": "WWW - What Web Was",
+    "copyright": "Copyright © 2024",
+    "mac": {
+      "category": "public.app-category.entertainment",
+      "target": [
+        { "target": "dmg", "arch": ["arm64", "x64"] }
+      ],
+      "icon": "build/icon.icns"
+    },
+    "dmg": {
+      "title": "WWW — What Web Was",
+      "background": "build/dmg-background.png",
+      "window": { "width": 540, "height": 380 },
+      "contents": [
+        { "x": 150, "y": 185, "type": "file" },
+        { "x": 390, "y": 185, "type": "link", "path": "/Applications" }
+      ]
+    },
+    "files": [
+      "main.js",
+      "src/**/*"
+    ]
+  },
+  "devDependencies": {
+    "electron": "^29.0.0",
+    "electron-builder": "^24.0.0"
+  }
+}
