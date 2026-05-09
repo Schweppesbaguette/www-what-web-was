@@ -12,9 +12,7 @@
     "productName": "WWW - What Web Was",
     "mac": {
       "category": "public.app-category.entertainment",
-      "target": [
-        { "target": "dmg", "arch": ["arm64", "x64"] }
-      ]
+      "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }]
     },
     "dmg": {
       "title": "WWW - What Web Was",
@@ -23,10 +21,7 @@
         { "x": 390, "y": 185, "type": "link", "path": "/Applications" }
       ]
     },
-    "files": [
-      "main.js",
-      "src/**/*"
-    ]
+    "files": ["main.js", "preload.js", "src/**/*"]
   },
   "devDependencies": {
     "electron": "^29.0.0",
