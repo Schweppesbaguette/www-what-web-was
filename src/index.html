@@ -46,19 +46,171 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 .mascot-pick img{width:34px;height:42px;object-fit:contain;display:block;}
 .mascot-pick-lbl{font-size:8px;color:#92d9ff;text-align:center;font-family:Tahoma;margin-top:1px;}
 
-/* ══ SIGNON ══ */
-#signon-screen{position:fixed;inset:0;z-index:99998;display:none;align-items:center;justify-content:center;background:center/cover no-repeat;}
-#signon-screen::before{content:'';position:absolute;inset:0;background:rgba(0,8,40,0.65);}
-#signon-box{position:relative;z-index:1;background:rgba(0,10,45,0.95);border:2px solid #4878c8;border-radius:10px;width:320px;box-shadow:0 0 40px rgba(72,136,255,0.5);overflow:hidden;}
-.signon-logo{width:100%;display:block;}
-.signon-body{padding:14px 16px;}
-.s-lbl{color:#c8e4ff;font-size:11px;display:block;margin-bottom:3px;}
-.s-inp{width:100%;padding:5px 8px;background:rgba(0,20,80,0.6);border:1px solid rgba(72,136,255,0.5);border-radius:3px;color:white;font-size:12px;font-family:Tahoma;margin-bottom:7px;}
-.s-inp:focus{outline:none;border-color:#92d9ff;}
-#signon-status{color:#81ff28;font-size:11px;text-align:center;min-height:15px;margin:3px 0;font-weight:bold;text-shadow:0 0 8px rgba(129,255,40,0.5);}
-.s-btns{display:flex;gap:8px;margin-top:7px;}
-.s-btn{flex:1;padding:6px;background:rgba(24,72,200,0.4);border:1px solid rgba(72,120,200,0.4);border-radius:4px;color:white;font-family:Tahoma;font-size:11px;font-weight:bold;cursor:pointer;}
-.s-btn.pri{background:linear-gradient(180deg,#4888e8,#1848c8);border-color:#1848c8;}
+/* ══ SIGNON - LIQUID CHROME PORTAL ══ */
+#signon-screen{position:fixed;inset:0;z-index:99998;display:none;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 40%,#001880,#000820 60%,#000408);}
+#signon-screen::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,transparent 30%,rgba(0,0,0,0.5) 100%);}
+/* Liquid chrome outer shell */
+#signon-box{
+  position:relative;z-index:1;
+  width:760px;min-height:520px;
+  background:radial-gradient(ellipse at 50% 20%,#3a6aaa,#1a3a70 40%,#0a1a40);
+  border-radius:40px 40px 50px 50px / 30px 30px 40px 40px;
+  box-shadow:
+    0 0 0 4px rgba(200,220,255,0.15),
+    0 0 0 8px rgba(100,160,255,0.1),
+    inset 0 2px 0 rgba(255,255,255,0.3),
+    inset 0 -3px 0 rgba(0,0,0,0.4),
+    0 20px 60px rgba(0,10,60,0.8),
+    0 0 100px rgba(72,136,255,0.2);
+  border:3px solid transparent;
+  background-clip:padding-box;
+  overflow:visible;
+  padding:0;
+}
+/* Chrome border ring */
+#signon-box::before{
+  content:'';position:absolute;inset:-4px;border-radius:44px 44px 54px 54px / 34px 34px 44px 44px;
+  background:linear-gradient(180deg,
+    rgba(200,220,255,0.9) 0%,
+    rgba(140,180,255,0.6) 20%,
+    rgba(80,120,200,0.4) 40%,
+    rgba(160,200,255,0.5) 60%,
+    rgba(200,220,255,0.8) 80%,
+    rgba(180,210,255,0.7) 100%
+  );
+  z-index:-1;
+}
+/* Sheen highlight top */
+#signon-box::after{
+  content:'';position:absolute;top:0;left:15%;right:15%;height:40%;
+  background:radial-gradient(ellipse at 50% 0%,rgba(255,255,255,0.15),transparent 70%);
+  border-radius:50%;pointer-events:none;
+}
+/* Top antenna */
+.signon-antenna{position:absolute;top:-55px;right:60px;display:flex;flex-direction:column;align-items:center;gap:0;}
+.signon-antenna-pole{width:3px;height:40px;background:linear-gradient(180deg,#aaa,#ddd,#888);border-radius:2px;}
+.signon-antenna-ball{width:10px;height:10px;background:radial-gradient(circle at 35% 35%,#88ff44,#44aa00);border-radius:50%;box-shadow:0 0 8px #88ff44,0 0 20px rgba(136,255,68,0.5);animation:antenna-blink 2s ease-in-out infinite;}
+@keyframes antenna-blink{0%,100%{box-shadow:0 0 8px #88ff44,0 0 20px rgba(136,255,68,0.5);}50%{box-shadow:0 0 4px #44ff00,0 0 8px rgba(68,255,0,0.3);}}
+/* Bottom speaker/oscilloscope */
+.signon-osc{position:absolute;bottom:-20px;right:20px;width:80px;height:60px;background:radial-gradient(circle,#001830,#000d20);border-radius:50%;border:3px solid rgba(150,180,255,0.4);box-shadow:0 0 15px rgba(72,120,255,0.3),inset 0 0 10px rgba(0,50,150,0.5);overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.signon-osc canvas{width:70px;height:45px;}
+/* Bottom left speaker */
+.signon-spk{position:absolute;bottom:-15px;left:30px;width:65px;height:50px;background:radial-gradient(circle,#0a1428,#050a18);border-radius:50%;border:3px solid rgba(100,140,220,0.4);box-shadow:inset 0 0 10px rgba(0,0,0,0.8);display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(3,1fr);gap:3px;padding:10px;}
+.signon-spk-dot{background:rgba(60,80,120,0.6);border-radius:50%;}
+/* Green LED indicators */
+.signon-led{position:absolute;width:10px;height:10px;background:radial-gradient(circle at 35% 35%,#88ff44,#228800);border-radius:50%;box-shadow:0 0 6px #44ff00;animation:led-pulse 2s ease-in-out infinite;}
+@keyframes led-pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+
+/* Inner content area */
+.signon-inner{display:flex;flex-direction:column;padding:0;border-radius:36px 36px 44px 44px / 26px 26px 36px 36px;overflow:hidden;}
+/* Header bar */
+.signon-header{
+  background:linear-gradient(180deg,#0a1848,#061030);
+  padding:16px 20px 12px;
+  display:flex;align-items:center;gap:16px;
+  border-bottom:2px solid rgba(72,120,255,0.3);
+}
+.signon-logo-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.signon-title-img{height:60px;object-fit:contain;filter:drop-shadow(0 0 10px rgba(72,136,255,0.6));}
+.signon-welcome{
+  flex:1;
+  background:linear-gradient(180deg,#0030a0,#001870);
+  border-radius:12px;
+  padding:8px 16px;
+  border:1px solid rgba(100,160,255,0.3);
+  box-shadow:inset 0 0 20px rgba(0,20,80,0.5),0 0 10px rgba(72,120,255,0.2);
+}
+.signon-welcome-sm{color:#92d9ff;font-size:10px;font-family:Tahoma;}
+.signon-welcome-lg{color:#81ff28;font-size:18px;font-weight:bold;font-family:Tahoma;text-shadow:0 0 10px rgba(129,255,40,0.5);}
+/* Globe icon */
+.signon-globe{width:70px;height:70px;border-radius:50%;overflow:hidden;border:3px solid rgba(100,150,255,0.5);box-shadow:0 0 15px rgba(72,120,255,0.4);flex-shrink:0;}
+.signon-globe img{width:100%;height:100%;object-fit:cover;}
+/* Main two-column body */
+.signon-cols{display:flex;gap:0;flex:1;}
+/* Left: login form */
+.signon-form-col{
+  flex:1;
+  background:linear-gradient(180deg,#061030,#040820);
+  padding:16px 20px;
+  border-right:1px solid rgba(72,120,255,0.2);
+}
+.signon-form-title{
+  color:white;font-size:16px;font-weight:bold;font-family:Tahoma;
+  display:flex;align-items:center;gap:8px;margin-bottom:12px;
+}
+.signon-form-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(129,255,40,0.5),transparent);margin-left:6px;}
+.signon-form-title-dot{width:8px;height:8px;background:#81ff28;border-radius:50%;box-shadow:0 0 6px #81ff28;flex-shrink:0;}
+.signon-field{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.signon-field-icon{font-size:18px;width:24px;text-align:center;flex-shrink:0;}
+.signon-field-input{
+  flex:1;padding:8px 12px;
+  background:linear-gradient(180deg,#0a1848,#061030);
+  border:1px solid rgba(100,160,255,0.4);
+  border-radius:6px;color:white;font-size:13px;font-family:Tahoma;
+  box-shadow:inset 0 2px 6px rgba(0,0,40,0.5);
+}
+.signon-field-input:focus{outline:none;border-color:#92d9ff;box-shadow:inset 0 2px 6px rgba(0,0,40,0.5),0 0 8px rgba(146,217,255,0.3);}
+.signon-remember{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.signon-remember input[type=checkbox]{accent-color:#4888e8;width:14px;height:14px;}
+.signon-remember label{color:#92d9ff;font-size:11px;font-family:Tahoma;}
+.signon-forgot{color:#4888e8;font-size:10px;font-family:Tahoma;cursor:pointer;margin-left:auto;}
+.signon-forgot:hover{color:#92d9ff;text-decoration:underline;}
+.signon-btns-row{display:flex;gap:8px;margin-top:10px;}
+.signon-btn-switch{
+  flex:1;padding:9px;
+  background:linear-gradient(180deg,#1a3a70,#0a1a40);
+  border:2px solid rgba(100,160,255,0.4);
+  border-radius:8px;color:white;font-size:13px;font-weight:bold;font-family:Tahoma;cursor:pointer;
+  box-shadow:0 2px 8px rgba(0,20,80,0.4),inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.signon-btn-switch:hover{background:linear-gradient(180deg,#2a5090,#1a3060);}
+.signon-btn-sign{
+  flex:1.3;padding:9px;
+  background:linear-gradient(180deg,#4888e8,#1848c8,#2a68d8);
+  border:2px solid rgba(146,217,255,0.4);
+  border-radius:8px;color:white;font-size:13px;font-weight:bold;font-family:Tahoma;cursor:pointer;
+  box-shadow:0 2px 10px rgba(72,120,255,0.5),inset 0 1px 0 rgba(255,255,255,0.25);
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.signon-btn-sign:hover{background:linear-gradient(180deg,#58a8ff,#2858d8,#3a88f8);}
+#signon-status{min-height:14px;text-align:center;font-size:10px;font-family:Tahoma;color:#81ff28;margin-top:5px;font-weight:bold;text-shadow:0 0 8px rgba(129,255,40,0.5);}
+/* Right: mascot picker */
+.signon-mascot-col{
+  width:280px;flex-shrink:0;
+  background:linear-gradient(180deg,#061030,#040820);
+  padding:14px 16px;
+}
+.signon-mascot-title{color:#92d9ff;font-size:13px;font-weight:bold;font-family:Tahoma;margin-bottom:10px;}
+.signon-mascot-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.signon-mascot-pick{
+  cursor:pointer;border:2px solid rgba(72,120,200,0.3);border-radius:8px;
+  padding:6px 4px;background:rgba(0,10,40,0.5);
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  transition:all 0.15s;
+}
+.signon-mascot-pick:hover{border-color:#4888e8;background:rgba(20,60,160,0.4);}
+.signon-mascot-pick.sel{border-color:#81ff28;background:rgba(20,80,20,0.3);box-shadow:0 0 10px rgba(129,255,40,0.2);}
+.signon-mascot-pick img{width:52px;height:64px;object-fit:contain;}
+.signon-mascot-pick-lbl{font-size:8px;color:#92d9ff;font-family:Tahoma;text-align:center;line-height:1.2;}
+/* Bottom bar */
+.signon-bottom{
+  background:linear-gradient(180deg,#0a1848,#061030);
+  border-top:1px solid rgba(72,120,255,0.2);
+  padding:10px 20px;
+  display:flex;align-items:center;justify-content:center;gap:12px;
+}
+.signon-create-pill{
+  display:flex;align-items:center;gap:10px;
+  background:linear-gradient(180deg,#0830a0,#051870);
+  border:1px solid rgba(100,160,255,0.4);
+  border-radius:30px;padding:8px 24px;cursor:pointer;
+  box-shadow:0 2px 12px rgba(72,120,255,0.3),inset 0 1px 0 rgba(255,255,255,0.1);
+  transition:all 0.15s;
+}
+.signon-create-pill:hover{background:linear-gradient(180deg,#1040c0,#082090);box-shadow:0 4px 16px rgba(72,120,255,0.4);}
+.signon-create-sm{color:#92d9ff;font-size:11px;font-family:Tahoma;}
+.signon-create-lg{color:#81ff28;font-size:14px;font-weight:bold;font-family:Tahoma;text-shadow:0 0 8px rgba(129,255,40,0.4);}
+.signon-create-arrow{color:#81ff28;font-size:16px;font-weight:bold;}
 
 /* ══ CONNECTING ══ */
 #conn-screen{position:fixed;inset:0;z-index:99997;display:none;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#001060,#000820 60%,#000410);color:white;font-family:Tahoma;}
@@ -506,6 +658,60 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 .feat-badge{background:linear-gradient(90deg,#81ff28,#50c800);font-size:9px;font-weight:bold;padding:1px 5px;border-radius:2px;color:#002000;margin-bottom:3px;display:inline-block;box-shadow:0 0 6px rgba(129,255,40,0.4);}
 
 @keyframes star-twinkle{0%,100%{opacity:0.3;transform:scale(1)}50%{opacity:1;transform:scale(1.4)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* Radio nav buttons */
+.radio-nav-btn{padding:7px 6px;font-size:10px;font-family:Tahoma;color:#8ab;cursor:pointer;border-bottom:1px solid #1a2a50;transition:all 0.1s;border-left:3px solid transparent;}
+.radio-nav-btn:hover{background:rgba(100,160,255,0.1);color:#adf;}
+.radio-nav-btn.sel{background:rgba(100,160,255,0.15);color:#6af;border-left-color:#4af;font-weight:bold;}
+.radio-yr-btn{background:rgba(40,80,160,0.3);border:1px solid rgba(100,160,255,0.25);border-radius:3px;padding:3px 6px;color:#8ab;font-size:10px;font-family:Tahoma;cursor:pointer;transition:all 0.1s;}
+.radio-yr-btn:hover,.radio-yr-btn.sel{background:rgba(40,80,200,0.5);color:#adf;border-color:#4af;box-shadow:0 0 5px rgba(100,160,255,0.3);}
+
+/* TV channel buttons */
+.tv-ch-btn{background:linear-gradient(180deg,#2a0808,#1a0404);border:1px solid #5a2020;border-radius:3px;padding:4px 8px;color:#f88;font-size:10px;font-family:Tahoma;cursor:pointer;transition:all 0.1s;}
+.tv-ch-btn:hover{background:linear-gradient(180deg,#4a1010,#2a0808);border-color:#aa4040;color:#faa;}
+.tv-ch-btn.active{background:linear-gradient(180deg,#8a1010,#5a0808);border-color:#ff4444;color:#fff;box-shadow:0 0 6px rgba(255,80,80,0.4);}
+
+/* Per-mascot theme classes applied to browser-win */
+#browser-win.theme-PUNK .browser-toolbar{background:linear-gradient(180deg,#2a0020,#4a0030 10%,#880040 30%,#660030 50%,#880040 70%,#4a0030 90%,#2a0020);}
+#browser-win.theme-PUNK .ticker{background:linear-gradient(90deg,#1a0010,#440020 15%,#880040 50%,#440020 85%,#1a0010);border-bottom-color:#ff66bb;color:#ff66bb;}
+#browser-win.theme-PUNK .addr-row{background:linear-gradient(180deg,#2a001a,#1a0010);}
+#browser-win.theme-PUNK .wnd-title{background:linear-gradient(180deg,#ff88cc,#cc0066,#880044,#cc0066,#ff88cc);}
+#browser-win.theme-PUNK #sidebar{background:linear-gradient(180deg,#3a0028,#200018,#2a0020) !important;}
+#browser-win.theme-PUNK .new-badge{background:linear-gradient(180deg,#ff66bb,#cc0066);}
+
+#browser-win.theme-HH .browser-toolbar{background:linear-gradient(180deg,#0a0a20,#1a1a40 10%,#2a2a80 30%,#1a1a60 50%,#2a2a80 70%,#1a1a40 90%,#0a0a20);}
+#browser-win.theme-HH .ticker{background:linear-gradient(90deg,#050510,#101040 15%,#202080 50%,#101040 85%,#050510);border-bottom-color:#ffd700;color:#ffd700;}
+#browser-win.theme-HH .addr-row{background:linear-gradient(180deg,#1a1a40,#0a0a20);}
+#browser-win.theme-HH .wnd-title{background:linear-gradient(180deg,#aaaaff,#2222cc,#111188,#2222cc,#aaaaff);}
+#browser-win.theme-HH #sidebar{background:linear-gradient(180deg,#1a1a50,#0a0a30,#101040) !important;}
+#browser-win.theme-HH .new-badge{background:linear-gradient(180deg,#ffd700,#cc9900);color:#000;}
+
+#browser-win.theme-HIPPIE .browser-toolbar{background:linear-gradient(180deg,#0a1a00,#1a3a00 10%,#2a6000 30%,#1a4000 50%,#2a6000 70%,#1a3a00 90%,#0a1a00);}
+#browser-win.theme-HIPPIE .ticker{background:linear-gradient(90deg,#050e00,#103000 15%,#206000 50%,#103000 85%,#050e00);border-bottom-color:#88dd44;color:#88dd44;}
+#browser-win.theme-HIPPIE .addr-row{background:linear-gradient(180deg,#1a3a00,#0a1a00);}
+#browser-win.theme-HIPPIE .wnd-title{background:linear-gradient(180deg,#aaff88,#228822,#114411,#228822,#aaff88);}
+#browser-win.theme-HIPPIE #sidebar{background:linear-gradient(180deg,#1a3a08,#0a2004,#122808) !important;}
+
+#browser-win.theme-RASTA .browser-toolbar{background:linear-gradient(180deg,#1a0800,#3a1800 10%,#6a2800 30%,#4a1800 50%,#6a2800 70%,#3a1800 90%,#1a0800);}
+#browser-win.theme-RASTA .ticker{background:linear-gradient(90deg,#0e0500,#2a1000 15%,#553000 50%,#2a1000 85%,#0e0500);border-bottom-color:#ffcc00;color:#ffcc00;}
+#browser-win.theme-RASTA .addr-row{background:linear-gradient(180deg,#3a1800,#1a0800);}
+#browser-win.theme-RASTA .wnd-title{background:linear-gradient(180deg,#ffcc44,#cc4400 33%,#006600 66%,#cc4400,#ffcc44);}
+#browser-win.theme-RASTA #sidebar{background:linear-gradient(180deg,#2a1000,#1a0800,#220e00) !important;}
+
+#browser-win.theme-TECHNO .browser-toolbar{background:linear-gradient(180deg,#000818,#001030 10%,#002060 30%,#001440 50%,#002060 70%,#001030 90%,#000818);}
+#browser-win.theme-TECHNO .ticker{background:linear-gradient(90deg,#000408,#001020 15%,#002050 50%,#001020 85%,#000408);border-bottom-color:#00ffff;color:#00ffff;text-shadow:0 0 10px rgba(0,255,255,0.8);}
+#browser-win.theme-TECHNO .addr-row{background:linear-gradient(180deg,#001030,#000818);}
+#browser-win.theme-TECHNO .wnd-title{background:linear-gradient(180deg,#88ffff,#008888,#004444,#008888,#88ffff);}
+#browser-win.theme-TECHNO #sidebar{background:linear-gradient(180deg,#001428,#000818,#001020) !important;}
+#browser-win.theme-TECHNO .new-badge{background:linear-gradient(180deg,#00ffff,#008888);color:#000;}
+
+#browser-win.theme-NERD .browser-toolbar{background:linear-gradient(180deg,#1a1000,#3a2800 10%,#6a4800 30%,#4a3000 50%,#6a4800 70%,#3a2800 90%,#1a1000);}
+#browser-win.theme-NERD .ticker{background:linear-gradient(90deg,#0e0800,#2a1a00 15%,#554000 50%,#2a1a00 85%,#0e0800);border-bottom-color:#fde68a;color:#fde68a;}
+#browser-win.theme-NERD .addr-row{background:linear-gradient(180deg,#3a2800,#1a1000);}
+#browser-win.theme-NERD .wnd-title{background:linear-gradient(180deg,#fde68a,#d97706,#78350f,#d97706,#fde68a);}
+#browser-win.theme-NERD #sidebar{background:linear-gradient(180deg,#2a1800,#1a1000,#221400) !important;}
+#browser-win.theme-NERD .new-badge{background:linear-gradient(180deg,#fde68a,#d97706);color:#000;}
 </style>
 </head>
 <body>
@@ -536,32 +742,84 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
   </div>
 </div>
 
-<!-- SIGNON -->
+<!-- SIGNON - LIQUID CHROME PORTAL -->
 <div id="signon-screen">
   <div id="signon-box">
-    <img class="signon-logo" id="signon-logo" src="" alt="WWW"/>
-    <div class="signon-body">
-      <div style="margin-bottom:8px;">
-        <div style="color:#AADDFF;font-size:10px;font-family:Tahoma;margin-bottom:4px;">Your Mascot:</div>
-        <div class="mascot-row" id="signon-mascot-row"></div>
+    <!-- Antenna -->
+    <div class="signon-antenna">
+      <div class="signon-antenna-ball"></div>
+      <div class="signon-antenna-pole"></div>
+    </div>
+    <!-- LED indicators -->
+    <div class="signon-led" style="bottom:25px;left:50px;"></div>
+    <div class="signon-led" style="bottom:25px;left:66px;animation-delay:0.5s;"></div>
+    <div class="signon-led" style="bottom:40px;right:110px;animation-delay:1s;"></div>
+    <!-- Oscilloscope -->
+    <div class="signon-osc"><canvas id="signon-osc-canvas" width="70" height="45"></canvas></div>
+    <!-- Speaker -->
+    <div class="signon-spk">
+      <div class="signon-spk-dot"></div><div class="signon-spk-dot"></div><div class="signon-spk-dot"></div><div class="signon-spk-dot"></div>
+      <div class="signon-spk-dot"></div><div class="signon-spk-dot"></div><div class="signon-spk-dot"></div><div class="signon-spk-dot"></div>
+      <div class="signon-spk-dot"></div><div class="signon-spk-dot"></div><div class="signon-spk-dot"></div><div class="signon-spk-dot"></div>
+    </div>
+    <div class="signon-inner">
+      <!-- Header -->
+      <div class="signon-header">
+        <div class="signon-logo-wrap">
+          <img class="signon-title-img" id="signon-logo" src="" alt="WWW"/>
+        </div>
+        <div class="signon-globe">
+          <img src="" id="signon-globe-img" alt="" style="width:100%;height:100%;object-fit:cover;"/>
+        </div>
+        <div class="signon-welcome">
+          <div class="signon-welcome-sm">welcome to</div>
+          <div class="signon-welcome-lg">What Web Was!</div>
+        </div>
       </div>
-      <label class="s-lbl">Screen Name:</label>
-      <input class="s-inp" id="s-name" readonly/>
-      <label class="s-lbl">Password:</label>
-      <input class="s-inp" type="password" id="s-pass" onkeydown="if(event.key==='Enter')doSignOn()"/>
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
-        <input type="checkbox" id="s-remember" checked>
-        <label for="s-remember" style="font-size:11px;font-family:Tahoma;color:#AADDFF;">Remember password</label>
+      <!-- Two columns -->
+      <div class="signon-cols">
+        <!-- Left: login form -->
+        <div class="signon-form-col">
+          <div class="signon-form-title">
+            <div class="signon-form-title-dot"></div>
+            Member Login
+          </div>
+          <div style="color:#92d9ff;font-size:11px;font-family:Tahoma;margin-bottom:4px;">Screen Name:</div>
+          <div class="signon-field">
+            <div class="signon-field-icon">👤</div>
+            <input class="signon-field-input" id="s-name" readonly/>
+          </div>
+          <div style="color:#92d9ff;font-size:11px;font-family:Tahoma;margin-bottom:4px;">Password:</div>
+          <div class="signon-field">
+            <div class="signon-field-icon">🔒</div>
+            <input class="signon-field-input" type="password" id="s-pass" onkeydown="if(event.key==='Enter')doSignOn()"/>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+            <div class="signon-remember">
+              <input type="checkbox" id="s-remember" checked>
+              <label for="s-remember">Remember my password</label>
+            </div>
+            <span class="signon-forgot" onclick="">Forgot Password?</span>
+          </div>
+          <div id="signon-status">Welcome to What Web Was!</div>
+          <div class="signon-btns-row">
+            <button class="signon-btn-switch" onclick="resetSetup()">Switch User</button>
+            <button class="signon-btn-sign" onclick="doSignOn()">▶ Sign On</button>
+          </div>
+        </div>
+        <!-- Right: mascot picker -->
+        <div class="signon-mascot-col">
+          <div class="signon-mascot-title">Choose Your Mascot:</div>
+          <div class="signon-mascot-grid" id="signon-mascot-row"></div>
+        </div>
       </div>
-      <div id="signon-status">Welcome to What Web Was!</div>
-      <div class="s-btns" style="margin-top:7px;">
-        <button class="s-btn" onclick="resetSetup()">Switch User</button>
-        <button class="s-btn pri" onclick="doSignOn()">▶ Sign On</button>
-      </div>
-      <div style="text-align:center;margin-top:7px;font-size:10px;font-family:Tahoma;">
-        <span style="color:#60A8FF;cursor:pointer;" onclick="resetSetup()">Reconfigure</span>
-        &nbsp;·&nbsp;
-        <span style="color:#60A8FF;cursor:pointer;" onclick="cycleMascot()">Change mascot</span>
+      <!-- Bottom -->
+      <div class="signon-bottom">
+        <div class="signon-create-pill" onclick="resetSetup()">
+          <span class="signon-create-sm">new here?</span>
+          <span class="signon-create-lg">Create Account</span>
+          <span class="signon-create-arrow">▶</span>
+        </div>
       </div>
     </div>
   </div>
@@ -657,6 +915,8 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
         <div class="sb-sec">QUICK</div>
         <div class="sb-it" onclick="openWin('radio-win');initRadio()">📻 Radio</div>
         <div class="sb-it" onclick="openTV()">📺 Retro TV</div>
+        <div class="sb-it" onclick="openTimeHistorian()">🕰️ Time Historian</div>
+        <div class="sb-it" onclick="openWeather()">🌤️ Weather</div>
         <div class="sb-it" onclick="tryFlash()">⚡ Flash</div>
         <div class="sb-it" onclick="toggleMascotPanel()">🎨 Mascot</div>
         <div class="sb-it" onclick="signOff()">🚪 Sign Off</div>
@@ -813,17 +1073,104 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
     </div>
   </div>
 
-  <!-- RADIO -->
-  <div class="wnd" id="radio-win" style="width:300px;height:350px;top:80px;right:210px;">
-    <div class="wnd-title"><span>📻 Time Machine Radio — USA</span>
+  <!-- RADIO - Windows Media Player skin -->
+  <div class="wnd" id="radio-win" style="width:420px;height:320px;top:80px;right:60px;">
+    <div class="wnd-title"><span>🎵 WWW Time Machine Radio</span>
       <div class="wnd-btns"><div class="wb wb-min" onclick="minimizeWin('radio-win')">─</div><div class="wb wb-cls" onclick="closeWin('radio-win')">✕</div></div>
     </div>
-    <div class="radio-head">
-      <div style="color:#AADDFF;font-size:10px;font-family:Tahoma;text-align:center;">🇺🇸 USA Radio · 1991–2008</div>
-      <div class="radio-yr-grid" id="radio-yr-btns"></div>
-      <div id="radio-np">Select a year to tune in</div>
+    <div id="radio-player" style="flex:1;display:flex;flex-direction:column;background:linear-gradient(180deg,#1a2a4a,#0d1a36);overflow:hidden;">
+      <!-- WMP-style nav sidebar -->
+      <div style="display:flex;flex:1;overflow:hidden;">
+        <div id="radio-sidebar" style="width:100px;background:linear-gradient(180deg,#1e3a6e,#0e2050);border-right:2px solid #2a50a0;display:flex;flex-direction:column;flex-shrink:0;">
+          <div style="background:linear-gradient(180deg,#0a1830,#142860);padding:8px 6px;border-bottom:1px solid #2a50a0;">
+            <div style="color:#6af;font-size:9px;font-weight:bold;font-family:Tahoma;letter-spacing:1px;">WWW RADIO</div>
+          </div>
+          <div class="radio-nav-btn sel" id="rnav-now" onclick="radioNav('now')">Now Playing</div>
+          <div class="radio-nav-btn" id="rnav-guide" onclick="radioNav('guide')">Year Guide</div>
+          <div class="radio-nav-btn" id="rnav-eq" onclick="radioNav('eq')">Equalizer</div>
+          <div style="flex:1;"></div>
+          <div style="padding:6px;text-align:center;">
+            <div style="font-size:18px;animation:bob 2s ease-in-out infinite;" id="radio-mascot-icon">📻</div>
+          </div>
+        </div>
+        <!-- Main panel -->
+        <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+          <!-- Now playing viz area -->
+          <div id="radio-viz" style="height:110px;background:#000;position:relative;overflow:hidden;border-bottom:1px solid #2a50a0;">
+            <canvas id="radio-canvas" style="width:100%;height:100%;"></canvas>
+            <div style="position:absolute;top:6px;left:8px;">
+              <div id="radio-np-artist" style="color:#fff;font-size:11px;font-weight:bold;font-family:Tahoma;text-shadow:0 0 8px #4af;">WWW Time Machine Radio</div>
+              <div id="radio-np-track" style="color:#6af;font-size:10px;font-family:Tahoma;">Select a year to tune in</div>
+            </div>
+            <div id="radio-live-dot" style="position:absolute;top:8px;right:8px;display:none;align-items:center;gap:4px;">
+              <div style="width:7px;height:7px;background:#f00;border-radius:50%;animation:blink 1s infinite;"></div>
+              <span style="color:#f88;font-size:9px;font-family:Tahoma;font-weight:bold;">LIVE</span>
+            </div>
+          </div>
+          <!-- Year grid -->
+          <div id="radio-now-panel" style="flex:1;overflow-y:auto;padding:4px;">
+            <div style="color:#6af;font-size:9px;font-family:Tahoma;padding:3px 4px 2px;font-weight:bold;letter-spacing:1px;">SELECT ERA:</div>
+            <div id="radio-yr-btns" style="display:flex;flex-wrap:wrap;gap:2px;padding:2px;"></div>
+          </div>
+          <div id="radio-guide-panel" style="display:none;flex:1;overflow-y:auto;padding:6px;">
+            <div style="color:#6af;font-size:10px;font-family:Tahoma;font-weight:bold;margin-bottom:4px;">Year Guide</div>
+            <div id="radio-guide-list"></div>
+          </div>
+          <div id="radio-eq-panel" style="display:none;flex:1;padding:8px;display:none;">
+            <div style="color:#6af;font-size:10px;font-family:Tahoma;font-weight:bold;margin-bottom:6px;">Equalizer</div>
+            <div style="display:flex;gap:6px;align-items:flex-end;height:60px;" id="radio-eq-bars"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Transport controls -->
+      <div style="background:linear-gradient(180deg,#0e1e40,#08142e);border-top:2px solid #2a50a0;padding:6px 10px;display:flex;align-items:center;gap:6px;">
+        <button onclick="radioSkip(-1)" style="background:linear-gradient(180deg,#2a4a8a,#1a3060);border:1px solid #4878c8;border-radius:3px;padding:3px 8px;color:#adf;font-size:13px;cursor:pointer;">⏮</button>
+        <button id="radio-play-btn" onclick="toggleRadio()" style="background:linear-gradient(180deg,#3a6aaa,#1a4080);border:1px solid #5888d8;border-radius:3px;padding:4px 14px;color:white;font-size:13px;cursor:pointer;font-weight:bold;">▶</button>
+        <button onclick="radioSkip(1)" style="background:linear-gradient(180deg,#2a4a8a,#1a3060);border:1px solid #4878c8;border-radius:3px;padding:3px 8px;color:#adf;font-size:13px;cursor:pointer;">⏭</button>
+        <div style="flex:1;height:4px;background:#0a1428;border-radius:2px;overflow:hidden;border:1px solid #2a4070;"><div id="radio-progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#2a7af0,#80d0ff);transition:width 0.5s;"></div></div>
+        <input type="range" id="radio-vol" min="0" max="100" value="80" oninput="setRadioVol(this.value)" style="width:60px;accent-color:#4af;cursor:pointer;">
+        <span style="color:#6af;font-size:9px;font-family:'Courier New';min-width:30px;" id="radio-yr-display">----</span>
+      </div>
     </div>
-    <div id="radio-player-div" style="flex:1;background:linear-gradient(180deg,#0a0a1a,#000);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:12px;"><div style="font-size:28px;">📻</div><div style="font-size:11px;color:#AADDFF;font-family:Tahoma;">Select a year above to tune in</div><button onclick="window.open('https://radiooooo.com/','_blank')" style="background:linear-gradient(180deg,#1040A0,#0A2870);border:1px solid #2060C0;border-radius:4px;padding:7px 16px;color:white;font-size:11px;font-family:Tahoma;cursor:pointer;margin-top:6px;">🎵 Open Radiooooo</button></div>
+  </div>
+
+  <!-- TV - Retro CRT Television skin -->
+  <div class="wnd" id="tv-win" style="width:500px;height:400px;top:60px;left:80px;">
+    <div class="wnd-title"><span>📺 WWW Retro TV</span>
+      <div class="wnd-btns"><div class="wb wb-min" onclick="minimizeWin('tv-win')">─</div><div class="wb wb-cls" onclick="closeWin('tv-win')">✕</div></div>
+    </div>
+    <div id="tv-body" style="flex:1;display:flex;flex-direction:column;background:linear-gradient(180deg,#1a0a0a,#0d0808);overflow:hidden;">
+      <!-- CRT screen area -->
+      <div style="flex:1;position:relative;background:#000;overflow:hidden;border:3px solid #2a1a1a;margin:4px 4px 0;">
+        <!-- Scanline overlay -->
+        <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.15) 2px,rgba(0,0,0,0.15) 4px);pointer-events:none;z-index:10;"></div>
+        <!-- CRT glow overlay -->
+        <div style="position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,0.5) 100%);pointer-events:none;z-index:11;"></div>
+        <div id="tv-screen" style="width:100%;height:100%;position:relative;">
+          <!-- Static/nosignal screen -->
+          <div id="tv-nosignal" style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#111;color:#888;font-family:'Courier New';gap:6px;">
+            <div style="font-size:32px;filter:grayscale(1);">📺</div>
+            <div style="font-size:11px;">NO SIGNAL</div>
+            <div style="font-size:9px;color:#555;">Select a channel below</div>
+          </div>
+          <webview id="tv-webview" style="width:100%;height:100%;display:none;" allowpopups></webview>
+        </div>
+        <!-- Channel badge -->
+        <div id="tv-channel-badge" style="position:absolute;top:6px;right:8px;background:rgba(0,0,0,0.7);color:#ff0;font-family:'Courier New';font-size:10px;font-weight:bold;padding:2px 6px;border:1px solid #555;display:none;z-index:12;"></div>
+      </div>
+      <!-- Channel selector strip -->
+      <div style="background:linear-gradient(180deg,#1a0808,#0d0505);border-top:2px solid #3a1a1a;padding:6px 8px;display:flex;align-items:center;gap:4px;flex-shrink:0;flex-wrap:wrap;">
+        <div style="color:#f88;font-size:9px;font-family:Tahoma;font-weight:bold;width:100%;margin-bottom:2px;">📡 CHANNELS:</div>
+        <button class="tv-ch-btn" onclick="tuneTV('retro','https://90s.myretrotvs.com/#H8oWpfQSr2Q','📺 90s TV')">📺 90s TV</button>
+        <button class="tv-ch-btn" onclick="tuneTV('yt-music','https://www.youtube.com/embed/videoseries?list=PLToa_dCBQFdohFHfMqmMRcwwCLdPlQeRD&autoplay=1','🎵 MTV 90s')">🎵 MTV 90s</button>
+        <button class="tv-ch-btn" onclick="tuneTV('yt-news','https://www.youtube.com/embed/live_stream?channel=UCeY0bbntWzzVIaj2z3QigXg&autoplay=1','📰 Live News')">📰 Live News</button>
+        <button class="tv-ch-btn" onclick="tuneTV('yt-lofi','https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1','🎧 Lo-Fi Radio')">🎧 Lo-Fi</button>
+        <button class="tv-ch-btn" onclick="tuneTV('static','','📡 Static')">📡 Static</button>
+        <div style="margin-left:auto;display:flex;gap:4px;align-items:center;">
+          <button onclick="tvToggleFullscreen()" style="background:#3a1010;border:1px solid #6a2020;border-radius:3px;padding:3px 7px;color:#f88;font-size:10px;cursor:pointer;font-family:Tahoma;">⛶ Full</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- MASCOT CORNER -->
@@ -1122,10 +1469,33 @@ function showSignon(){
   myMascot=CFG.mascot||'PUNK';
   const ss=document.getElementById('signon-screen');
   ss.style.display='flex';
-  if(A.SIGNINIMAGE) ss.style.backgroundImage='url(\''+A.SIGNINIMAGE+'\')';
+  // Set logo
+  const li=document.getElementById('signon-logo');
+  if(li&&A.WWWLOGO) li.src=A.WWWLOGO;
+  // Set globe image to current mascot
+  const gi=document.getElementById('signon-globe-img');
+  if(gi) gi.src=A[myMascot]||'';
   document.getElementById('s-name').value=CFG.screenName||'';
   try{const p=localStorage.getItem('www_pass');if(p)document.getElementById('s-pass').value=atob(p);}catch(e){}
-  highlightMascotPick('signon-mascot-row', myMascot);
+  buildMascotRows();
+  // Oscilloscope animation
+  const osc=document.getElementById('signon-osc-canvas');
+  if(osc){
+    const ctx=osc.getContext('2d');
+    let phase=0;
+    (function drawOsc(){
+      if(!document.getElementById('signon-screen')||document.getElementById('signon-screen').style.display==='none') return;
+      ctx.clearRect(0,0,70,45);
+      ctx.strokeStyle='#00ffcc';ctx.lineWidth=1.5;ctx.shadowColor='#00ffcc';ctx.shadowBlur=4;
+      ctx.beginPath();
+      for(let x=0;x<70;x++){
+        const y=22+Math.sin((x/70)*Math.PI*4+phase)*10+Math.sin((x/70)*Math.PI*8+phase*1.3)*4;
+        x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+      }
+      ctx.stroke();phase+=0.08;
+      requestAnimationFrame(drawOsc);
+    })();
+  }
 }
 
 function doSignOn(){
@@ -1215,10 +1585,10 @@ function bootDesktop(){
 //  MASCOT SYSTEM
 // ═══════════════════════════════════════════════════════
 function buildMascotRows(){
-  ['setup-mascot-row','signon-mascot-row'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(!el)return;
-    el.innerHTML='';
+  // Setup screen (old style)
+  const setupRow=document.getElementById('setup-mascot-row');
+  if(setupRow){
+    setupRow.innerHTML='';
     MKEYS.forEach(key=>{
       const m=MASCOTS[key];
       const d=document.createElement('div');
@@ -1227,14 +1597,32 @@ function buildMascotRows(){
       d.innerHTML='<img src="'+(A[key]||'')+'" alt="'+m.name+'"/><div class="mascot-pick-lbl">'+m.name.replace('W.W. ','')+'</div>';
       d.onclick=()=>{
         myMascot=key;
-        document.querySelectorAll('.mascot-pick').forEach(e=>e.classList.remove('sel'));
+        document.querySelectorAll('#setup-mascot-row .mascot-pick').forEach(e=>e.classList.remove('sel'));
         d.classList.add('sel');
         const sn=document.getElementById('setup-mascot-name');
         if(sn) sn.textContent=m.name+' — '+m.tag;
       };
-      el.appendChild(d);
+      setupRow.appendChild(d);
     });
-  });
+  }
+  // Signon screen (new chrome grid style)
+  const signonRow=document.getElementById('signon-mascot-row');
+  if(signonRow){
+    signonRow.innerHTML='';
+    MKEYS.forEach(key=>{
+      const m=MASCOTS[key];
+      const d=document.createElement('div');
+      d.className='signon-mascot-pick'+(key===myMascot?' sel':'');
+      d.dataset.key=key;
+      d.innerHTML='<img src="'+(A[key]||'')+'" alt="'+m.name+'"/><div class="signon-mascot-pick-lbl">'+m.name.replace('W.W. ','')+'</div>';
+      d.onclick=()=>{
+        myMascot=key;
+        document.querySelectorAll('.signon-mascot-pick').forEach(e=>e.classList.remove('sel'));
+        d.classList.add('sel');
+      };
+      signonRow.appendChild(d);
+    });
+  }
 }
 
 function highlightMascotPick(rowId, key){
@@ -1281,21 +1669,34 @@ function selectMascot(key){
 }
 
 function applyTheme(key){
-  const m = MASCOTS[key];
+  const m=MASCOTS[key];
   if(!m) return;
-  // ONLY touch the sidebar — all chrome stays the same liquid blue
-  // Just change sidebar color and accent var for neon highlights
+  // Set CSS variable for accent color
   document.documentElement.style.setProperty('--ta', m.accent||'#81ff28');
-  const sb = document.getElementById('sidebar');
-  if(sb){
-    const baseBlue = '#031460';
-    const mc = m.color;
-    // Blend mascot color slightly into the deep blue sidebar
-    sb.style.background = 'linear-gradient(180deg,'
-      +'color-mix(in srgb,'+mc+' 25%,'+baseBlue+') 0%,'
-      +'color-mix(in srgb,'+mc+' 15%,'+baseBlue+') 50%,'
-      +'color-mix(in srgb,'+mc+' 20%,'+baseBlue+') 100%)';
+  // Remove all theme classes, add new one
+  const bw=document.getElementById('browser-win');
+  if(bw){
+    MKEYS.forEach(k=>bw.classList.remove('theme-'+k));
+    bw.classList.add('theme-'+key);
   }
+  // Theme the radio player
+  const rp=document.getElementById('radio-player');
+  if(rp){
+    const tc=m.color,dark=m.dark,acc=m.accent||'#81ff28';
+    rp.style.background='linear-gradient(180deg,'+dark+'cc,'+dark+'88)';
+    const sidebar=document.getElementById('radio-sidebar');
+    if(sidebar) sidebar.style.background='linear-gradient(180deg,'+dark+'ff,'+dark+'88)';
+  }
+  // Theme the TV
+  const tvb=document.getElementById('tv-body');
+  if(tvb) tvb.style.background='linear-gradient(180deg,'+m.dark+'cc,#0d0808)';
+  // Theme ticker accent
+  const ticker=document.querySelector('.ticker');
+  if(ticker){ticker.style.color=m.accent||'#81ff28';ticker.style.borderBottomColor=m.accent||'#81ff28';}
+  // Update mascot icon in radio
+  const ri=document.getElementById('radio-mascot-icon');
+  const mascotIcons={PUNK:'🎸',HH:'🎤',HIPPIE:'☮️',RASTA:'🌿',TECHNO:'🎧',NERD:'📚'};
+  if(ri) ri.textContent=mascotIcons[key]||'📻';
 }
 
 
@@ -1380,10 +1781,14 @@ function buildAvatarPanel(){
 }
 
 function setAvatar(src){
+  // ONLY updates messenger profile — never touches mascot-corner-img or mascot system
   myAvatarSrc=src;
-  const e=document.getElementById('bl-avatar');if(e)e.src=src;
   try{localStorage.setItem('www_avatar',src);}catch(e){}
+  const blav=document.getElementById('bl-avatar');
+  if(blav) blav.src=src;
+  // Sync presence (avatar field only — mascot stays separate)
   if(presenceCh) try{presenceCh.presence.update({screenName:CFG.screenName,mascot:myMascot,away:awayMsg,avatar:src});}catch(e){}
+  // Do NOT touch mascot-corner-img
 }
 
 function uploadAvatar(input){
@@ -1862,8 +2267,7 @@ function setupPeerEvents(buddy){
   const remoteStream=new MediaStream();
   peerConn.onicecandidate=e=>{if(e.candidate)sendSig(buddy,{type:'ice',candidate:e.candidate});};
   peerConn.ontrack=e=>{
-    e.streams[0]?e.streams[0].getTracks().forEach(t=>{ if(!remoteStream.getTrackById(t.id)) remoteStream.addTrack(t); })
-                :remoteStream.addTrack(e.track);
+    e.streams&&e.streams[0]?e.streams[0].getTracks().forEach(t=>{if(!remoteStream.getTrackById(t.id))remoteStream.addTrack(t);}):remoteStream.addTrack(e.track);
     const remote=document.getElementById('vid-remote');
     if(remote&&remote.srcObject!==remoteStream){
       remote.srcObject=remoteStream;
@@ -1878,10 +2282,8 @@ function setupPeerEvents(buddy){
   };
   peerConn.onconnectionstatechange=()=>{
     const s=peerConn?.connectionState;
-    if(['disconnected','failed','closed'].includes(s)) document.getElementById('vid-status').textContent='⚠ DISCONNECTED';
-    console.log('WebRTC state:',s);
+    if(['disconnected','failed','closed'].includes(s))document.getElementById('vid-status').textContent='⚠ DISCONNECTED';
   };
-  peerConn.oniceconnectionstatechange=()=>console.log('ICE:',peerConn?.iceConnectionState);
 }
 
 async function startVideoCall(buddy){
@@ -2230,20 +2632,23 @@ function loadInFrame(src){
   const view=document.getElementById('html-view');
   const isElectron=typeof process!=='undefined'&&process.versions&&process.versions.electron;
   const isWayback=src.includes('web.archive.org');
-
   if(isElectron){
-    // Electron: use webview for everything — no cross-origin restrictions
+    // In Electron, webview loads ANY site natively — no iframe restrictions
     frame.style.display='none'; view.style.display='block'; view.style.flex='1';
-    view.innerHTML='<webview id="electron-webview" src="'+src+'" style="width:100%;height:100%;flex:1;" allowpopups></webview>';
-    const wv=document.getElementById('electron-webview');
-    if(wv){
-      wv.addEventListener('did-start-loading',()=>{ document.getElementById('status-txt').textContent='Loading...'; });
-      wv.addEventListener('did-finish-load',()=>{ document.getElementById('status-txt').textContent='Done'; });
-      wv.addEventListener('did-fail-load',()=>{ document.getElementById('status-txt').textContent='Failed to load'; });
+    let wv=document.getElementById('electron-webview');
+    if(wv) wv.setAttribute('src',src);
+    else {
+      view.innerHTML='<webview id="electron-webview" src="'+src+'" style="width:100%;height:100%;display:flex;" allowpopups useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"></webview>';
+      wv=document.getElementById('electron-webview');
+      if(wv){
+        wv.addEventListener('did-start-loading',()=>{document.getElementById('status-txt').textContent='Loading...';});
+        wv.addEventListener('did-finish-load',()=>{document.getElementById('status-txt').textContent='Done';try{document.getElementById('addr-bar').value=wv.getURL();}catch(e){}});
+        wv.addEventListener('did-fail-load',(e)=>{if(e.errorCode!==-3)document.getElementById('status-txt').textContent='Failed';});
+      }
     }
+    document.getElementById('status-txt').textContent='Loading...';
     return;
   }
-
   if(isWayback){
     frame.style.display='block';frame.style.flex='1';
     view.style.display='none';
@@ -2344,22 +2749,25 @@ function openTV(){
   const view=document.getElementById('html-view');
   const frame=document.getElementById('site-frame');
   frame.style.display='none'; view.style.display='block'; view.style.flex='1';
-  document.getElementById('addr-bar').value='tv://retro.myretrotvs.com';
+  document.getElementById('addr-bar').value='tv://90s.myretrotvs.com';
   view.innerHTML='';
-  const isElectron=typeof process!=='undefined'&&process.versions&&process.versions.electron;
-  if(isElectron){
-    // In Electron, use webview tag which can load any site
-    view.innerHTML='<webview src="https://90s.myretrotvs.com/#H8oWpfQSr2Q" style="width:100%;height:100%;flex:1;" allowpopups></webview>';
-    document.getElementById('status-txt').textContent='📺 Retro TV — Live';
-    return;
-  }
-  // Browser fallback: embed YouTube playlist of retro TV
   const wrap=document.createElement('div');
-  wrap.style.cssText='display:flex;flex-direction:column;width:100%;height:100%;background:#000;';
-  wrap.innerHTML='<iframe style="flex:1;width:100%;height:100%;border:none;" src="https://www.youtube.com/embed/videoseries?list=PLToa_dCBQFdohFHfMqmMRcwwCLdPlQeRD&autoplay=1&mute=0" allow="autoplay; encrypted-media" allowfullscreen></iframe>';
+  wrap.style.cssText='display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;background:radial-gradient(ellipse at center,#1a0a2e,#000);color:white;font-family:Tahoma;text-align:center;padding:30px;gap:16px;';
+  wrap.innerHTML='<div style="font-size:48px;">📺</div>'
+    +'<div style="font-size:18px;font-weight:bold;color:#FFD700;">Retro TV</div>'
+    +'<div style="font-size:12px;color:#AADDFF;max-width:360px;line-height:1.6;">Watch 90s and 2000s TV — commercials, music videos, shows and more.</div>'
+    +'<div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:14px 20px;"><div style="font-size:13px;color:#FFD700;">📡 Live Stream Active</div></div>';
+  const btn=document.createElement('button');
+  btn.textContent='📺 Watch Retro TV';
+  btn.style.cssText='background:linear-gradient(180deg,#8800FF,#5500AA);border:1px solid #6600CC;border-radius:6px;padding:10px 28px;color:white;font-size:13px;font-weight:bold;font-family:Tahoma;cursor:pointer;';
+  btn.onclick=function(){ window.open('https://90s.myretrotvs.com/#H8oWpfQSr2Q','_blank'); };
+  wrap.appendChild(btn);
+  const note=document.createElement('div');
+  note.textContent='Opens in new tab for full experience';
+  note.style.cssText='font-size:10px;color:#446688;';
+  wrap.appendChild(note);
   view.appendChild(wrap);
-  document.getElementById('status-txt').textContent='📺 Retro TV — Live';
-  showToast('📺 Retro TV loading!','');
+  showToast('Click Watch Retro TV to open!','');
 }
 
 function tryFlash(){
@@ -2440,12 +2848,12 @@ function loadSWF(url){
   showToast('⚡ Flash loading via Ruffle!','');
 }
 
-// Real internet radio streams by era (free, publicly playable streams)
+// Real internet radio streams by era
 const RADIO_STREAMS={
-  '1991':{name:'90s Hits Radio',genre:'Early 90s Pop/Rock',url:'https://stream.zeno.fm/0r0xa792kwzuv'},
-  '1992':{name:'90s Hits Radio',genre:'Early 90s Pop/Rock',url:'https://stream.zeno.fm/0r0xa792kwzuv'},
-  '1993':{name:'90s Alternative',genre:'Grunge / Alternative',url:'https://stream.zeno.fm/yn65dy4vhs8uv'},
-  '1994':{name:'90s Alternative',genre:'Grunge / Alternative',url:'https://stream.zeno.fm/yn65dy4vhs8uv'},
+  '1991':{name:'90s Alt Rock',genre:'Grunge / Alternative',url:'https://stream.zeno.fm/yn65dy4vhs8uv'},
+  '1992':{name:'90s Alt Rock',genre:'Grunge / Alternative',url:'https://stream.zeno.fm/yn65dy4vhs8uv'},
+  '1993':{name:'90s Alt Rock',genre:'Grunge / Alternative',url:'https://stream.zeno.fm/yn65dy4vhs8uv'},
+  '1994':{name:'90s Hits Radio',genre:'Early 90s Pop/Rock',url:'https://stream.zeno.fm/0r0xa792kwzuv'},
   '1995':{name:'90s Hits Radio',genre:'Mid-90s Pop/R&B',url:'https://stream.zeno.fm/0r0xa792kwzuv'},
   '1996':{name:'90s Hip Hop',genre:'Mid-90s Hip Hop',url:'https://stream.zeno.fm/f3wvbbqmdg8uv'},
   '1997':{name:'90s Hip Hop',genre:'Late 90s Hip Hop',url:'https://stream.zeno.fm/f3wvbbqmdg8uv'},
@@ -2457,11 +2865,12 @@ const RADIO_STREAMS={
   '2003':{name:'2000s Hip Hop',genre:'2000s Hip Hop',url:'https://stream.zeno.fm/f3wvbbqmdg8uv'},
   '2004':{name:'2000s Hip Hop',genre:'2000s Hip Hop/R&B',url:'https://stream.zeno.fm/f3wvbbqmdg8uv'},
   '2005':{name:'Mid-2000s Hits',genre:'2000s Pop/Rock',url:'https://stream.zeno.fm/0r0xa792kwzuv'},
-  '2006':{name:'Mid-2000s Hits',genre:'2000s Indie/Alt',url:'https://stream.zeno.fm/yn65dy4vhs8uv'},
+  '2006':{name:'Mid-2000s Indie',genre:'2000s Indie/Alt',url:'https://stream.zeno.fm/yn65dy4vhs8uv'},
   '2007':{name:'Late 2000s Pop',genre:'Late 2000s Pop',url:'https://stream.zeno.fm/0r0xa792kwzuv'},
   '2008':{name:'Late 2000s Pop',genre:'Late 2000s Pop/Dance',url:'https://stream.zeno.fm/0r0xa792kwzuv'},
 };
-let currentRadioAudio=null,radioPlaying=false;
+let currentRadioAudio=null,radioPlaying=false,currentRadioYear=null;
+let radioVizInterval=null;
 
 function initRadio(){
   const c=document.getElementById('radio-yr-btns');
@@ -2476,80 +2885,522 @@ function initRadio(){
     };
     c.appendChild(b);
   }
-  // Auto-highlight current wayback year
+  // Build guide list
+  const gl=document.getElementById('radio-guide-list');
+  if(gl){
+    gl.innerHTML='';
+    for(let y=1991;y<=2008;y++){
+      const s=RADIO_STREAMS[String(y)];
+      const row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid rgba(100,160,255,0.1);cursor:pointer;font-family:Tahoma;font-size:10px;color:#8ab;';
+      row.innerHTML='<span style="color:#4af;font-weight:bold;width:30px;">'+y+'</span><span style="flex:1;">'+s.genre+'</span><span style="color:#6af;">'+s.name+'</span>';
+      row.onclick=()=>{ radioNav('now'); playRadioYear(String(y)); };
+      gl.appendChild(row);
+    }
+  }
+  // Build EQ bars
+  const eqc=document.getElementById('radio-eq-bars');
+  if(eqc){
+    eqc.innerHTML='';
+    const bands=['32','63','125','250','500','1K','2K','4K','8K','16K'];
+    bands.forEach(b=>{
+      const col=document.createElement('div');
+      col.style.cssText='display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;';
+      const bar=document.createElement('div');
+      const h=20+Math.random()*40;
+      bar.style.cssText='width:100%;background:linear-gradient(180deg,#00ffcc,#0088aa);border-radius:2px 2px 0 0;transition:height 0.3s;';
+      bar.style.height=h+'px';
+      bar.className='eq-bar';
+      const lbl=document.createElement('div');
+      lbl.style.cssText='font-size:7px;color:#6af;font-family:Tahoma;';lbl.textContent=b;
+      col.appendChild(bar);col.appendChild(lbl);eqc.appendChild(col);
+    });
+    // Animate EQ
+    setInterval(()=>{
+      if(!radioPlaying)return;
+      document.querySelectorAll('.eq-bar').forEach(b=>{
+        b.style.height=(20+Math.random()*40)+'px';
+      });
+    },300);
+  }
+  // Auto-select wayback year
   const yr=waybackDate.substr(0,4);
   const matching=Array.from(c.children).find(b=>b.textContent===yr);
-  if(matching){matching.style.color='#FFD700';matching.style.fontWeight='bold';}
-  // Update radio frame with custom player UI
-  updateRadioPlayerUI();
+  if(matching) matching.style.cssText+='color:#ffd700;font-weight:bold;';
+  startRadioViz();
 }
 
-function updateRadioPlayerUI(){
-  const frame=document.getElementById('radio-frame');
-  if(!frame)return;
-  // Replace the iframe with our own player div
-  const parent=frame.parentElement;
-  frame.style.display='none';
-  let playerDiv=document.getElementById('radio-player-div');
-  if(!playerDiv){
-    playerDiv=document.createElement('div');
-    playerDiv.id='radio-player-div';
-    playerDiv.style.cssText='flex:1;background:linear-gradient(180deg,#0a0a1a,#000);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:12px;';
-    parent.appendChild(playerDiv);
-  }
-  const yr=waybackDate.substr(0,4);
-  playerDiv.innerHTML='<div style="font-size:28px;filter:drop-shadow(0 0 10px #00AAFF);">📻</div>'
-    +'<div style="font-size:11px;color:#FFD700;font-family:Tahoma;font-weight:bold;" id="radio-station-name">Select a year above</div>'
-    +'<div style="font-size:10px;color:#6688AA;font-family:Tahoma;" id="radio-genre">1991–2008 USA Radio</div>'
-    +'<div style="display:flex;gap:8px;margin-top:4px;">'
-    +'<button id="radio-play-btn" onclick="toggleRadio()" style="background:linear-gradient(180deg,#007700,#005500);border:1px solid #009900;border-radius:4px;padding:6px 16px;color:#00FF00;font-size:12px;font-weight:bold;font-family:Tahoma;cursor:pointer;">▶ Play</button>'
-    /* button added via DOM */
-    +'</div>'
-    +'<div style="width:80%;height:3px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;"><div id="radio-progress" style="height:100%;width:0%;background:linear-gradient(90deg,#0044FF,#00AAFF);animation:radio-progress 30s linear infinite;"></div></div>'
-    +'<audio id="radio-audio" style="display:none;"></audio>'
-    +'<style>@keyframes radio-progress{from{width:0%}to{width:100%}}</style>';
+function startRadioViz(){
+  const canvas=document.getElementById('radio-canvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  canvas.width=canvas.offsetWidth||300;
+  canvas.height=canvas.offsetHeight||110;
+  let phase=0;
+  (function draw(){
+    if(!document.getElementById('radio-win')||document.getElementById('radio-win').style.display==='none'){return;}
+    const w=canvas.width,h=canvas.height;
+    ctx.fillStyle='rgba(0,0,0,0.15)';ctx.fillRect(0,0,w,h);
+    if(radioPlaying){
+      const m=MASCOTS[myMascot];
+      const acc=m?m.accent:'#00ff88';
+      ctx.strokeStyle=acc;ctx.lineWidth=2;
+      ctx.shadowColor=acc;ctx.shadowBlur=8;
+      ctx.beginPath();
+      for(let x=0;x<w;x++){
+        const amp=radioPlaying?15:3;
+        const y=h/2+Math.sin((x/w)*Math.PI*6+phase)*amp+Math.sin((x/w)*Math.PI*12+phase*1.7)*5;
+        x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+      // Frequency bars
+      ctx.shadowBlur=0;
+      const bars=32;
+      for(let i=0;i<bars;i++){
+        const bh=(radioPlaying?10:2)+Math.abs(Math.sin(i/bars*Math.PI*3+phase*2))*20;
+        ctx.fillStyle=acc+'88';
+        ctx.fillRect(i*(w/bars)+1,h-bh-2,w/bars-2,bh);
+      }
+      phase+=0.05;
+    } else {
+      ctx.strokeStyle='#334';ctx.lineWidth=1;ctx.shadowBlur=0;
+      ctx.beginPath();ctx.moveTo(0,h/2);ctx.lineTo(w,h/2);ctx.stroke();
+    }
+    requestAnimationFrame(draw);
+  })();
+}
+
+function radioNav(panel){
+  ['now','guide','eq'].forEach(p=>{
+    const el=document.getElementById('radio-'+p+'-panel');
+    const btn=document.getElementById('rnav-'+p);
+    if(el) el.style.display=p===panel?'block':'none';
+    if(btn) btn.classList.toggle('sel',p===panel);
+  });
 }
 
 function playRadioYear(yr){
   const station=RADIO_STREAMS[yr];
-  if(!station)return;
-  document.getElementById('radio-np').textContent='📡 '+yr+' — '+station.genre;
-  const nameEl=document.getElementById('radio-station-name');
-  const genreEl=document.getElementById('radio-genre');
-  if(nameEl) nameEl.textContent=yr+' — '+station.name;
-  if(genreEl) genreEl.textContent=station.genre;
+  if(!station) return;
+  currentRadioYear=yr;
+  // Update display
+  const artist=document.getElementById('radio-np-artist');
+  const track=document.getElementById('radio-np-track');
+  const yrDisp=document.getElementById('radio-yr-display');
+  if(artist) artist.textContent=yr+' · '+station.name;
+  if(track) track.textContent=station.genre;
+  if(yrDisp) yrDisp.textContent=yr+' FM';
+  // Stop existing
   if(currentRadioAudio){currentRadioAudio.pause();currentRadioAudio.src='';currentRadioAudio=null;radioPlaying=false;}
+  // Start new stream
   currentRadioAudio=new Audio(station.url);
   currentRadioAudio.crossOrigin='anonymous';
+  currentRadioAudio.volume=(document.getElementById('radio-vol')?.value||80)/100;
   currentRadioAudio.play().then(()=>{
     radioPlaying=true;
     const btn=document.getElementById('radio-play-btn');
-    if(btn) btn.textContent='⏸ Pause';
-    document.getElementById('radio-np').textContent='🎵 Playing: '+yr+' — '+station.genre;
+    if(btn) btn.textContent='⏸';
+    const dot=document.getElementById('radio-live-dot');
+    if(dot) dot.style.display='flex';
+    // Progress bar animation
+    let prog=0;
+    clearInterval(radioVizInterval);
+    radioVizInterval=setInterval(()=>{
+      prog=(prog+0.5)%100;
+      const pb=document.getElementById('radio-progress-bar');
+      if(pb) pb.style.width=prog+'%';
+    },500);
   }).catch(err=>{
-    console.warn('Radio stream error:',err);
-    document.getElementById('radio-np').innerHTML='📡 '+yr+' stream — <a href="https://radiooooo.com/?year='+yr+'&country=US" target="_blank" style="color:#FFD700;">Open Radiooooo ↗</a>';
+    console.warn('Radio stream failed:',err);
+    if(artist) artist.textContent=yr+' · Unable to connect';
+    if(track) track.textContent='Stream error — try another year';
+    radioPlaying=false;
   });
 }
 
 function toggleRadio(){
-  if(!currentRadioAudio){
+  if(!currentRadioAudio||!currentRadioYear){
     const yr=waybackDate.substr(0,4);
-    playRadioYear(yr);
+    const matching=Array.from(document.querySelectorAll('.radio-yr-btn')).find(b=>b.textContent===yr);
+    if(matching) matching.click();
+    else playRadioYear(yr);
     return;
   }
   if(radioPlaying){
-    currentRadioAudio.pause();
-    radioPlaying=false;
-    const btn=document.getElementById('radio-play-btn');
-    if(btn) btn.textContent='▶ Play';
+    currentRadioAudio.pause();radioPlaying=false;
+    const btn=document.getElementById('radio-play-btn');if(btn)btn.textContent='▶';
+    const dot=document.getElementById('radio-live-dot');if(dot)dot.style.display='none';
   } else {
     currentRadioAudio.play().then(()=>{
       radioPlaying=true;
-      const btn=document.getElementById('radio-play-btn');
-      if(btn) btn.textContent='⏸ Pause';
+      const btn=document.getElementById('radio-play-btn');if(btn)btn.textContent='⏸';
+      const dot=document.getElementById('radio-live-dot');if(dot)dot.style.display='flex';
     }).catch(()=>{});
   }
+}
+
+function radioSkip(dir){
+  const yrs=Object.keys(RADIO_STREAMS);
+  const idx=yrs.indexOf(currentRadioYear||waybackDate.substr(0,4));
+  const next=yrs[Math.max(0,Math.min(yrs.length-1,idx+dir))];
+  playRadioYear(next);
+  document.querySelectorAll('.radio-yr-btn').forEach(b=>{
+    b.classList.toggle('sel',b.textContent===next);
+  });
+}
+
+function setRadioVol(v){
+  if(currentRadioAudio) currentRadioAudio.volume=v/100;
+}
+
+// ═══════════════════════════════════════════════════════
+//  TV SYSTEM
+// ═══════════════════════════════════════════════════════
+let currentTVChannel=null;
+
+function openTV(){
+  openWin('tv-win');
+}
+
+function tuneTV(id,url,label){
+  const isElectron=typeof process!=='undefined'&&process.versions&&process.versions.electron;
+  // Update channel buttons
+  document.querySelectorAll('.tv-ch-btn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  const badge=document.getElementById('tv-channel-badge');
+  const nosignal=document.getElementById('tv-nosignal');
+  const wv=document.getElementById('tv-webview');
+  if(badge){badge.textContent=label;badge.style.display='block';}
+  if(id==='static'){
+    if(nosignal) nosignal.style.display='flex';
+    if(wv) wv.style.display='none';
+    currentTVChannel=null;
+    showTVStatic();
+    return;
+  }
+  if(isElectron&&wv){
+    if(nosignal) nosignal.style.display='none';
+    wv.style.display='block';
+    wv.setAttribute('src',url);
+  } else {
+    // Fallback: embed YouTube in an iframe within the TV screen
+    if(nosignal) nosignal.style.display='none';
+    const screen=document.getElementById('tv-screen');
+    let iframe=document.getElementById('tv-iframe-fallback');
+    if(!iframe){
+      iframe=document.createElement('iframe');
+      iframe.id='tv-iframe-fallback';
+      iframe.style.cssText='width:100%;height:100%;border:none;position:absolute;top:0;left:0;';
+      iframe.allow='autoplay;encrypted-media';
+      if(wv) wv.style.display='none';
+      if(screen) screen.appendChild(iframe);
+    }
+    iframe.src=url;
+  }
+  currentTVChannel=id;
+}
+
+function showTVStatic(){
+  const screen=document.getElementById('tv-screen');
+  const existing=document.getElementById('tv-static-canvas');
+  if(existing) existing.remove();
+  const canvas=document.createElement('canvas');
+  canvas.id='tv-static-canvas';
+  canvas.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;';
+  canvas.width=320;canvas.height=200;
+  if(screen) screen.appendChild(canvas);
+  const ctx=canvas.getContext('2d');
+  (function drawStatic(){
+    if(!document.getElementById('tv-static-canvas')) return;
+    const img=ctx.createImageData(320,200);
+    for(let i=0;i<img.data.length;i+=4){
+      const v=Math.random()>0.5?255:0;
+      img.data[i]=img.data[i+1]=img.data[i+2]=v;img.data[i+3]=200;
+    }
+    ctx.putImageData(img,0,0);
+    requestAnimationFrame(drawStatic);
+  })();
+}
+
+function tvToggleFullscreen(){
+  const win=document.getElementById('tv-win');
+  if(!win) return;
+  if(win.dataset.fullscreen==='1'){
+    win.style.cssText='width:500px;height:400px;top:60px;left:80px;display:flex;flex-direction:column;';
+    win.dataset.fullscreen='0';
+  } else {
+    win.style.cssText='width:calc(100% - 40px);height:calc(100% - 40px);top:20px;left:20px;display:flex;flex-direction:column;z-index:9000;';
+    win.dataset.fullscreen='1';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  TIME TRAVEL HISTORIAN
+// ═══════════════════════════════════════════════════════
+const TTH_ERAS=[
+  {id:'ancient',label:'Ancient Echoes',years:'Prehistory–500 CE',icon:'🏛️',
+    aesthetics:['Cave Painting','Egyptian Art','Classical Greek','Roman Architecture','Byzantine Icons'],
+    desc:'The foundations of visual culture — from cave walls to marble temples. Symmetry, symbolism, and the divine shaped every brushstroke and chisel mark.',
+    themes:'Sacred geometry, natural pigments, mythological narrative, collective identity',
+    impact:'Established visual storytelling, proportion, and the idea that art communicates meaning beyond words.'},
+  {id:'world',label:'World Traditions',years:'500–1500',icon:'🌍',
+    aesthetics:['Islamic Geometric','Gothic Cathedrals','Japanese Ukiyo-e','Aztec Codex','Medieval Illuminated'],
+    desc:'A flowering of regional visual identities across civilizations. Each culture developed its own visual grammar — Islamic geometry, Gothic verticality, East Asian brushwork.',
+    themes:'Religious devotion, cultural identity, craft mastery, decorative complexity',
+    impact:'Established diverse visual traditions that still influence design, architecture, and art worldwide.'},
+  {id:'renaissance',label:'Renaissance Visions',years:'1400–1700',icon:'🎨',
+    aesthetics:['High Renaissance','Baroque Drama','Mannerism','Dutch Golden Age','Flemish Portraits'],
+    desc:'The rediscovery of classical ideals merged with Christian symbolism. Linear perspective, chiaroscuro, and humanism transformed how artists depicted the world.',
+    themes:'Humanism, perspective, light and shadow, idealized form, patronage culture',
+    impact:'Established Western fine art canon, realistic representation, and the concept of the artist as genius.'},
+  {id:'industrial',label:'Industrial Age',years:'1750–1900',icon:'⚙️',
+    aesthetics:['Art Nouveau','Victorian Gothic','Arts & Crafts','Impressionism','Pre-Raphaelite'],
+    desc:'The machine age created both industrial ugliness and nostalgic beauty. Arts & Crafts rebelled against factories; Art Nouveau embraced organic curves as escape.',
+    themes:'Nature vs. industry, ornament, labor, national identity, scientific observation',
+    impact:'Created the template for modern graphic design, typography, and the tension between handcraft and mass production.'},
+  {id:'global',label:'Global Village Coffeehouse',years:'Late 1980s–Mid 1990s',icon:'☕',
+    aesthetics:['Global Village Coffeehouse','World Beat','Tribal Fusion','Multicultural Posters','New Age Visual'],
+    desc:'A cross-cultural design movement that blended world music, tribal and folk art, abstract forms, and earthy palettes with a modern, urban sensibility. Community over commerce.',
+    themes:'Cultural fusion, spirituality, community, world music, mindful living',
+    impact:'Shaped the look of coffeehouses, world music albums, lifestyle brands, and the early internet\'s idealistic global village dream.'},
+  {id:'digital',label:'Digital Dawn',years:'1995–Now',icon:'💻',
+    aesthetics:['Y2K Aesthetic','Frutiger Aero','Vaporwave','Skeuomorphism','Flat Design','Brutalism','Indie Web'],
+    desc:'The screen became the canvas. From blinking GIFs to liquid chrome interfaces, digital design invented entirely new visual languages at breakneck speed.',
+    themes:'Interactivity, nostalgia, utopian futures, corporate vs. indie, glitch as aesthetic',
+    impact:'Democratized design, created entirely new aesthetics, and collapsed the distance between designer and audience.'},
+];
+
+let tthCurrentEra=null;
+
+function openTimeHistorian(){
+  const view=document.getElementById('html-view');
+  const frame=document.getElementById('site-frame');
+  frame.style.display='none';view.style.display='block';view.style.flex='1';
+  document.getElementById('addr-bar').value='time-travel-historian://aesthetics';
+  document.getElementById('status-txt').textContent='Time Travel Historian — Explore Visual History';
+  tthCurrentEra=TTH_ERAS[4]; // Default to Global Village
+  renderTimeHistorian();
+}
+
+function renderTimeHistorian(eraId){
+  if(eraId) tthCurrentEra=TTH_ERAS.find(e=>e.id===eraId)||tthCurrentEra;
+  const era=tthCurrentEra||TTH_ERAS[4];
+  const m=MASCOTS[myMascot];
+  const view=document.getElementById('html-view');
+  const hp=[];
+  hp.push('<div style="display:flex;height:100%;background:linear-gradient(135deg,#2c1810,#1a0e08);font-family:Georgia,serif;overflow:hidden;">');
+  // Left spine (book)
+  hp.push('<div style="width:70px;background:linear-gradient(180deg,#1a0a05,#2a1008,#1a0a05);border-right:3px solid #5a2a10;display:flex;flex-direction:column;align-items:center;padding:12px 4px;flex-shrink:0;">');
+  hp.push('<div style="writing-mode:vertical-rl;transform:rotate(180deg);color:#c8a060;font-size:11px;font-weight:bold;letter-spacing:2px;text-align:center;line-height:1.3;text-shadow:0 0 8px rgba(200,160,96,0.4);">TIME TRAVEL HISTORIAN</div>');
+  hp.push('<div style="margin-top:12px;color:#806040;font-size:9px;writing-mode:vertical-rl;transform:rotate(180deg);letter-spacing:1px;">EXPLORE THE VISUAL AESTHETICS OF OUR WORLD</div>');
+  hp.push('</div>');
+  // Main content
+  hp.push('<div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">');
+  // Header
+  hp.push('<div style="background:linear-gradient(180deg,#3a1a08,#2a1005);border-bottom:3px solid #5a2a10;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;">');
+  hp.push('<div style="font-size:24px;">☀️</div>');
+  hp.push('<div><div style="color:#c8a060;font-size:20px;font-weight:bold;font-family:Georgia;text-shadow:0 0 10px rgba(200,160,96,0.3);">Time Travel Historian</div><div style="color:#806040;font-size:11px;">Explore the Visual Aesthetics of Our World</div></div>');
+  // Address bar
+  hp.push('<div style="flex:1;display:flex;align-items:center;gap:4px;background:rgba(0,0,0,0.3);border:1px solid #5a2a10;border-radius:4px;padding:4px 8px;margin-left:8px;">');
+  hp.push('<div style="font-size:12px;">🌐</div>');
+  hp.push('<div style="color:#c8a060;font-size:10px;font-family:\'Courier New\';flex:1;">time-travel-historian://aesthetics//'+era.id+'</div>');
+  hp.push('<div style="width:12px;height:12px;background:#4a2a10;border:1px solid #8a5a30;border-radius:2px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><span style="color:#c8a060;font-size:8px;">▼</span></div>');
+  hp.push('</div>');
+  // Window buttons
+  hp.push('<div style="display:flex;gap:3px;margin-left:8px;">');
+  hp.push('<div onclick="loadHomepage()" style="width:22px;height:22px;background:#4a2a10;border:1px solid #8a5a30;border-radius:3px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#c8a060;font-size:12px;">?</div>');
+  hp.push('<div style="width:22px;height:22px;background:#4a2a10;border:1px solid #8a5a30;border-radius:3px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#c8a060;font-size:12px;">─</div>');
+  hp.push('<div onclick="loadHomepage()" style="width:22px;height:22px;background:#8a2a10;border:1px solid #c05030;border-radius:3px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:white;font-size:12px;">✕</div>');
+  hp.push('</div>');
+  hp.push('</div>');
+  // Nav tabs
+  hp.push('<div style="display:flex;gap:0;background:#2a1005;border-bottom:2px solid #5a2a10;padding:0 8px;flex-shrink:0;">');
+  ['Back','Forward','Home','Favorites'].forEach((t,i)=>{
+    const icons=['←','→','🏠','⭐'];
+    hp.push('<div onclick="'+(t==='Home'?'loadHomepage()':t==='Back'?'histBack()':'')+'" style="padding:6px 14px;cursor:pointer;color:#a07840;font-size:11px;display:flex;align-items:center;gap:4px;border-right:1px solid #3a1a08;transition:all 0.1s;" onmouseover="this.style.background=\'rgba(200,160,96,0.1)\'" onmouseout="this.style.background=\'\'">'+icons[i]+' '+t+'</div>');
+  });
+  ['Discover','Learn','Create','Quiz'].forEach((t,i)=>{
+    const icons=['🌍','📖','✏️','?'];const isActive=t==='Discover';
+    hp.push('<div style="margin-left:auto;padding:6px 14px;cursor:pointer;font-size:11px;display:flex;align-items:center;gap:4px;color:'+(isActive?'#c8a060':'#806040')+';background:'+(isActive?'rgba(200,160,96,0.15)':'')+';border-bottom:'+(isActive?'3px solid #c8a060':'')+';font-family:Tahoma;" onmouseover="this.style.background=\'rgba(200,160,96,0.1)\'" onmouseout="this.style.background=\''+(isActive?'rgba(200,160,96,0.15)':'')+'\'">'+icons[i]+' '+t+'</div>');
+  });
+  hp.push('</div>');
+  // Three-column body
+  hp.push('<div style="flex:1;display:flex;overflow:hidden;">');
+  // Left: era list
+  hp.push('<div style="width:180px;background:linear-gradient(180deg,#2a1005,#1a0803);border-right:2px solid #5a2a10;overflow-y:auto;flex-shrink:0;">');
+  hp.push('<div style="padding:6px 10px;color:#806040;font-size:10px;font-weight:bold;letter-spacing:1px;border-bottom:1px solid #3a1a08;">Aesthetic Era Explorer</div>');
+  TTH_ERAS.forEach(e=>{
+    const sel=e.id===era.id;
+    hp.push('<div onclick="renderTimeHistorian(\''+e.id+'\')" style="padding:8px 10px;cursor:pointer;border-bottom:1px solid #2a1005;display:flex;gap:8px;align-items:flex-start;background:'+(sel?'linear-gradient(90deg,rgba(200,160,96,0.2),rgba(200,160,96,0.05))':'')+';border-left:'+(sel?'3px solid #c8a060':'3px solid transparent')+';transition:all 0.1s;" onmouseover="if(!this.dataset.sel) this.style.background=\'rgba(200,160,96,0.08)\'" onmouseout="if(!this.dataset.sel) this.style.background=\'\'">');
+    hp.push('<div style="font-size:16px;flex-shrink:0;">'+e.icon+'</div>');
+    hp.push('<div><div style="color:'+(sel?'#c8a060':'#a07840')+';font-size:11px;font-weight:'+(sel?'bold':'normal')+';font-family:Georgia;">'+e.label+'</div><div style="color:#604020;font-size:9px;font-family:Tahoma;margin-top:1px;">'+e.years+'</div></div>');
+    hp.push('</div>');
+  });
+  hp.push('<div onclick="renderTimeHistorian()" style="padding:8px 10px;cursor:pointer;border-top:2px solid #3a1a08;color:#806040;font-size:11px;display:flex;align-items:center;gap:6px;"><span style="font-size:16px;">🔄</span> All Timelines</div>');
+  hp.push('</div>');
+  // Center: main content
+  hp.push('<div style="flex:1;overflow-y:auto;padding:14px 16px;background:linear-gradient(180deg,#f5e8d0,#efe0c0);color:#2a1505;">');
+  hp.push('<div style="color:#604020;font-size:11px;font-family:Tahoma;margin-bottom:4px;">Now Exploring:</div>');
+  hp.push('<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">');
+  hp.push('<h2 style="font-size:22px;color:#2a1505;font-family:Georgia;font-weight:bold;">'+era.label+'</h2>');
+  hp.push('<span style="background:#c8a060;color:#2a1505;font-size:10px;padding:2px 8px;border-radius:2px;font-family:Tahoma;margin-left:4px;">★</span>');
+  hp.push('<span style="background:#806040;color:#f5e8d0;font-size:10px;padding:2px 8px;border-radius:2px;font-family:Tahoma;">🖨</span>');
+  hp.push('</div>');
+  hp.push('<div style="color:#604020;font-size:12px;font-family:Tahoma;margin-bottom:12px;">'+era.years+'</div>');
+  // Content grid
+  hp.push('<div style="display:flex;gap:12px;">');
+  // Art image placeholder (patterned)
+  hp.push('<div style="width:180px;min-height:180px;flex-shrink:0;background:linear-gradient(135deg,#8B4513,#D2691E,#8B4513,#5C3317);border:2px solid #8B4513;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:48px;box-shadow:inset 0 0 20px rgba(0,0,0,0.3);">'+era.icon+'</div>');
+  // Text
+  hp.push('<div style="flex:1;">');
+  hp.push('<p style="font-size:12px;line-height:1.7;color:#2a1505;margin-bottom:10px;font-family:Georgia;">'+era.desc+'</p>');
+  hp.push('<div style="display:flex;gap:8px;margin-bottom:8px;">');
+  hp.push('<div style="font-size:16px;">🌀</div><div><strong style="color:#2a1505;font-size:11px;font-family:Tahoma;">Key Themes</strong><div style="font-size:11px;color:#4a2510;font-family:Tahoma;line-height:1.5;">'+era.themes+'</div></div>');
+  hp.push('</div>');
+  hp.push('<div style="display:flex;gap:8px;">');
+  hp.push('<div style="font-size:16px;">⭐</div><div><strong style="color:#2a1505;font-size:11px;font-family:Tahoma;">Cultural Impact</strong><div style="font-size:11px;color:#4a2510;font-family:Tahoma;line-height:1.5;">'+era.impact+'</div></div>');
+  hp.push('</div>');
+  hp.push('</div>');
+  hp.push('</div>');
+  // Aesthetics list
+  hp.push('<div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;">');
+  era.aesthetics.forEach(a=>{
+    hp.push('<div style="background:#8B4513;color:#f5e8d0;padding:4px 10px;border-radius:3px;font-size:10px;font-family:Tahoma;cursor:pointer;border:1px solid #c8a060;" onmouseover="this.style.background=\'#a05820\'" onmouseout="this.style.background=\'#8B4513\'">'+a+'</div>');
+  });
+  hp.push('</div>');
+  // Bottom action buttons
+  hp.push('<div style="display:flex;gap:8px;margin-top:14px;">');
+  [['🔍','Explore','Dive into visual examples'],['⏰','Timeline','See how it evolved'],['🏺','Artifacts','Browse iconic pieces']].forEach(([ico,lbl,desc])=>{
+    hp.push('<div style="flex:1;background:#e8d5b0;border:2px solid #8B4513;border-radius:6px;padding:8px;cursor:pointer;text-align:center;transition:all 0.1s;" onmouseover="this.style.background=\'#d4c09a\'" onmouseout="this.style.background=\'#e8d5b0\'">');
+    hp.push('<div style="font-size:18px;">'+ico+'</div>');
+    hp.push('<div style="font-weight:bold;color:#2a1505;font-size:11px;font-family:Tahoma;">'+lbl+'</div>');
+    hp.push('<div style="color:#604020;font-size:9px;font-family:Tahoma;">'+desc+'</div>');
+    hp.push('</div>');
+  });
+  hp.push('</div>');
+  hp.push('</div>');
+  // Right: guide panel
+  hp.push('<div style="width:160px;background:linear-gradient(180deg,#f0e0c0,#e8d4a8);border-left:2px solid #8B4513;overflow-y:auto;flex-shrink:0;padding:8px;">');
+  hp.push('<div style="color:#2a1505;font-size:12px;font-weight:bold;font-family:Georgia;border-bottom:2px solid #8B4513;padding-bottom:4px;margin-bottom:8px;">Your Guide</div>');
+  hp.push('<div style="font-size:11px;color:#4a2510;font-family:Georgia;line-height:1.6;margin-bottom:10px;">Welcome, traveler! I\'m your humble guide through time and art. Let us explore the <em>'+era.label+'</em> era together.</div>');
+  // Mascot guide image
+  hp.push('<div style="text-align:center;margin:8px 0;"><img src="'+(A[myMascot]||'')+'" style="height:70px;object-fit:contain;filter:sepia(0.4) saturate(0.8);"/></div>');
+  hp.push('<div style="background:#d4c09a;border:1px solid #8B4513;border-radius:4px;padding:6px;margin-top:6px;">');
+  hp.push('<div style="font-size:10px;font-weight:bold;color:#2a1505;font-family:Tahoma;margin-bottom:3px;">☀️ Did You Know?</div>');
+  hp.push('<div style="font-size:10px;color:#4a2510;font-family:Georgia;line-height:1.5;">The term "'+era.label+'" was coined to describe the visual spirit of an entire era — a shared aesthetic language across cultures.</div>');
+  hp.push('</div>');
+  hp.push('</div>');
+  hp.push('</div>'); // three-col
+  // Bottom status bar
+  hp.push('<div style="background:#2a1005;border-top:2px solid #5a2a10;padding:5px 12px;display:flex;align-items:center;gap:10px;flex-shrink:0;">');
+  hp.push('<div onclick="loadHomepage()" style="display:flex;align-items:center;gap:4px;padding:3px 8px;background:#4a2a10;border:1px solid #7a4a20;border-radius:4px;cursor:pointer;color:#c8a060;font-size:10px;font-family:Tahoma;">▶ Media Player</div>');
+  hp.push('<div style="display:flex;align-items:center;gap:4px;padding:3px 8px;background:#4a2a10;border:1px solid #7a4a20;border-radius:4px;cursor:pointer;color:#c8a060;font-size:10px;font-family:Tahoma;">📁 My Collection</div>');
+  hp.push('<div style="flex:1;text-align:center;font-family:Tahoma;font-size:10px;"><span style="color:#c8a060;">Level 2: Visual Voyager</span> <span style="color:#806040;margin-left:8px;">650 / 1000 XP</span></div>');
+  hp.push('<div style="display:flex;align-items:center;gap:4px;padding:3px 8px;background:#4a2a10;border:1px solid #7a4a20;border-radius:4px;cursor:pointer;color:#c8a060;font-size:10px;font-family:Tahoma;">? Help</div>');
+  hp.push('<div style="display:flex;align-items:center;gap:4px;padding:3px 8px;background:#4a2a10;border:1px solid #7a4a20;border-radius:4px;cursor:pointer;color:#c8a060;font-size:10px;font-family:Tahoma;">⚙ Settings</div>');
+  hp.push('</div>');
+  hp.push('</div>'); // main content
+  hp.push('</div>'); // outer flex
+  view.innerHTML=hp.join('');
+}
+
+// ═══════════════════════════════════════════════════════
+//  WEATHER WIDGET
+// ═══════════════════════════════════════════════════════
+const WEATHER_ERA={
+  '1991':'❄️ Cold snap across the Midwest. 34°F / 1°C',
+  '1992':'🌧️ El Niño year — unusually wet coast-to-coast. 58°F / 14°C',
+  '1993':'❄️ The Storm of the Century aftermath. Still cold. 32°F / 0°C',
+  '1994':'🌤️ Mild and clear. Spring came early. 62°F / 17°C',
+  '1995':'☀️ Hot summer. Record heat in Midwest. 88°F / 31°C',
+  '1996':'🌨️ Blizzard season. Northeast buried. 28°F / -2°C',
+  '1997':'⛈️ Severe storm season. Tornadoes active. 66°F / 19°C',
+  '1998':'🌡️ Hottest year on record at the time. 92°F / 33°C',
+  '1999':'🌤️ Mild year. Y2K anxiety in the air. 65°F / 18°C',
+  '2000':'⛅ Partly cloudy. New millennium, same weather. 58°F / 14°C',
+  '2001':'🌧️ Overcast with a heavy feeling in the air. 55°F / 13°C',
+  '2002':'☀️ Dry and warm. Drought in Western states. 78°F / 26°C',
+  '2003':'🌡️ European heat wave kills tens of thousands. 95°F / 35°C',
+  '2004':'🌀 Hurricane season — 4 major storms hit Florida. 82°F / 28°C',
+  '2005':'🌊 Katrina year. Devastating hurricane season. 88°F / 31°C',
+  '2006':'☀️ Warmest winter on record in Europe. 70°F / 21°C',
+  '2007':'🔥 California wildfires. Drought conditions West. 85°F / 29°C',
+  '2008':'🌧️ Flooding in Midwest. Ike hits Texas. 72°F / 22°C',
+};
+
+function openWeather(){
+  const yr=waybackDate.substr(0,4);
+  const m=MASCOTS[myMascot];
+  const view=document.getElementById('html-view');
+  const frame=document.getElementById('site-frame');
+  frame.style.display='none';view.style.display='block';view.style.flex='1';
+  document.getElementById('addr-bar').value='weather://'+yr;
+  const eraWeather=WEATHER_ERA[yr]||'🌤️ Partly cloudy. 65°F / 18°C';
+  const parts=eraWeather.split(' ');
+  const weatherIcon=parts[0];
+  view.innerHTML=`
+  <div style="display:flex;flex-direction:column;height:100%;background:linear-gradient(135deg,#001040,#002080);font-family:Tahoma;color:white;padding:0;">
+    <div style="background:linear-gradient(180deg,#0030c0,#001880);padding:10px 16px;display:flex;align-items:center;gap:8px;border-bottom:2px solid #4878c8;">
+      <span style="font-size:20px;">🌤️</span>
+      <span style="font-size:14px;font-weight:bold;">WWW Weather — <span style="color:#81ff28;">${yr} Era</span></span>
+      <div style="margin-left:auto;display:flex;gap:6px;">
+        <button onclick="loadHomepage()" style="background:rgba(72,120,200,0.3);border:1px solid #4878c8;border-radius:4px;padding:3px 10px;color:white;cursor:pointer;font-size:10px;font-family:Tahoma;">🌐 Modern Weather</button>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;gap:16px;padding:16px;overflow:hidden;">
+      <!-- Main weather -->
+      <div style="flex:1;background:rgba(0,20,80,0.5);border:1px solid rgba(72,120,255,0.3);border-radius:8px;padding:20px;display:flex;flex-direction:column;gap:12px;">
+        <div style="font-size:11px;color:#92d9ff;letter-spacing:1px;">${yr} HISTORICAL WEATHER</div>
+        <div style="font-size:72px;text-align:center;line-height:1;">${weatherIcon}</div>
+        <div style="font-size:14px;color:#92d9ff;text-align:center;">${eraWeather.replace(weatherIcon,'').trim()}</div>
+        <div style="font-size:11px;color:#6090b0;line-height:1.6;border-top:1px solid rgba(72,120,255,0.2);padding-top:8px;">Based on historical weather patterns for the era of ${yr}.</div>
+        <div style="background:rgba(0,0,0,0.3);border-radius:4px;padding:8px;text-align:center;">
+          <img src="${A[myMascot]||''}" style="height:50px;object-fit:contain;margin-bottom:4px;filter:drop-shadow(0 0 8px ${m.accent||'#81ff28'});" />
+          <div style="font-size:10px;color:${m.accent||'#81ff28'};font-style:italic;">"${weatherIcon.includes('☀️')||weatherIcon.includes('🌤️')?'Beautiful day to surf the web!':weatherIcon.includes('❄️')||weatherIcon.includes('🌨️')?'Bundle up and browse from inside!':'Stay safe out there, surfer!'}"</div>
+          <div style="font-size:9px;color:#4a7a9a;margin-top:2px;">— ${m.name}</div>
+        </div>
+      </div>
+      <!-- Weekly forecast -->
+      <div style="width:200px;background:rgba(0,20,80,0.5);border:1px solid rgba(72,120,255,0.3);border-radius:8px;padding:12px;flex-shrink:0;">
+        <div style="font-size:11px;color:#92d9ff;font-weight:bold;margin-bottom:10px;">5-DAY FORECAST (${yr})</div>
+        ${['Mon','Tue','Wed','Thu','Fri'].map((d,i)=>{
+          const icons=['☀️','🌤️','⛅','🌧️','🌤️'];
+          const temps=[62,58,55,60,65];
+          return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(72,120,255,0.1);font-size:11px;">
+            <span style="width:28px;color:#92d9ff;">${d}</span>
+            <span>${icons[i]}</span>
+            <span style="color:#81ff28;margin-left:auto;">${temps[i]}°F</span>
+          </div>`;
+        }).join('')}
+        <div style="margin-top:12px;font-size:10px;color:#4a7a9a;">Historical forecast approximation based on ${yr} climate data.</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  WINDOW RESIZE SYSTEM
+// ═══════════════════════════════════════════════════════
+function makeResizable(el){
+  if(!el||el.dataset.resizable) return;
+  el.dataset.resizable='1';
+  const handle=document.createElement('div');
+  handle.style.cssText='position:absolute;bottom:0;right:0;width:14px;height:14px;cursor:se-resize;z-index:10;background:linear-gradient(135deg,transparent 50%,rgba(146,217,255,0.4) 50%);border-radius:0 0 4px 0;';
+  el.style.position='absolute';
+  el.appendChild(handle);
+  let startX,startY,startW,startH;
+  handle.addEventListener('mousedown',e=>{
+    e.preventDefault();e.stopPropagation();
+    startX=e.clientX;startY=e.clientY;
+    startW=el.offsetWidth;startH=el.offsetHeight;
+    const onMove=e=>{
+      el.style.width=Math.max(200,startW+e.clientX-startX)+'px';
+      el.style.height=Math.max(150,startH+e.clientY-startY)+'px';
+    };
+    const onUp=()=>{document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);};
+    document.addEventListener('mousemove',onMove);
+    document.addEventListener('mouseup',onUp);
+  });
 }
 
 // ═══════════════════════════════════════════════════════
@@ -2645,6 +3496,9 @@ function openWin(id){
   playClick();
   const w=document.getElementById(id);if(!w)return;
   w.style.display='flex';w.style.zIndex=++zTop;
+  makeResizable(w);
+  makeDraggable(w);
+}
   addTbItem(id,null);
   w.addEventListener('mousedown',()=>w.style.zIndex=++zTop,{passive:true});
 }
