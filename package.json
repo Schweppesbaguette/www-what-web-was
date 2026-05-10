@@ -12,6 +12,7 @@
     "productName": "WWW - What Web Was",
     "mac": {
       "category": "public.app-category.entertainment",
+      "icon": "build/icon.icns",
       "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }]
     },
     "dmg": {
