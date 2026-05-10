@@ -135,6 +135,15 @@ let CFG = {};
 try { const s = localStorage.getItem('www_cfg'); if(s) CFG = JSON.parse(s); } catch(e) {}
 myMascot = CFG.mascot || 'PUNK';
 
+// If no config, redirect to setup in main window
+if(!CFG.screenName || !CFG.ablyKey) {
+  if(window.electronAPI) {
+    window.electronAPI.signonComplete(); // open main window which shows setup
+  } else {
+    window.location.href = 'index.html';
+  }
+}
+
 // Mascot data (mirrored from main app)
 const MASCOTS = {
   PUNK: { name:'W.W. Punk', color:'#FF0066', accent:'#FF66BB' },

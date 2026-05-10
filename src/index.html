@@ -2297,17 +2297,28 @@ async function handleRTCOffer(from,sdp){
 
 async function startLocalVideo(){
   try{
-    vidStream=await navigator.mediaDevices.getUserMedia({
-      video:{width:{ideal:320},height:{ideal:240},frameRate:{ideal:12,max:15},facingMode:'user'},
+    // In Electron with webSecurity:false, camera should work directly
+    const constraints = {
+      video:{width:{ideal:320},height:{ideal:240},frameRate:{ideal:15,max:30}},
       audio:true
-    });
+    };
+    vidStream=await navigator.mediaDevices.getUserMedia(constraints);
     const local=document.getElementById('vid-local');
-    if(local) local.srcObject=vidStream;
+    if(local){local.srcObject=vidStream;local.play().catch(()=>{});}
     document.getElementById('vid-status').textContent='● CAM ON';
     return Promise.resolve();
   }catch(e){
-    document.getElementById('vid-status').textContent='⚠ '+e.message.slice(0,25);
-    showToast('⚠️ Camera: '+e.message,'');
+    console.error('Camera error:',e);
+    // Try video only
+    try{
+      vidStream=await navigator.mediaDevices.getUserMedia({video:true});
+      const local=document.getElementById('vid-local');
+      if(local){local.srcObject=vidStream;local.play().catch(()=>{});}
+      document.getElementById('vid-status').textContent='● CAM (no mic)';
+    }catch(e2){
+      document.getElementById('vid-status').textContent='⚠ '+e.name;
+      showToast('⚠️ Camera: '+e.message.slice(0,40),'');
+    }
     return Promise.resolve();
   }
 }
@@ -3603,11 +3614,11 @@ function signOff(){
   if(presenceCh)try{presenceCh.presence.leave();}catch(e){}
   if(ablyClient)try{ablyClient.close();}catch(e){}
   if(vidStream)vidStream.getTracks().forEach(t=>t.stop());
-  document.getElementById('browser-win').classList.remove('active');
   if(window.electronAPI){
-    window.electronAPI.setupComplete(); // open signon window
+    window.electronAPI.signOff(); // closes this window, opens signon
   } else {
-    showSetup(); // browser fallback
+    document.getElementById('browser-win').classList.remove('active');
+    showSetup();
   }
 }
 
