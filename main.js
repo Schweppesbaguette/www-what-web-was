@@ -7,6 +7,7 @@ let mainWindow = null;
 let signonWindow = null;
 let devServer = null;
 
+// ── Dev Server ──────────────────────────────────────────
 function startDevServer() {
   const PORT = 7331;
   const SRC = path.join(__dirname, 'src', 'index.html');
@@ -49,7 +50,7 @@ function startDevServer() {
             content=content.replace(find,replace);
             fs.writeFileSync(SRC,content,'utf8');
             if(mainWindow) mainWindow.webContents.reloadIgnoringCache();
-            res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({success:true,message:'Patched and reloaded'}));
+            res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({success:true}));
           } else {
             res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({success:false,error:'String not found'}));
           }
@@ -60,12 +61,21 @@ function startDevServer() {
     res.writeHead(404); res.end('Not found');
   });
   devServer.listen(PORT,'127.0.0.1',()=>{
-    console.log(`\n🔧 WWW Live Edit Server: http://127.0.0.1:${PORT}`);
+    console.log(`\n🔧 WWW Live Edit Server: http://127.0.0.1:${PORT}\n`);
   });
   devServer.on('error',e=>{ if(e.code!=='EADDRINUSE') console.error(e); });
 }
 
+// ── Permissions ─────────────────────────────────────────
+function setupPermissions() {
+  session.defaultSession.setPermissionRequestHandler((wc, perm, cb) => cb(true));
+  session.defaultSession.setPermissionCheckHandler(() => true);
+  try { session.defaultSession.setDevicePermissionHandler(() => true); } catch(e) {}
+}
+
+// ── Main window (browser) ───────────────────────────────
 function createMainWindow() {
+  if (mainWindow) { mainWindow.focus(); return; }
   mainWindow = new BrowserWindow({
     width: 1280, height: 860, minWidth: 800, minHeight: 600,
     title: 'WWW — What Web Was',
@@ -76,21 +86,18 @@ function createMainWindow() {
       preload: path.join(__dirname, 'preload.js'),
     },
   });
-  session.defaultSession.setPermissionRequestHandler((wc, perm, cb) => {
-    cb(['media','audioCapture','videoCapture','camera','microphone','notifications'].includes(perm));
-  });
+  setupPermissions();
   mainWindow.loadFile(path.join(__dirname, 'src', 'index.html'));
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
+// ── Signon window (skinned, frameless) ──────────────────
 function createSignonWindow() {
-  // Frameless transparent window — the PNG skin IS the window shape
+  if (signonWindow) { signonWindow.focus(); return; }
   signonWindow = new BrowserWindow({
     width: 1000, height: 780,
-    frame: false,
-    transparent: true,
-    resizable: false,
-    hasShadow: true,
+    frame: false, transparent: true,
+    resizable: false, hasShadow: true,
     backgroundColor: '#00000000',
     webPreferences: {
       nodeIntegration: false, contextIsolation: true,
@@ -101,36 +108,12 @@ function createSignonWindow() {
   signonWindow.on('closed', () => { signonWindow = null; });
 }
 
-// IPC: signon complete — close signon, open main
-ipcMain.on('signon-complete', (event, config) => {
-  createMainWindow();
-  if (signonWindow) { signonWindow.close(); signonWindow = null; }
-});
-
-// IPC: drag the frameless signon window
-ipcMain.on('signon-drag-start', () => {
-  if (signonWindow) signonWindow.webContents.send('drag-start');
-});
-
-app.whenReady().then(() => {
-  startDevServer();
-  createSignonWindow();
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createSignonWindow();
-  });
-});
-
-app.on('window-all-closed', () => {
-  if (devServer) devServer.close();
-  if (process.platform !== 'darwin') app.quit();
-});
-
-// Radio window
+// ── Radio window (skinned, frameless) ───────────────────
 let radioWindow = null;
 function createRadioWindow() {
   if (radioWindow) { radioWindow.focus(); return; }
   radioWindow = new BrowserWindow({
-    width: 1100, height: 520,
+    width: 1100, height: 540,
     frame: false, transparent: true,
     resizable: false, hasShadow: true,
     backgroundColor: '#00000000',
@@ -140,12 +123,12 @@ function createRadioWindow() {
   radioWindow.on('closed', () => { radioWindow = null; });
 }
 
-// TV window  
+// ── TV window (skinned, frameless) ──────────────────────
 let tvWindow = null;
 function createTVWindow() {
   if (tvWindow) { tvWindow.focus(); return; }
   tvWindow = new BrowserWindow({
-    width: 1100, height: 860,
+    width: 1150, height: 900,
     frame: false, transparent: true,
     resizable: true, hasShadow: true,
     backgroundColor: '#00000000',
@@ -155,7 +138,38 @@ function createTVWindow() {
   tvWindow.on('closed', () => { tvWindow = null; });
 }
 
+// ── IPC handlers ────────────────────────────────────────
+// Signon done → open main browser
+ipcMain.on('signon-complete', () => {
+  createMainWindow();
+  if (signonWindow) { signonWindow.close(); signonWindow = null; }
+});
+
+// Setup done in main window → show signon
+ipcMain.on('setup-complete', () => {
+  createSignonWindow();
+});
+
 ipcMain.on('open-radio', () => createRadioWindow());
 ipcMain.on('open-tv', () => createTVWindow());
 ipcMain.on('minimize-radio', () => { if(radioWindow) radioWindow.minimize(); });
 ipcMain.on('minimize-tv', () => { if(tvWindow) tvWindow.minimize(); });
+ipcMain.on('close-radio', () => { if(radioWindow) radioWindow.close(); });
+ipcMain.on('close-tv', () => { if(tvWindow) tvWindow.close(); });
+
+// ── App ready ───────────────────────────────────────────
+app.whenReady().then(() => {
+  startDevServer();
+  setupPermissions();
+  // Always start with the main window — it handles both setup and boot
+  // signon.html is opened from setup flow via IPC
+  createMainWindow();
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
+  });
+});
+
+app.on('window-all-closed', () => {
+  if (devServer) devServer.close();
+  if (process.platform !== 'darwin') app.quit();
+});
