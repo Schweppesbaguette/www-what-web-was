@@ -118,8 +118,9 @@ function createMainWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       webviewTag: true,
-      webSecurity: false, // needed for camera access and cross-origin webviews
+      webSecurity: false,
       allowRunningInsecureContent: true,
+      experimentalFeatures: true,
       preload: path.join(__dirname, 'preload.js'),
     },
   });
@@ -132,9 +133,9 @@ function createMainWindow() {
 function createRadioWindow() {
   if (radioWindow) { radioWindow.focus(); return; }
   radioWindow = new BrowserWindow({
-    width: 1100, height: 540,
+    width: 800, height: 420,
     frame: false, transparent: true,
-    resizable: false, hasShadow: true,
+    resizable: true, hasShadow: true,
     backgroundColor: '#00000000',
     webPreferences: {
       nodeIntegration: false, contextIsolation: true,
@@ -151,7 +152,7 @@ function createRadioWindow() {
 function createTVWindow() {
   if (tvWindow) { tvWindow.focus(); return; }
   tvWindow = new BrowserWindow({
-    width: 1150, height: 900,
+    width: 900, height: 700,
     frame: false, transparent: true,
     resizable: true, hasShadow: true,
     backgroundColor: '#00000000',
@@ -193,6 +194,11 @@ ipcMain.on('minimize-radio', () => { if(radioWindow) radioWindow.minimize(); });
 ipcMain.on('minimize-tv', () => { if(tvWindow) tvWindow.minimize(); });
 
 // ── App start — ALWAYS show signon first ─────────────────
+// Enable camera access in Electron
+app.commandLine.appendSwitch('use-fake-ui-for-media-stream', 'false');
+app.commandLine.appendSwitch('enable-usermedia-screen-capturing');
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+
 app.whenReady().then(() => {
   startDevServer();
   setupPermissions();
@@ -213,7 +219,7 @@ let historianWindow = null;
 function createHistorianWindow() {
   if (historianWindow) { historianWindow.focus(); return; }
   historianWindow = new BrowserWindow({
-    width: 1100, height: 825,
+    width: 900, height: 680,
     frame: false, transparent: true,
     resizable: true, hasShadow: true,
     backgroundColor: '#00000000',
