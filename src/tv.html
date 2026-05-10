@@ -58,7 +58,7 @@ button { cursor:pointer; }
 <img id="skin" src="assets/tv.png" alt=""/>
 
 <!-- Window controls -->
-<button class="win-btn" style="top:9%;right:7%;width:28px;height:24px;" onclick="window.close()"></button>
+<button class="win-btn" style="top:9%;right:7%;width:28px;height:24px;" onclick="if(window.electronAPI)window.electronAPI.closeTV();else window.close()"></button>
 <button class="win-btn" style="top:9%;right:9.5%;width:28px;height:24px;" onclick="toggleMax()"></button>
 <button class="win-btn" style="top:9%;right:12%;width:28px;height:24px;" onclick="minimize()"></button>
 
@@ -135,17 +135,17 @@ button { cursor:pointer; }
 <script>
 const CHANNELS = [
   {name:'Cosmic Pulse',channel:'FutureTV',url:'https://90s.myretrotvs.com/#H8oWpfQSr2Q',bitrate:'128 kbps',useWebview:true},
-  {name:'Liquid Dreams',channel:'RetroTV',url:'https://www.youtube.com/embed/videoseries?list=PLToa_dCBQFdohFHfMqmMRcwwCLdPlQeRD&autoplay=1',bitrate:'256 kbps',useWebview:false},
-  {name:'Neon Horizon',channel:'NeonTV',url:'https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1',bitrate:'192 kbps',useWebview:false},
-  {name:'Digital Sunrise',channel:'DigitalTV',url:'https://www.youtube.com/embed/5qap5aO4i9A?autoplay=1',bitrate:'128 kbps',useWebview:false},
-  {name:'Astro Drift',channel:'AstroTV',url:'https://www.youtube.com/embed/kgx4WGK0oNU?autoplay=1',bitrate:'256 kbps',useWebview:false},
-  {name:'Zero Gravity',channel:'ZeroTV',url:'https://www.youtube.com/embed/DWcJFNfaw9c?autoplay=1',bitrate:'128 kbps',useWebview:false},
-  {name:'Virtual Reality',channel:'VR-TV',url:'https://www.youtube.com/embed/bnVUHWCynig?autoplay=1',bitrate:'320 kbps',useWebview:false},
-  {name:'Data Stream',channel:'DataTV',url:'https://www.youtube.com/embed/21X5lGlDOfg?autoplay=1',bitrate:'192 kbps',useWebview:false},
-  {name:'Cybernetic Soul',channel:'CyberTV',url:'https://www.youtube.com/embed/YPHkjJ2OCWA?autoplay=1',bitrate:'256 kbps',useWebview:false},
-  {name:'Endless Vector',channel:'VectorTV',url:'https://www.youtube.com/embed/GGXzlPnKMgA?autoplay=1',bitrate:'128 kbps',useWebview:false},
-  {name:'Synapse Wave',channel:'SynapseTV',url:'https://www.youtube.com/embed/UfcAVejslrU?autoplay=1',bitrate:'192 kbps',useWebview:false},
-  {name:'Electric Flow',channel:'ElectricTV',url:'https://www.youtube.com/embed/tDexBj46oNI?autoplay=1',bitrate:'256 kbps',useWebview:false},
+  {name:'Liquid Dreams',channel:'RetroTV',url:'https://www.youtube.com/embed/videoseries?list=PLToa_dCBQFdohFHfMqmMRcwwCLdPlQeRD&autoplay=1',bitrate:'256 kbps',useWebview:true},
+  {name:'Neon Horizon',channel:'NeonTV',url:'https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1',bitrate:'192 kbps',useWebview:true},
+  {name:'Digital Sunrise',channel:'DigitalTV',url:'https://www.youtube.com/embed/5qap5aO4i9A?autoplay=1',bitrate:'128 kbps',useWebview:true},
+  {name:'Astro Drift',channel:'AstroTV',url:'https://www.youtube.com/embed/kgx4WGK0oNU?autoplay=1',bitrate:'256 kbps',useWebview:true},
+  {name:'Zero Gravity',channel:'ZeroTV',url:'https://www.youtube.com/embed/DWcJFNfaw9c?autoplay=1',bitrate:'128 kbps',useWebview:true},
+  {name:'Virtual Reality',channel:'VR-TV',url:'https://www.youtube.com/embed/bnVUHWCynig?autoplay=1',bitrate:'320 kbps',useWebview:true},
+  {name:'Data Stream',channel:'DataTV',url:'https://www.youtube.com/embed/21X5lGlDOfg?autoplay=1',bitrate:'192 kbps',useWebview:true},
+  {name:'Cybernetic Soul',channel:'CyberTV',url:'https://www.youtube.com/embed/YPHkjJ2OCWA?autoplay=1',bitrate:'256 kbps',useWebview:true},
+  {name:'Endless Vector',channel:'VectorTV',url:'https://www.youtube.com/embed/GGXzlPnKMgA?autoplay=1',bitrate:'128 kbps',useWebview:true},
+  {name:'Synapse Wave',channel:'SynapseTV',url:'https://www.youtube.com/embed/UfcAVejslrU?autoplay=1',bitrate:'192 kbps',useWebview:true},
+  {name:'Electric Flow',channel:'ElectricTV',url:'https://www.youtube.com/embed/tDexBj46oNI?autoplay=1',bitrate:'256 kbps',useWebview:true},
 ];
 
 let currentIdx = null;
@@ -200,7 +200,7 @@ function skipBack() { tuneChannel(Math.max(0,(currentIdx||0)-1)); }
 function skipNext() { tuneChannel(Math.min(CHANNELS.length-1,(currentIdx||0)+1)); }
 function pauseTV() { const iframe=document.getElementById('tv-iframe'); iframe.src=iframe.src; }
 function setVol(v) {}
-function minimize() {}
+function minimize(){if(window.electronAPI)window.electronAPI.minimizeTV();}
 function toggleMax() {}
 function navClick(id) {
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));

@@ -147,13 +147,15 @@ const MASCOTS = {
 const MKEYS = ['PUNK','HH','HIPPIE','RASTA','TECHNO','NERD'];
 
 // Assets — same base64 sprites as main app (loaded from localStorage cache or inline)
-const ASSETS = {};
-try { 
-  MKEYS.forEach(k => { 
-    const cached = localStorage.getItem('www_asset_'+k);
-    if(cached) ASSETS[k] = cached;
-  });
-} catch(e){}
+// Load assets directly from files
+const ASSET_PATHS = {
+  PUNK: 'assets/asset-punk.png',
+  HH: 'assets/asset-hh.png',
+  HIPPIE: 'assets/asset-hippie.png',
+  RASTA: 'assets/asset-rasta.png',
+  TECHNO: 'assets/asset-techno.png',
+  NERD: 'assets/asset-nerd.png',
+};
 
 // ── Populate fields ──
 document.getElementById('s-name').value = CFG.screenName || '';
@@ -168,17 +170,9 @@ function buildGrid() {
     cell.className = 'mascot-cell' + (key === myMascot ? ' sel' : '');
     cell.dataset.key = key;
     const img = document.createElement('img');
-    img.src = ASSETS[key] || '';
+    img.src = ASSET_PATHS[key] || '';
     img.alt = key;
-    // If no cached asset, show emoji fallback
-    if (!ASSETS[key]) {
-      const emojis = {PUNK:'🎸',HH:'🎤',HIPPIE:'☮️',RASTA:'🌿',TECHNO:'🎧',NERD:'📚'};
-      img.style.fontSize = '40px';
-      img.outerHTML; // won't work — use span instead
-      cell.innerHTML = '<span style="font-size:40px;">' + (emojis[key]||'❓') + '</span>';
-    } else {
-      cell.appendChild(img);
-    }
+    cell.appendChild(img);
     cell.onclick = () => {
       myMascot = key;
       document.querySelectorAll('.mascot-cell').forEach(c => c.classList.remove('sel'));

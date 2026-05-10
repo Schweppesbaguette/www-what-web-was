@@ -130,7 +130,7 @@ button { cursor:pointer; }
 <img id="skin" src="assets/radio.png" alt=""/>
 
 <!-- Window controls (top-right of skin) -->
-<button class="win-btn" style="top:27%;right:17.5%;" onclick="window.close()" title="Close"></button>
+<button class="win-btn" style="top:27%;right:17.5%;" onclick="if(window.electronAPI)window.electronAPI.closeRadio();else window.close()" title="Close"></button>
 <button class="win-btn" style="top:27%;right:20.5%;" onclick="toggleMax()" title="Maximize"></button>
 <button class="win-btn" style="top:27%;right:23%;" onclick="minimize()" title="Minimize"></button>
 
@@ -255,7 +255,7 @@ function nextPreset() { tunePreset(((currentPreset||0)+1) % PRESETS.length); }
 function presetUp() { tunePreset(Math.max(0,(currentPreset||0)-1)); }
 function presetDown() { tunePreset(Math.min(PRESETS.length-1,(currentPreset||0)+1)); }
 function setVol(v) { if(currentAudio) currentAudio.volume=v/100; }
-function minimize() { if(window.electronAPI) window.electronAPI.minimizeRadio(); }
+function minimize(){if(window.electronAPI)window.electronAPI.minimizeRadio();}
 function toggleMax() {}
 
 // Signal bar animation

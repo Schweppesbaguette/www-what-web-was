@@ -742,76 +742,6 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
   </div>
 </div>
 
-<!-- SIGNON -->
-<div id="signon-screen">
-  <div id="signon-box">
-    <img id="signon-skin" src="assets/login.png" style="position:absolute;top:0;left:0;width:100%;height:100%;display:block;" alt=""/>
-
-    <!-- Screen Name field (over skin's field at ~42% down, 17% left) -->
-    <input id="s-name" readonly style="
-      position:absolute;top:42%;left:17%;width:38%;
-      padding:5px 10px;
-      background:rgba(2,10,50,0.88);
-      border:1px solid rgba(60,100,220,0.5);border-radius:4px;
-      color:white;font-size:13px;font-family:Tahoma;
-      box-shadow:inset 0 2px 5px rgba(0,0,50,0.8);
-    "/>
-
-    <!-- Password field (~51% down) -->
-    <input type="password" id="s-pass" onkeydown="if(event.key==='Enter')doSignOn()" style="
-      position:absolute;top:52%;left:17%;width:38%;
-      padding:5px 10px;
-      background:rgba(2,10,50,0.88);
-      border:1px solid rgba(60,100,220,0.5);border-radius:4px;
-      color:white;font-size:13px;font-family:Tahoma;
-      box-shadow:inset 0 2px 5px rgba(0,0,50,0.8);
-    "/>
-
-    <!-- Remember + Forgot (~60% down) -->
-    <div style="position:absolute;top:60%;left:15%;width:40%;display:flex;align-items:center;gap:6px;">
-      <input type="checkbox" id="s-remember" checked style="accent-color:#4888e8;width:14px;height:14px;"/>
-      <label for="s-remember" style="color:#92d9ff;font-size:11px;font-family:Tahoma;">Remember my password</label>
-      <span style="color:#4888e8;font-size:10px;font-family:Tahoma;margin-left:auto;cursor:pointer;">Forgot Password?</span>
-    </div>
-
-    <!-- Status (~66% down) -->
-    <div id="signon-status" style="position:absolute;top:66%;left:15%;width:40%;min-height:12px;color:#81ff28;font-size:10px;font-family:Tahoma;font-weight:bold;text-align:center;text-shadow:0 0 6px rgba(129,255,40,0.5);"></div>
-
-    <!-- Buttons (~70% down) -->
-    <div style="position:absolute;top:70%;left:13%;width:43%;display:flex;gap:4%;">
-      <button onclick="resetSetup()" style="
-        flex:1;padding:7px 4px;
-        background:linear-gradient(180deg,#1e3f78,#0c1e4a);
-        border:2px solid rgba(100,150,255,0.6);border-radius:8px;
-        color:white;font-size:13px;font-weight:bold;font-family:Tahoma;cursor:pointer;
-        box-shadow:0 2px 8px rgba(0,20,80,0.6);
-      ">Switch User</button>
-      <button onclick="doSignOn()" style="
-        flex:1.5;padding:7px 4px;
-        background:linear-gradient(180deg,#3a78e8,#1438c0);
-        border:2px solid rgba(146,217,255,0.6);border-radius:8px;
-        color:white;font-size:13px;font-weight:bold;font-family:Tahoma;cursor:pointer;
-        box-shadow:0 2px 10px rgba(72,120,255,0.6);
-        display:flex;align-items:center;justify-content:center;gap:5px;
-      ">▶ Sign On</button>
-    </div>
-
-    <!-- Mascot grid (right panel: 53% left, 32% top, 40% wide, 45% tall) -->
-    <div style="position:absolute;top:32%;left:53%;width:40%;height:45%;">
-      <div id="signon-mascot-row" style="
-        display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;
-        gap:3%;width:100%;height:100%;
-        align-items:center;justify-items:center;
-      "></div>
-    </div>
-
-    <!-- Oscilloscope canvas (bottom-right: 79% left, 79% top, 15% wide, 12% tall) -->
-    <canvas id="signon-osc-canvas" style="
-      position:absolute;top:79%;left:79%;width:15%;height:12%;
-    "></canvas>
-
-  </div>
-</div>
 
 <!-- CONNECTING -->
 <div id="conn-screen">
@@ -1228,24 +1158,43 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 const A={};
 // Assets loaded from hidden HTML elements - see #asset-store
 function loadAssets(){
-  const _PUNK=document.getElementById("ast-PUNK"); if(_PUNK) A["PUNK"]=_PUNK.src;
-  const _HH=document.getElementById("ast-HH"); if(_HH) A["HH"]=_HH.src;
-  const _HIPPIE=document.getElementById("ast-HIPPIE"); if(_HIPPIE) A["HIPPIE"]=_HIPPIE.src;
-  const _RASTA=document.getElementById("ast-RASTA"); if(_RASTA) A["RASTA"]=_RASTA.src;
-  const _TECHNO=document.getElementById("ast-TECHNO"); if(_TECHNO) A["TECHNO"]=_TECHNO.src;
-  const _NERD=document.getElementById("ast-NERD"); if(_NERD) A["NERD"]=_NERD.src;
-  const _WWWLOGO=document.getElementById("ast-WWWLOGO"); if(_WWWLOGO) A["WWWLOGO"]=_WWWLOGO.src;
-  const _SIGNINIMAGE=document.getElementById("ast-SIGNINIMAGE"); if(_SIGNINIMAGE) A["SIGNINIMAGE"]=_SIGNINIMAGE.src;
-  const _dialup=document.getElementById("ast-dialup"); if(_dialup) A["dialup"]=_dialup.src;
-  const _dooropen=document.getElementById("ast-dooropen"); if(_dooropen) A["dooropen"]=_dooropen.src;
-  const _doorslam=document.getElementById("ast-doorslam"); if(_doorslam) A["doorslam"]=_doorslam.src;
-  const _goodbye=document.getElementById("ast-goodbye"); if(_goodbye) A["goodbye"]=_goodbye.src;
-  const _imsend=document.getElementById("ast-imsend"); if(_imsend) A["imsend"]=_imsend.src;
-  const _imrcv=document.getElementById("ast-imrcv"); if(_imrcv) A["imrcv"]=_imrcv.src;
-  const _welcome=document.getElementById("ast-welcome"); if(_welcome) A["welcome"]=_welcome.src;
-  const _ygm=document.getElementById("ast-ygm"); if(_ygm) A["ygm"]=_ygm.src;
-  // UI assets - set img src directly since they're referenced by id in HTML
-  // (toolbar buttons already have id="ast-ui-KEY" so browser loads them natively)
+  // Wait for all asset images to load before reading their src
+  const keys=['PUNK','HH','HIPPIE','RASTA','TECHNO','NERD','WWWLOGO','SIGNINIMAGE'];
+  const imgs = keys.map(k => document.getElementById('ast-'+k)).filter(Boolean);
+  let loaded = 0;
+  function onLoad(){
+    loaded++;
+    if(loaded >= imgs.length) doLoadAssets();
+  }
+  imgs.forEach(img => {
+    if(img.complete) onLoad();
+    else { img.onload = onLoad; img.onerror = onLoad; }
+  });
+  if(imgs.length === 0) doLoadAssets();
+}
+
+function doLoadAssets(){
+  const _PUNK=document.getElementById('ast-PUNK'); if(_PUNK) A['PUNK']=_PUNK.src;
+  const _HH=document.getElementById('ast-HH'); if(_HH) A['HH']=_HH.src;
+  const _HIPPIE=document.getElementById('ast-HIPPIE'); if(_HIPPIE) A['HIPPIE']=_HIPPIE.src;
+  const _RASTA=document.getElementById('ast-RASTA'); if(_RASTA) A['RASTA']=_RASTA.src;
+  const _TECHNO=document.getElementById('ast-TECHNO'); if(_TECHNO) A['TECHNO']=_TECHNO.src;
+  const _NERD=document.getElementById('ast-NERD'); if(_NERD) A['NERD']=_NERD.src;
+  const _WWWLOGO=document.getElementById('ast-WWWLOGO'); if(_WWWLOGO) A['WWWLOGO']=_WWWLOGO.src;
+  const _SIGNINIMAGE=document.getElementById('ast-SIGNINIMAGE'); if(_SIGNINIMAGE) A['SIGNINIMAGE']=_SIGNINIMAGE.src;
+  // Audio assets
+  const _dialup=document.getElementById('ast-dialup'); if(_dialup) A['dialup']=_dialup.src;
+  const _dooropen=document.getElementById('ast-dooropen'); if(_dooropen) A['dooropen']=_dooropen.src;
+  const _doorslam=document.getElementById('ast-doorslam'); if(_doorslam) A['doorslam']=_doorslam.src;
+  const _goodbye=document.getElementById('ast-goodbye'); if(_goodbye) A['goodbye']=_goodbye.src;
+  const _imsend=document.getElementById('ast-imsend'); if(_imsend) A['imsend']=_imsend.src;
+  const _imrcv=document.getElementById('ast-imrcv'); if(_imrcv) A['imrcv']=_imrcv.src;
+  const _welcome=document.getElementById('ast-welcome'); if(_welcome) A['welcome']=_welcome.src;
+  const _ygm=document.getElementById('ast-ygm'); if(_ygm) A['ygm']=_ygm.src;
+  // Refresh UI that depends on assets
+  if(document.getElementById('signon-screen')?.style.display !== 'none'){
+    buildMascotRows();
+  }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1410,10 +1359,9 @@ window.addEventListener('load',()=>{
   loadAssets();
   // Set logo/signin images
   const setupLogo=document.getElementById('setup-logo');
-  const signinLogo=document.getElementById('signon-logo');
   const connLogo=document.getElementById('conn-logo-img');
-  if(setupLogo) setupLogo.src=A.SIGNINIMAGE||'';
-  if(signinLogo) signinLogo.src=A.SIGNINIMAGE||'';
+  // setupLogo uses WWWLOGO for the setup screen background
+  if(setupLogo) setupLogo.src=A.WWWLOGO||'';
   if(connLogo) connLogo.src=A.WWWLOGO||'';
   // Load config
   try{const s=localStorage.getItem('www_cfg');if(s)CFG=JSON.parse(s);}catch(e){CFG={};}
@@ -1424,7 +1372,7 @@ window.addEventListener('load',()=>{
   if(CFG.screenName&&CFG.ablyKey){
     document.getElementById('setup-screen').style.display='none';
     // Coming from signon window — boot directly
-    setTimeout(bootDesktop, 100);
+    setTimeout(bootDesktop, 500);
   } else {
     showSetup();
   }
@@ -1446,11 +1394,24 @@ function saveSetup(){
   CFG={screenName:name,password:pass,ablyKey:ably,googleClientId:google,mascot:myMascot};
   localStorage.setItem('www_cfg',JSON.stringify(CFG));
   document.getElementById('setup-screen').style.display='none';
-  showSignon();
+  if(window.electronAPI){
+    // Open the skinned signon window
+    window.electronAPI.setupComplete();
+  } else {
+    // Browser: show connecting screen then boot
+    document.getElementById('conn-screen').style.display='flex';
+    const cm=document.getElementById('conn-mascot'); if(cm) cm.src=A[myMascot]||'';
+    const cl=document.getElementById('conn-logo-img'); if(cl) cl.src=A.WWWLOGO||'';
+    setTimeout(()=>playDialup(),100);
+    const _steps=[[100,'Dialing...',2,'...'],[1400,'Connecting...',25,'Carrier!'],[2800,'Auth...',55,'Verifying...'],[4000,'Connected!',100,'Welcome!']];
+    _steps.forEach(([d,s,p,det])=>setTimeout(()=>{const c=document.getElementById('conn-status-txt');if(c)c.textContent=s;const b=document.getElementById('conn-bar');if(b)b.style.width=p+'%';},d));
+    setTimeout(bootDesktop,4500);
+  }
 }
 
 function resetSetup(){
-  document.getElementById('signon-screen').style.display='none';
+  // signon is in separate window - just show setup screen
+  const ss=document.getElementById('signon-screen'); if(ss) ss.style.display='none';
   showSetup();
 }
 
@@ -1507,7 +1468,7 @@ function showSignon_UNUSED(){
   }
 }
 
-function doSignOn(){
+function doSignOn_INDEX_UNUSED(){
   const pass=document.getElementById('s-pass').value;
   if(CFG.password&&pass!==CFG.password){
     document.getElementById('signon-status').textContent='Incorrect password.';
@@ -1544,7 +1505,7 @@ function cancelConnect(){
   document.getElementById('conn-screen').style.display='none';
   const bw=document.getElementById('browser-win');
   bw.classList.remove('active');
-  showSignon();
+  showSetup();
 }
 
 function bootDesktop(){
@@ -2645,14 +2606,14 @@ function navigateTo(url){
 function loadInFrame(src){
   const frame=document.getElementById('site-frame');
   const view=document.getElementById('html-view');
-  const isElectron=typeof process!=='undefined'&&process.versions&&process.versions.electron;
+  const isElectron=!!(window.electronAPI);
   const isWayback=src.includes('web.archive.org');
+
   if(isElectron){
-    // In Electron, webview loads ANY site natively — no iframe restrictions
+    // In Electron, use webview — loads any site natively
     frame.style.display='none'; view.style.display='block'; view.style.flex='1';
     let wv=document.getElementById('electron-webview');
-    if(wv) wv.setAttribute('src',src);
-    else {
+    if(!wv){
       view.innerHTML='<webview id="electron-webview" src="'+src+'" style="width:100%;height:100%;display:flex;" allowpopups useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"></webview>';
       wv=document.getElementById('electron-webview');
       if(wv){
@@ -2660,10 +2621,13 @@ function loadInFrame(src){
         wv.addEventListener('did-finish-load',()=>{document.getElementById('status-txt').textContent='Done';try{document.getElementById('addr-bar').value=wv.getURL();}catch(e){}});
         wv.addEventListener('did-fail-load',(e)=>{if(e.errorCode!==-3)document.getElementById('status-txt').textContent='Failed';});
       }
+    } else {
+      wv.setAttribute('src',src);
     }
     document.getElementById('status-txt').textContent='Loading...';
     return;
   }
+
   if(isWayback){
     frame.style.display='block';frame.style.flex='1';
     view.style.display='none';
@@ -2863,7 +2827,7 @@ let currentRadioAudio=null,radioPlaying=false,currentRadioYear=null;
 let radioVizInterval=null;
 
 function initRadio(){
-  const isElectron=typeof process!=='undefined'&&process.versions&&process.versions.electron;
+  const isElectron=!!(window.electronAPI);
   if(isElectron&&window.electronAPI){ window.electronAPI.openRadio(); return; }
   const c=document.getElementById('radio-yr-btns');
   if(!c||c.children.length)return;
@@ -3051,13 +3015,13 @@ function setRadioVol(v){
 let currentTVChannel=null;
 
 function openTV(){
-  const isElectron=typeof process!=='undefined'&&process.versions&&process.versions.electron;
+  const isElectron=!!(window.electronAPI);
   if(isElectron&&window.electronAPI){ window.electronAPI.openTV(); return; }
   openWin('tv-win');
 }
 
 function tuneTV(id,url,label){
-  const isElectron=typeof process!=='undefined'&&process.versions&&process.versions.electron;
+  const isElectron=!!(window.electronAPI);
   // Update channel buttons
   document.querySelectorAll('.tv-ch-btn').forEach(b=>b.classList.remove('active'));
   event.target.classList.add('active');
@@ -3640,7 +3604,11 @@ function signOff(){
   if(ablyClient)try{ablyClient.close();}catch(e){}
   if(vidStream)vidStream.getTracks().forEach(t=>t.stop());
   document.getElementById('browser-win').classList.remove('active');
-  showSignon();
+  if(window.electronAPI){
+    window.electronAPI.setupComplete(); // open signon window
+  } else {
+    showSetup(); // browser fallback
+  }
 }
 
 // ═══════════════════════════════════════════════════════
