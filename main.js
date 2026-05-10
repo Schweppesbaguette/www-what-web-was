@@ -126,6 +126,14 @@ function createMainWindow() {
   });
   setupPermissions();
   mainWindow.loadFile(path.join(__dirname, 'src', 'index.html'));
+  mainWindow.webContents.on('did-finish-load', () => {
+    // Pre-request camera permission so it's ready when user clicks Video
+    mainWindow.webContents.executeJavaScript(`
+      navigator.mediaDevices && navigator.mediaDevices.enumerateDevices()
+        .then(d => console.log('Media devices:', d.length))
+        .catch(e => console.log('Media devices err:', e));
+    `).catch(()=>{});
+  });
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
