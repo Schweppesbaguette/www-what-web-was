@@ -14,12 +14,8 @@
       "category": "public.app-category.entertainment",
       "icon": "build/icon.icns",
       "target": [
-        { "target": "dmg", "arch": ["arm64", "x64"] },
         { "target": "zip", "arch": ["arm64", "x64"] }
       ]
-    },
-    "dmg": {
-      "title": "WhatWebWas"
     },
     "files": ["main.js", "preload.js", "src/**/*"]
   },
