@@ -1,4 +1,4 @@
-name: Build macOS DMG
+name: Build macOS App
 
 on:
   push:
@@ -38,15 +38,36 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build DMG
+      - name: Build App
         run: npm run dist
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
-      - name: Upload DMG as artifact
+      - name: Upload App as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: WWW-WhatWebWas-DMG
+          name: WhatWebWas-Mac
           path: dist/*.dmg
+          if-no-files-found: warn
           retention-days: 30
+
+      - name: Upload zip as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WhatWebWas-Mac-zip
+          path: dist/*.zip
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: WhatWebWas v${{ github.run_number }}
+          body: Download below and drag to Applications.
+          files: |
+            dist/*.dmg
+            dist/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
