@@ -9,14 +9,14 @@
   },
   "build": {
     "appId": "com.whatwebwas.www",
-    "productName": "WWW - What Web Was",
+    "productName": "WhatWebWas",
     "mac": {
       "category": "public.app-category.entertainment",
       "icon": "build/icon.icns",
       "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }]
     },
     "dmg": {
-      "title": "WWW - What Web Was",
+      "title": "WhatWebWas",
       "contents": [
         { "x": 150, "y": 185, "type": "file" },
         { "x": 390, "y": 185, "type": "link", "path": "/Applications" }
