@@ -207,3 +207,21 @@ app.on('window-all-closed', () => {
   if (devServer) devServer.close();
   if (process.platform !== 'darwin') app.quit();
 });
+
+// ── Historian window ─────────────────────────────────────
+let historianWindow = null;
+function createHistorianWindow() {
+  if (historianWindow) { historianWindow.focus(); return; }
+  historianWindow = new BrowserWindow({
+    width: 1100, height: 825,
+    frame: false, transparent: true,
+    resizable: true, hasShadow: true,
+    backgroundColor: '#00000000',
+    webPreferences: { nodeIntegration: false, contextIsolation: true, webviewTag: true, webSecurity: false, preload: path.join(__dirname, 'preload.js') },
+  });
+  historianWindow.loadFile(path.join(__dirname, 'src', 'historian.html'));
+  historianWindow.on('closed', () => { historianWindow = null; });
+}
+ipcMain.on('open-historian', () => createHistorianWindow());
+ipcMain.on('close-historian', () => { if(historianWindow){historianWindow.close();historianWindow=null;} });
+ipcMain.on('minimize-historian', () => { if(historianWindow) historianWindow.minimize(); });
