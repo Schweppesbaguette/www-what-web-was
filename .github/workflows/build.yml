@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
@@ -39,4 +41,12 @@ jobs:
       - name: Build DMG
         run: npm run dist
         env:
-          GH_TOKEN: ${{ secrets.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Upload DMG as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WWW-WhatWebWas-DMG
+          path: dist/*.dmg
+          retention-days: 30
