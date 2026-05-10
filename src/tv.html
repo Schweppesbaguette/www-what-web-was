@@ -5,11 +5,13 @@
 <style>
 * { box-sizing:border-box; margin:0; padding:0; }
 html, body {
-  width:1100px; height:860px;
+  width:1150px; height:900px;
   background:transparent !important;
   overflow:hidden;
   -webkit-app-region:drag;
   user-select:none;
+  margin:0;
+  padding:0;
 }
 #skin { position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none; }
 input,button,select,webview,iframe,.nodrag { -webkit-app-region:no-drag; user-select:text; }
@@ -55,7 +57,7 @@ button { cursor:pointer; }
 </head>
 <body>
 
-<img id="skin" src="assets/tv.png" alt=""/>
+<img id="skin" src="assets/tv.png" alt="" style="position:absolute;top:0;left:0;width:1150px;height:900px;pointer-events:none;"/>
 
 <!-- Window controls -->
 <button class="win-btn" style="top:9%;right:7%;width:28px;height:24px;" onclick="if(window.electronAPI)window.electronAPI.closeTV();else window.close()"></button>

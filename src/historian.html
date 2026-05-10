@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{
+  width:1448px;height:1086px;
+  background:transparent!important;
+  overflow:hidden;
+  -webkit-app-region:drag;
+  user-select:none;
+}
+#skin{position:absolute;top:0;left:0;width:1448px;height:1086px;pointer-events:none;}
+input,button,select,webview,a,.nodrag{-webkit-app-region:no-drag;user-select:text;}
+button{cursor:pointer;}
+.win-btn{position:absolute;background:transparent;border:none;cursor:pointer;width:28px;height:28px;border-radius:4px;-webkit-app-region:no-drag;}
+.win-btn:hover{background:rgba(255,255,255,0.15);}
+.era-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;cursor:pointer;border-bottom:1px solid rgba(90,50,10,0.3);transition:all 0.1s;-webkit-app-region:no-drag;font-family:Georgia,serif;}
+.era-item:hover,.era-item.active{background:rgba(200,160,96,0.15);}
+.era-item.active{border-left:3px solid #c8a060;}
+.era-icon{font-size:18px;flex-shrink:0;margin-top:2px;}
+.era-name{color:#c8a060;font-size:12px;font-weight:bold;line-height:1.3;}
+.era-years{color:#806040;font-size:10px;}
+#content-frame{position:absolute;top:19%;left:24%;width:51%;height:55%;background:#f5e8d0;overflow:hidden;border:1px solid #8B4513;}
+#addr-display{position:absolute;top:9.5%;left:24%;width:55%;font-size:11px;font-family:'Courier New';color:#c8a060;background:rgba(0,0,0,0.4);border:1px solid #5a2a10;padding:3px 8px;border-radius:2px;pointer-events:none;}
+#guide-text{position:absolute;top:19%;left:76%;width:22%;height:55%;overflow-y:auto;padding:10px;font-family:Georgia,serif;font-size:11px;color:#2a1505;line-height:1.6;-webkit-app-region:no-drag;}
+#status-bar{position:absolute;bottom:5%;left:24%;width:52%;display:flex;align-items:center;gap:10px;font-family:Tahoma,Arial;font-size:10px;color:#c8a060;-webkit-app-region:no-drag;}
+.status-btn{padding:3px 8px;background:#4a2a10;border:1px solid #7a4a20;border-radius:3px;cursor:pointer;color:#c8a060;font-size:10px;-webkit-app-region:no-drag;}
+.status-btn:hover{background:#5a3a18;}
+</style>
+</head>
+<body>
+
+<img id="skin" src="assets/timetravel.png" alt=""/>
+
+<!-- Window controls -->
+<button class="win-btn" style="top:3.5%;right:4.5%;" onclick="if(window.electronAPI)window.electronAPI.closeHistorian();else window.close();"></button>
+<button class="win-btn" style="top:3.5%;right:6.8%;" onclick="if(window.electronAPI)window.electronAPI.minimizeHistorian();else window.close();"></button>
+
+<!-- Address bar overlay -->
+<div id="addr-display">time-travel-historian://aesthetics//global-village</div>
+
+<!-- Era nav buttons (Back/Fwd/Home/Favs overlaid on skin nav area ~10-14% down) -->
+<div style="position:absolute;top:10.5%;left:24%;width:52%;display:flex;gap:0;-webkit-app-region:no-drag;">
+  <button onclick="histBack()" style="padding:5px 14px;background:transparent;border:none;cursor:pointer;color:transparent;width:80px;height:36px;"></button>
+  <button onclick="histFwd()" style="padding:5px 14px;background:transparent;border:none;cursor:pointer;color:transparent;width:80px;height:36px;"></button>
+  <button onclick="loadEra('global')" style="padding:5px 14px;background:transparent;border:none;cursor:pointer;color:transparent;width:80px;height:36px;"></button>
+  <button onclick="" style="padding:5px 14px;background:transparent;border:none;cursor:pointer;color:transparent;width:80px;height:36px;"></button>
+</div>
+
+<!-- Era navigation list (left panel) -->
+<div style="position:absolute;top:19%;left:2.5%;width:21%;height:55%;overflow-y:auto;-webkit-app-region:no-drag;">
+  <div id="era-list"></div>
+</div>
+
+<!-- Main CARI webview -->
+<div id="content-frame">
+  <webview id="historian-webview"
+    src="https://cari.institute/aesthetics"
+    allowpopups
+    useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    style="width:100%;height:100%;">
+  </webview>
+</div>
+
+<!-- Guide panel -->
+<div id="guide-text">
+  <strong>Welcome, traveler!</strong><br><br>
+  I am your humble guide through time and art. Let us explore the visual aesthetics of our world.<br><br>
+  Click any era on the left, or browse CARI directly in the center panel.<br><br>
+  <div style="margin-top:8px;padding:6px;background:rgba(200,160,96,0.1);border-radius:4px;font-size:10px;">
+    <strong>☀️ Did You Know?</strong><br>
+    CARI documents visual culture movements across all of human history.
+  </div>
+</div>
+
+<!-- Status bar -->
+<div id="status-bar">
+  <button class="status-btn">▶ Media Player</button>
+  <button class="status-btn">📁 My Collection</button>
+  <span style="flex:1;text-align:center;">Level 2: Visual Voyager — 650 / 1000 XP</span>
+  <button class="status-btn">? Help</button>
+  <button class="status-btn">⚙ Settings</button>
+</div>
+
+<script>
+const ERAS = [
+  {id:'ancient',icon:'🏛️',name:'Ancient Echoes',years:'Prehistory–500 CE',url:'https://cari.institute/aesthetics'},
+  {id:'world',icon:'🌍',name:'World Traditions',years:'500–1500',url:'https://cari.institute/aesthetics'},
+  {id:'renaissance',icon:'🎨',name:'Renaissance Visions',years:'1400–1700',url:'https://cari.institute/aesthetics'},
+  {id:'industrial',icon:'⚙️',name:'Industrial Age',years:'1750–1900',url:'https://cari.institute/aesthetics'},
+  {id:'global',icon:'☕',name:'Global Village Coffeehouse',years:'Late 1980s–Mid 1990s',url:'https://cari.institute/aesthetics/global-village-coffeehouse'},
+  {id:'digital',icon:'💻',name:'Digital Dawn',years:'1995–Now',url:'https://cari.institute/aesthetics'},
+];
+let currentEra = 'global';
+let historyStack = [];
+let histIdx = -1;
+
+function buildEraList(){
+  const list = document.getElementById('era-list');
+  list.innerHTML = '';
+  ERAS.forEach(e=>{
+    const div = document.createElement('div');
+    div.className = 'era-item'+(e.id===currentEra?' active':'');
+    div.id = 'era-'+e.id;
+    div.innerHTML = '<div class="era-icon">'+e.icon+'</div><div><div class="era-name">'+e.name+'</div><div class="era-years">'+e.years+'</div></div>';
+    div.onclick = () => loadEra(e.id);
+    list.appendChild(div);
+  });
+}
+
+function loadEra(id){
+  const era = ERAS.find(e=>e.id===id);
+  if(!era) return;
+  currentEra = id;
+  document.querySelectorAll('.era-item').forEach(i=>i.classList.remove('active'));
+  const el = document.getElementById('era-'+id);
+  if(el) el.classList.add('active');
+  const wv = document.getElementById('historian-webview');
+  wv.src = era.url;
+  document.getElementById('addr-display').textContent = 'time-travel-historian://aesthetics//'+id;
+  document.getElementById('guide-text').innerHTML =
+    '<strong>'+era.icon+' '+era.name+'</strong><br><small style="color:#806040;">'+era.years+'</small><br><br>'+
+    'Exploring the visual aesthetics of the <em>'+era.name+'</em> era via the CARI archive.<br><br>'+
+    '<div style="margin-top:8px;padding:6px;background:rgba(200,160,96,0.1);border-radius:4px;font-size:10px;">'+
+    '<strong>☀️ CARI Archive</strong><br>Browse authentic artifacts, imagery, and visual records from this period.</div>';
+}
+
+function histBack(){
+  const wv = document.getElementById('historian-webview');
+  try{wv.goBack();}catch(e){}
+}
+function histFwd(){
+  const wv = document.getElementById('historian-webview');
+  try{wv.goForward();}catch(e){}
+}
+
+buildEraList();
+
+window.addEventListener('load',()=>{
+  const wv = document.getElementById('historian-webview');
+  wv.addEventListener('did-start-loading',()=>{
+    document.getElementById('addr-display').style.color = '#ffd700';
+  });
+  wv.addEventListener('did-finish-load',()=>{
+    document.getElementById('addr-display').style.color = '#c8a060';
+    try{document.getElementById('addr-display').textContent = wv.getURL();}catch(e){}
+    try{wv.insertCSS('header,.site-header,nav,.global-nav{display:none!important;}body{padding-top:0!important;}');}catch(e){}
+  });
+  wv.addEventListener('did-navigate',(e)=>{
+    try{document.getElementById('addr-display').textContent = e.url;}catch(err){}
+  });
+});
+</script>
+</body>
+</html>
