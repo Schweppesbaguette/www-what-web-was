@@ -733,9 +733,8 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
       <label class="setup-lbl">Ably API Key:</label>
       <input class="setup-inp" id="cfg-ably" placeholder="xxxxx.xxxxx:xxxxxxxxxx"/>
       <div class="setup-hint">From ably.com → App → API Keys. Enables real-time chat with friends.</div>
-      <div class="setup-sec">📧 Gmail (optional)</div>
-      <label class="setup-lbl">Google Client ID:</label>
-      <input class="setup-inp" id="cfg-google" value="234470124470-utn6re9unl2fksdt19ohajopogbgehtd.apps.googleusercontent.com"/>
+      <div class="setup-hint" style="color:#81ff28;margin-top:4px;">📧 Gmail connects inside the app — no setup needed!</div>
+      <input type="hidden" id="cfg-google" value="234470124470-utn6re9unl2fksdt19ohajopogbgehtd.apps.googleusercontent.com"/>
       <div id="setup-err" class="setup-err">Please enter a screen name and Ably key.</div>
       <button class="setup-btn" onclick="saveSetup()">▶ Enter the Web</button>
     </div>
@@ -1123,23 +1122,22 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 
   <!-- GMAIL MODAL -->
   <div class="modal-bg" id="gmail-modal">
-    <div class="modal-box" style="width:330px;">
+    <div class="modal-box" style="width:300px;">
       <div class="modal-title"><span>📮 Connect Gmail</span>
         <div class="wnd-btns"><div class="wb wb-cls" onclick="closeModal('gmail-modal')">✕</div></div>
       </div>
       <div class="modal-body">
-        <p style="font-size:11px;font-family:Tahoma;color:#333;line-height:1.6;margin-bottom:10px;">Connect your Gmail to read and send email in retro style.</p>
-        <div id="gm-step1">
-          <label class="modal-lbl">Google Client ID:</label>
-          <input class="modal-inp" id="gclient-id" value="234470124470-utn6re9unl2fksdt19ohajopogbgehtd.apps.googleusercontent.com"/>
-          <div class="modal-foot">
+        <div id="gm-step1" style="text-align:center;padding:10px;">
+          <div style="font-size:36px;margin-bottom:8px;">📮</div>
+          <p style="font-size:12px;font-family:Tahoma;color:#333;line-height:1.6;margin-bottom:14px;">Sign in with your Google account to read and send email in retro style.</p>
+          <div class="modal-foot" style="justify-content:center;gap:8px;">
             <button class="btn-xp" onclick="closeModal('gmail-modal')">Cancel</button>
-            <button class="btn-xp" onclick="startGmailAuth()" style="background:linear-gradient(180deg,#EA4335,#C02020);color:white;border-color:#901010;">Sign in with Google</button>
+            <button class="btn-xp" onclick="startGmailAuth()" style="background:linear-gradient(180deg,#EA4335,#C02020);color:white;border-color:#901010;padding:6px 16px;">🔐 Sign in with Google</button>
           </div>
         </div>
-        <div id="gm-step2" style="display:none;text-align:center;padding:10px;">
+        <div id="gm-step2" style="display:none;text-align:center;padding:16px;">
           <div style="font-size:26px;margin-bottom:8px;">⏳</div>
-          <p style="font-size:11px;font-family:Tahoma;">Waiting for Google sign-in...</p>
+          <p style="font-size:11px;font-family:Tahoma;">Opening Google sign-in...</p>
           <button class="btn-xp" style="margin-top:10px;" onclick="closeModal('gmail-modal');document.getElementById('gm-step2').style.display='none';document.getElementById('gm-step1').style.display='block';">Cancel</button>
         </div>
       </div>
@@ -1210,7 +1208,33 @@ function playSound(k,vol){
     a.play().catch(()=>{});
   }catch(e){}
 }
-function playDialup(){playSound('dialup',0.8);}
+function playDialup(){
+  if(A['dialup']){playSound('dialup',0.8);return;}
+  // Generate dialup sound with WebAudio if no asset
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const times=[200,400,800,1600,3200];
+    let t=ctx.currentTime;
+    times.forEach((freq,i)=>{
+      const o=ctx.createOscillator();
+      const g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);
+      o.frequency.setValueAtTime(freq,t);
+      o.frequency.exponentialRampToValueAtTime(freq*1.5,t+0.3);
+      g.gain.setValueAtTime(0.3,t);
+      g.gain.exponentialRampToValueAtTime(0.01,t+0.4);
+      o.start(t);o.stop(t+0.4);
+      t+=0.35;
+    });
+    // White noise burst
+    const buf=ctx.createBuffer(1,ctx.sampleRate*0.5,ctx.sampleRate);
+    const d=buf.getChannelData(0);
+    for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*0.1;
+    const src=ctx.createBufferSource();
+    src.buffer=buf;src.connect(ctx.destination);
+    src.start(ctx.currentTime+1.8);
+  }catch(e){}
+}
 function playDoorOpen(){playSound('dooropen',0.9);}
 function playDoorClose(){playSound('doorslam',0.9);}
 function playIMSend(){playSound('imsend',0.85);}
@@ -2316,29 +2340,38 @@ async function handleRTCOffer(from,sdp){
 
 async function startLocalVideo(){
   try{
-    // In Electron with webSecurity:false, camera should work directly
-    const constraints = {
-      video:{width:{ideal:320},height:{ideal:240},frameRate:{ideal:15,max:30}},
+    // Check if mediaDevices is available
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+      throw new Error('Camera API not available. Try running as Electron app.');
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video:{width:{ideal:640},height:{ideal:480},frameRate:{ideal:30}},
       audio:true
-    };
-    vidStream=await navigator.mediaDevices.getUserMedia(constraints);
+    });
+    vidStream = stream;
     const local=document.getElementById('vid-local');
-    if(local){local.srcObject=vidStream;local.play().catch(()=>{});}
+    if(local){local.srcObject=stream;local.muted=true;await local.play().catch(e=>console.log('local play:',e));}
     document.getElementById('vid-status').textContent='● CAM ON';
-    return Promise.resolve();
+    return stream;
   }catch(e){
-    console.error('Camera error:',e);
-    // Try video only
+    console.error('Camera error:',e.name,e.message);
+    // Try video only as fallback
     try{
-      vidStream=await navigator.mediaDevices.getUserMedia({video:true});
+      const stream = await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+      vidStream=stream;
       const local=document.getElementById('vid-local');
-      if(local){local.srcObject=vidStream;local.play().catch(()=>{});}
+      if(local){local.srcObject=stream;local.muted=true;await local.play().catch(()=>{});}
       document.getElementById('vid-status').textContent='● CAM (no mic)';
+      return stream;
     }catch(e2){
       document.getElementById('vid-status').textContent='⚠ '+e.name;
-      showToast('⚠️ Camera: '+e.message.slice(0,40),'');
+      const ns=document.getElementById('vid-nosignal');
+      if(ns){
+        ns.style.display='flex';
+        ns.innerHTML='<div style="text-align:center;padding:16px;"><div style="font-size:28px;margin-bottom:6px;">📷</div><div style="color:#ff8888;font-size:11px;font-weight:bold;">'+e.name+'</div><div style="color:#888;font-size:10px;margin-top:4px;max-width:200px;line-height:1.4;">'+e.message+'</div><div style="color:#81ff28;font-size:10px;margin-top:8px;">Go to System Settings → Privacy → Camera → enable WWW</div></div>';
+      }
+      return null;
     }
-    return Promise.resolve();
   }
 }
 
@@ -2348,37 +2381,20 @@ function quickVideoTest(){
   document.getElementById('vid-peer-name').textContent='📹 Camera Preview';
   document.getElementById('vid-status').textContent='● Starting...';
   const ns=document.getElementById('vid-nosignal');if(ns)ns.style.display='none';
-
-  // In Electron, camera access requires explicit getUserMedia
-  (async()=>{
-    try{
-      // Try to enumerate devices first to confirm camera exists
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const cams = devices.filter(d=>d.kind==='videoinput');
-      console.log('Cameras found:', cams.length, cams.map(c=>c.label));
-
-      vidStream = await navigator.mediaDevices.getUserMedia({
-        video:{width:{ideal:640},height:{ideal:480},frameRate:{ideal:30}},
-        audio:true
-      });
-
-      const local=document.getElementById('vid-local');
+  startLocalVideo().then(stream=>{
+    if(stream){
+      // Show local in both local pip and remote (for test mode)
       const remote=document.getElementById('vid-remote');
-      if(local){local.srcObject=vidStream;local.play().catch(e=>console.error('local play:',e));}
-      if(remote){remote.srcObject=vidStream;remote.play().catch(e=>console.error('remote play:',e));startLowFps(remote);}
-      document.getElementById('vid-status').textContent='● CAM ON';
-      vidTimeStart=Date.now();clearInterval(vidTimer);vidTimer=setInterval(updateVidTimer,1000);
-    }catch(e){
-      console.error('Camera error:',e.name,e.message);
-      document.getElementById('vid-status').textContent='⚠ '+e.name;
-      // Show helpful error in the video area
-      const ns2=document.getElementById('vid-nosignal');
-      if(ns2){
-        ns2.style.display='flex';
-        ns2.innerHTML='<div style="text-align:center;padding:20px;"><div style="font-size:24px;margin-bottom:8px;">📷</div><div style="color:#ff6060;font-size:12px;margin-bottom:4px;">'+e.name+'</div><div style="color:#888;font-size:10px;max-width:200px;line-height:1.4;">'+e.message+'</div><div style="color:#81ff28;font-size:10px;margin-top:8px;">Check System Preferences → Privacy → Camera</div></div>';
+      if(remote){
+        remote.srcObject=stream;
+        remote.onplaying=()=>startLowFps(remote);
+        remote.play().catch(()=>{});
+        setTimeout(()=>{if(remote.readyState>=2)startLowFps(remote);},1000);
       }
+      document.getElementById('vid-status').textContent='● LIVE (test)';
+      vidTimeStart=Date.now();clearInterval(vidTimer);vidTimer=setInterval(updateVidTimer,1000);
     }
-  })();
+  });
   showToast('📹 Camera test — retro filter active!','');
 }
 
@@ -2478,21 +2494,44 @@ function showEmailMain(){
   renderEmailList();
 }
 
-function connectGmail(){document.getElementById('gmail-modal').style.display='flex';}
+// Built-in WWW app Google OAuth client ID
+// Users just click Sign In - no client ID needed
+const WWW_GOOGLE_CLIENT_ID = '234470124470-utn6re9unl2fksdt19ohajopogbgehtd.apps.googleusercontent.com';
+
+function connectGmail(){
+  // Skip the modal - go straight to auth with built-in client ID
+  document.getElementById('gm-step1') && (document.getElementById('gm-step1').style.display='none');
+  document.getElementById('gm-step2') && (document.getElementById('gm-step2').style.display='block');
+  document.getElementById('gmail-modal').style.display='flex';
+  if(typeof google==='undefined'){loadGoogleLib(()=>doGmailAuth(WWW_GOOGLE_CLIENT_ID));}
+  else doGmailAuth(WWW_GOOGLE_CLIENT_ID);
+}
 function closeModal(id){document.getElementById(id).style.display='none';}
 
 function startGmailAuth(){
-  const cid=document.getElementById('gclient-id').value.trim();
-  if(!cid){alert('Enter Client ID');return;}
-  document.getElementById('gm-step1').style.display='none';
-  document.getElementById('gm-step2').style.display='block';
+  // Legacy - just use built-in ID
+  const cid=document.getElementById('gclient-id')?.value?.trim()||WWW_GOOGLE_CLIENT_ID;
+  document.getElementById('gm-step1') && (document.getElementById('gm-step1').style.display='none');
+  document.getElementById('gm-step2') && (document.getElementById('gm-step2').style.display='block');
   if(typeof google==='undefined'){loadGoogleLib(()=>doGmailAuth(cid));}
   else doGmailAuth(cid);
 }
 
 function loadGoogleLib(cb){
+  // Gmail requires valid OAuth setup - skip silently if not configured
+  if(!WWW_GOOGLE_CLIENT_ID||WWW_GOOGLE_CLIENT_ID.length<20){return;}
+  if(document.querySelector('script[src*="accounts.google.com"]')){
+    // Already loaded - wait for it
+    const wait=setInterval(()=>{if(typeof google!=='undefined'){clearInterval(wait);if(cb)cb();}},200);
+    return;
+  }
   const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;
-  s.onload=()=>{const s2=document.createElement('script');s2.src='https://apis.google.com/js/api.js';s2.onload=()=>gapi.load('client',()=>gapi.client.init({}).then(()=>{if(cb)cb();}));document.head.appendChild(s2);};
+  s.onload=()=>{
+    const s2=document.createElement('script');s2.src='https://apis.google.com/js/api.js';
+    s2.onload=()=>gapi.load('client',()=>gapi.client.init({}).then(()=>{if(cb)cb();}));
+    document.head.appendChild(s2);
+  };
+  s.onerror=()=>console.warn('Google API failed to load');
   document.head.appendChild(s);
 }
 
@@ -2503,10 +2542,16 @@ function doGmailAuth(cid){
         client_id:cid,
         scope:'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send',
         callback:(resp)=>{
-          if(resp.error){alert('Gmail error: '+resp.error);return;}
+          if(resp.error){
+            console.error('Gmail error:',resp.error);
+            showToast('Gmail error: '+resp.error,'');
+            closeModal('gmail-modal');
+            return;
+          }
           gmailToken=resp.access_token;mailMode='gmail';
           closeModal('gmail-modal');
-          document.getElementById('gm-step2').style.display='none';document.getElementById('gm-step1').style.display='block';
+          document.getElementById('gm-step2') && (document.getElementById('gm-step2').style.display='none');
+          document.getElementById('gm-step1') && (document.getElementById('gm-step1').style.display='block');
           document.getElementById('gmail-badge').style.display='';
           document.getElementById('gmail-btn').textContent='📮 Gmail ✓';
           document.getElementById('email-who').textContent=CFG.screenName+' (Gmail)';
@@ -2514,10 +2559,11 @@ function doGmailAuth(cid){
           fetchGmailMessages(false);showEmailMain();
         }
       });
-      tc.requestAccessToken({prompt:'consent'});
+      tc.requestAccessToken({prompt:'select_account'});
     }catch(e){
-      alert('Gmail OAuth Error\n\n1. Go to console.cloud.google.com\n2. OAuth consent screen → rename app to "WWW Browser"\n3. Credentials → Client ID → add http://localhost:8080\n4. Run: python3 -m http.server 8080\n5. Open http://localhost:8080/WWW_WhatWebWas_Final.html\n\n'+e.message);
-      document.getElementById('gm-step1').style.display='block';document.getElementById('gm-step2').style.display='none';
+      console.error('Gmail OAuth Error:',e);
+      closeModal('gmail-modal');
+      showToast('⚠️ Gmail sign-in failed. Check your internet connection.','');
     }
   },800);
 }
@@ -3786,7 +3832,7 @@ setInterval(()=>{if(gmailToken)fetchGmailMessages(true);},60000);
   <img id="ast-RASTA" src="assets/asset-rasta.png" alt="" />
   <img id="ast-TECHNO" src="assets/asset-techno.png" alt="" />
   <img id="ast-NERD" src="assets/asset-nerd.png" alt="" />
-  <img id="ast-WWWLOGO" src="assets/asset-wwwlogo.png" alt="" />
+  <img id="ast-WWWLOGO" src="assets/wwwlogo_new.png" alt="" />
   <img id="ast-SIGNINIMAGE" src="assets/asset-signinimage.png" alt="" />
 </div>
 

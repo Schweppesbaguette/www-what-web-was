@@ -90,34 +90,34 @@ input, button, label, .nodrag {
 
 <!-- Screen Name (over the skin's Screen Name field area) -->
 <input id="s-name" class="field" readonly
-  style="top:42.5%;left:17%;width:36%;"
+  style="top:45%;left:18%;width:37%;"
 />
 
 <!-- Password -->
 <input id="s-pass" class="field" type="password"
-  style="top:52%;left:17%;width:36%;"
+  style="top:54%;left:18%;width:37%;"
   onkeydown="if(event.key==='Enter')doSignOn()"
 />
 
 <!-- Remember + Forgot -->
-<div class="nodrag" style="position:absolute;top:60.5%;left:16%;width:38%;display:flex;align-items:center;gap:8px;">
+<div class="nodrag" style="position:absolute;top:62.5%;left:15%;width:40%;display:flex;align-items:center;gap:8px;">
   <input type="checkbox" id="s-remember" checked style="accent-color:#4888e8;width:15px;height:15px;-webkit-app-region:no-drag;"/>
   <label for="s-remember" style="color:#92d9ff;font-size:11px;font-family:Tahoma;cursor:pointer;">Remember my password</label>
   <span style="color:#4888e8;font-size:10px;font-family:Tahoma;margin-left:auto;cursor:pointer;" onclick="">Forgot Password?</span>
 </div>
 
 <!-- Status -->
-<div id="signon-status" style="top:66%;left:16%;width:38%;"></div>
+<div id="signon-status" style="top:68%;left:16%;width:38%;"></div>
 
 <!-- Switch User button -->
-<button class="btn btn-switch" style="position:absolute;top:70%;left:14%;width:17%;padding:8px 4px;" onclick="switchUser()">Switch User</button>
+<button class="btn btn-switch" style="position:absolute;top:72%;left:13%;width:18%;padding:8px 4px;" onclick="switchUser()">Switch User</button>
 
 <!-- Sign On button -->
-<button class="btn btn-sign" style="position:absolute;top:70%;left:33%;width:21%;padding:8px 4px;" onclick="doSignOn()">▶ Sign On</button>
+<button class="btn btn-sign" style="position:absolute;top:72%;left:33%;width:22%;padding:8px 4px;" onclick="doSignOn()">▶ Sign On</button>
 
 <!-- Mascot grid (3x2 over right panel) -->
 <div id="mascot-grid" style="
-  position:absolute;top:33%;left:54%;width:37%;height:44%;
+  position:absolute;top:35%;left:54%;width:38%;height:42%;
   display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;
   gap:3%;align-items:center;justify-items:center;
   -webkit-app-region:no-drag;

@@ -5,7 +5,7 @@
 <style>
 * { box-sizing:border-box; margin:0; padding:0; }
 html, body {
-  width:1150px; height:900px;
+  width:900px; height:700px;
   background:transparent !important;
   overflow:hidden;
   -webkit-app-region:drag;
@@ -57,12 +57,14 @@ button { cursor:pointer; }
 </head>
 <body>
 
-<img id="skin" src="assets/tv.png" alt="" style="position:absolute;top:0;left:0;width:1150px;height:900px;pointer-events:none;"/>
+<img id="skin" src="assets/tv.png" alt="" style="position:absolute;top:0;left:0;width:900px;height:700px;pointer-events:none;"/>
 
-<!-- Window controls -->
-<button class="win-btn" style="top:9%;right:7%;width:28px;height:24px;" onclick="if(window.electronAPI)window.electronAPI.closeTV();else window.close()"></button>
-<button class="win-btn" style="top:9%;right:9.5%;width:28px;height:24px;" onclick="toggleMax()"></button>
-<button class="win-btn" style="top:9%;right:12%;width:28px;height:24px;" onclick="minimize()"></button>
+<!-- Window controls - visible -->
+<div style="position:absolute;top:8%;right:5.5%;display:flex;gap:3px;-webkit-app-region:no-drag;">
+  <button onclick="minimize()" style="width:22px;height:22px;background:linear-gradient(180deg,#5ab8f0,#3a98d8);border:1px solid rgba(255,255,255,0.4);border-radius:4px;cursor:pointer;color:white;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:bold;">─</button>
+  <button onclick="toggleMax()" style="width:22px;height:22px;background:linear-gradient(180deg,#5ab8f0,#3a98d8);border:1px solid rgba(255,255,255,0.4);border-radius:4px;cursor:pointer;color:white;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:bold;">□</button>
+  <button onclick="if(window.electronAPI)window.electronAPI.closeTV();else window.close();" style="width:22px;height:22px;background:linear-gradient(180deg,#f05858,#c02828);border:1px solid rgba(255,255,255,0.4);border-radius:4px;cursor:pointer;color:white;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:bold;">✕</button>
+</div>
 
 <!-- Left nav sidebar (overlaid on skin nav area) -->
 <div style="position:absolute;top:19%;left:2%;width:14%;height:62%;display:flex;flex-direction:column;overflow:hidden;">

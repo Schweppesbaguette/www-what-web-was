@@ -5,7 +5,7 @@
 <style>
 * { box-sizing:border-box; margin:0; padding:0; }
 html, body {
-  width:1100px; height:540px;
+  width:800px; height:420px;
   background:transparent !important;
   overflow:hidden;
   -webkit-app-region:drag;
@@ -129,12 +129,14 @@ button { cursor:pointer; }
 </head>
 <body>
 
-<img id="skin" src="assets/radio.png" alt="" style="position:absolute;top:0;left:0;width:1100px;height:540px;pointer-events:none;"/>
+<img id="skin" src="assets/radio.png" alt="" style="position:absolute;top:0;left:0;width:800px;height:420px;pointer-events:none;"/>
 
-<!-- Window controls (top-right of skin) -->
-<button class="win-btn" style="top:27%;right:17.5%;" onclick="if(window.electronAPI)window.electronAPI.closeRadio();else window.close()" title="Close"></button>
-<button class="win-btn" style="top:27%;right:20.5%;" onclick="toggleMax()" title="Maximize"></button>
-<button class="win-btn" style="top:27%;right:23%;" onclick="minimize()" title="Minimize"></button>
+<!-- Window controls - visible buttons matching skin chrome buttons -->
+<div style="position:absolute;top:26%;right:16%;display:flex;gap:3px;-webkit-app-region:no-drag;">
+  <button onclick="minimize()" style="width:22px;height:22px;background:linear-gradient(180deg,#5ab8f0,#3a98d8);border:1px solid rgba(255,255,255,0.4);border-radius:4px;cursor:pointer;color:white;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:bold;">─</button>
+  <button onclick="toggleMax()" style="width:22px;height:22px;background:linear-gradient(180deg,#5ab8f0,#3a98d8);border:1px solid rgba(255,255,255,0.4);border-radius:4px;cursor:pointer;color:white;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:bold;">□</button>
+  <button onclick="if(window.electronAPI)window.electronAPI.closeRadio();else window.close();" style="width:22px;height:22px;background:linear-gradient(180deg,#f05858,#c02828);border:1px solid rgba(255,255,255,0.4);border-radius:4px;cursor:pointer;color:white;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:bold;">✕</button>
+</div>
 
 <!-- Now playing bar -->
 <div id="now-bar">
