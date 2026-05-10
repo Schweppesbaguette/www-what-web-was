@@ -5,6 +5,8 @@ const http = require('http');
 
 let mainWindow = null;
 let signonWindow = null;
+let radioWindow = null;
+let tvWindow = null;
 let devServer = null;
 
 // ── Dev Server ──────────────────────────────────────────
@@ -61,28 +63,63 @@ function startDevServer() {
     res.writeHead(404); res.end('Not found');
   });
   devServer.listen(PORT,'127.0.0.1',()=>{
-    console.log(`\n🔧 WWW Live Edit Server: http://127.0.0.1:${PORT}\n`);
+    console.log(`\n🔧 WWW Live Edit: http://127.0.0.1:${PORT}\n`);
   });
   devServer.on('error',e=>{ if(e.code!=='EADDRINUSE') console.error(e); });
 }
 
 // ── Permissions ─────────────────────────────────────────
-function setupPermissions() {
-  session.defaultSession.setPermissionRequestHandler((wc, perm, cb) => cb(true));
-  session.defaultSession.setPermissionCheckHandler(() => true);
-  try { session.defaultSession.setDevicePermissionHandler(() => true); } catch(e) {}
+function setupPermissions(sess) {
+  sess = sess || session.defaultSession;
+  sess.setPermissionRequestHandler((wc, perm, cb) => cb(true));
+  sess.setPermissionCheckHandler(() => true);
+  try { sess.setDevicePermissionHandler(() => true); } catch(e) {}
+  // Allow camera/mic in webviews
+  sess.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': ["default-src * 'unsafe-inline' 'unsafe-eval' data: blob:"]
+      }
+    });
+  });
 }
 
-// ── Main window (browser) ───────────────────────────────
+// ── Signon window — ALWAYS shown first ──────────────────
+function createSignonWindow() {
+  if (signonWindow) { signonWindow.focus(); return; }
+  signonWindow = new BrowserWindow({
+    width: 1000, height: 780,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    hasShadow: true,
+    alwaysOnTop: false,
+    backgroundColor: '#00000000',
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
+    },
+  });
+  signonWindow.loadFile(path.join(__dirname, 'src', 'signon.html'));
+  signonWindow.on('closed', () => { signonWindow = null; });
+}
+
+// ── Main browser window ──────────────────────────────────
 function createMainWindow() {
   if (mainWindow) { mainWindow.focus(); return; }
   mainWindow = new BrowserWindow({
-    width: 1280, height: 860, minWidth: 800, minHeight: 600,
+    width: 1280, height: 860,
+    minWidth: 800, minHeight: 600,
     title: 'WWW — What Web Was',
     backgroundColor: '#00082a',
     webPreferences: {
-      nodeIntegration: false, contextIsolation: true,
-      webviewTag: true, webSecurity: true,
+      nodeIntegration: false,
+      contextIsolation: true,
+      webviewTag: true,
+      webSecurity: false, // needed for camera access and cross-origin webviews
+      allowRunningInsecureContent: true,
       preload: path.join(__dirname, 'preload.js'),
     },
   });
@@ -91,25 +128,7 @@ function createMainWindow() {
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
-// ── Signon window (skinned, frameless) ──────────────────
-function createSignonWindow() {
-  if (signonWindow) { signonWindow.focus(); return; }
-  signonWindow = new BrowserWindow({
-    width: 1000, height: 780,
-    frame: false, transparent: true,
-    resizable: false, hasShadow: true,
-    backgroundColor: '#00000000',
-    webPreferences: {
-      nodeIntegration: false, contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js'),
-    },
-  });
-  signonWindow.loadFile(path.join(__dirname, 'src', 'signon.html'));
-  signonWindow.on('closed', () => { signonWindow = null; });
-}
-
-// ── Radio window (skinned, frameless) ───────────────────
-let radioWindow = null;
+// ── Radio window ─────────────────────────────────────────
 function createRadioWindow() {
   if (radioWindow) { radioWindow.focus(); return; }
   radioWindow = new BrowserWindow({
@@ -117,14 +136,18 @@ function createRadioWindow() {
     frame: false, transparent: true,
     resizable: false, hasShadow: true,
     backgroundColor: '#00000000',
-    webPreferences: { nodeIntegration: false, contextIsolation: true, webviewTag: true, preload: path.join(__dirname, 'preload.js') },
+    webPreferences: {
+      nodeIntegration: false, contextIsolation: true,
+      webviewTag: true,
+      preload: path.join(__dirname, 'preload.js'),
+    },
   });
+  setupPermissions(radioWindow.webContents.session);
   radioWindow.loadFile(path.join(__dirname, 'src', 'radio.html'));
   radioWindow.on('closed', () => { radioWindow = null; });
 }
 
-// ── TV window (skinned, frameless) ──────────────────────
-let tvWindow = null;
+// ── TV window ────────────────────────────────────────────
 function createTVWindow() {
   if (tvWindow) { tvWindow.focus(); return; }
   tvWindow = new BrowserWindow({
@@ -132,40 +155,51 @@ function createTVWindow() {
     frame: false, transparent: true,
     resizable: true, hasShadow: true,
     backgroundColor: '#00000000',
-    webPreferences: { nodeIntegration: false, contextIsolation: true, webviewTag: true, preload: path.join(__dirname, 'preload.js') },
+    webPreferences: {
+      nodeIntegration: false, contextIsolation: true,
+      webviewTag: true,
+      webSecurity: false,
+      preload: path.join(__dirname, 'preload.js'),
+    },
   });
+  setupPermissions(tvWindow.webContents.session);
   tvWindow.loadFile(path.join(__dirname, 'src', 'tv.html'));
   tvWindow.on('closed', () => { tvWindow = null; });
 }
 
-// ── IPC handlers ────────────────────────────────────────
-// Signon done → open main browser
+// ── IPC ──────────────────────────────────────────────────
+// After signon → open main window
 ipcMain.on('signon-complete', () => {
   createMainWindow();
   if (signonWindow) { signonWindow.close(); signonWindow = null; }
 });
 
-// Setup done in main window → show signon
+// After setup in main → open signon
 ipcMain.on('setup-complete', () => {
   createSignonWindow();
 });
 
+// Sign off → close main, reopen signon
+ipcMain.on('sign-off', () => {
+  createSignonWindow();
+  if (mainWindow) { mainWindow.close(); mainWindow = null; }
+});
+
 ipcMain.on('open-radio', () => createRadioWindow());
 ipcMain.on('open-tv', () => createTVWindow());
+ipcMain.on('close-radio', () => { if(radioWindow){radioWindow.close();radioWindow=null;} });
+ipcMain.on('close-tv', () => { if(tvWindow){tvWindow.close();tvWindow=null;} });
 ipcMain.on('minimize-radio', () => { if(radioWindow) radioWindow.minimize(); });
 ipcMain.on('minimize-tv', () => { if(tvWindow) tvWindow.minimize(); });
-ipcMain.on('close-radio', () => { if(radioWindow) radioWindow.close(); });
-ipcMain.on('close-tv', () => { if(tvWindow) tvWindow.close(); });
 
-// ── App ready ───────────────────────────────────────────
+// ── App start — ALWAYS show signon first ─────────────────
 app.whenReady().then(() => {
   startDevServer();
   setupPermissions();
-  // Always start with the main window — it handles both setup and boot
-  // signon.html is opened from setup flow via IPC
-  createMainWindow();
+  // Always open signon first — it decides whether to show setup or login
+  createSignonWindow();
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
+    if (BrowserWindow.getAllWindows().length === 0) createSignonWindow();
   });
 });
 
