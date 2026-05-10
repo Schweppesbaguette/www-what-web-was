@@ -2340,9 +2340,8 @@ async function handleRTCOffer(from,sdp){
 
 async function startLocalVideo(){
   try{
-    // Check if mediaDevices is available
     if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-      throw new Error('Camera API not available. Try running as Electron app.');
+      throw new Error('Camera API not available');
     }
     const stream = await navigator.mediaDevices.getUserMedia({
       video:{width:{ideal:640},height:{ideal:480},frameRate:{ideal:30}},
@@ -2350,17 +2349,24 @@ async function startLocalVideo(){
     });
     vidStream = stream;
     const local=document.getElementById('vid-local');
-    if(local){local.srcObject=stream;local.muted=true;await local.play().catch(e=>console.log('local play:',e));}
+    if(local){
+      local.srcObject=stream;
+      local.muted=true;
+      local.setAttribute('autoplay','');
+      local.setAttribute('playsinline','');
+      // Force play
+      const playPromise = local.play();
+      if(playPromise) playPromise.catch(e=>console.log('local play err:',e));
+    }
     document.getElementById('vid-status').textContent='● CAM ON';
     return stream;
   }catch(e){
     console.error('Camera error:',e.name,e.message);
-    // Try video only as fallback
     try{
       const stream = await navigator.mediaDevices.getUserMedia({video:true,audio:false});
       vidStream=stream;
       const local=document.getElementById('vid-local');
-      if(local){local.srcObject=stream;local.muted=true;await local.play().catch(()=>{});}
+      if(local){local.srcObject=stream;local.muted=true;local.play().catch(()=>{});}
       document.getElementById('vid-status').textContent='● CAM (no mic)';
       return stream;
     }catch(e2){
@@ -2368,7 +2374,7 @@ async function startLocalVideo(){
       const ns=document.getElementById('vid-nosignal');
       if(ns){
         ns.style.display='flex';
-        ns.innerHTML='<div style="text-align:center;padding:16px;"><div style="font-size:28px;margin-bottom:6px;">📷</div><div style="color:#ff8888;font-size:11px;font-weight:bold;">'+e.name+'</div><div style="color:#888;font-size:10px;margin-top:4px;max-width:200px;line-height:1.4;">'+e.message+'</div><div style="color:#81ff28;font-size:10px;margin-top:8px;">Go to System Settings → Privacy → Camera → enable WWW</div></div>';
+        ns.innerHTML='<div style="text-align:center;padding:16px;color:#888;font-family:Tahoma;font-size:11px;"><div style="font-size:28px;margin-bottom:6px;">📷</div><div style="color:#ff8888;font-weight:bold;margin-bottom:4px;">'+e.name+'</div><div style="max-width:200px;line-height:1.4;">'+e.message+'</div><div style="color:#81ff28;margin-top:8px;">System Settings → Privacy → Camera → enable WhatWebWas</div></div>';
       }
       return null;
     }
@@ -3826,12 +3832,12 @@ setInterval(()=>{if(gmailToken)fetchGmailMessages(true);},60000);
 
 <!-- ASSET STORE: hidden elements, browser loads natively -->
 <div id="asset-store" style="display:none!important;width:0;height:0;overflow:hidden;position:absolute;">
-  <img id="ast-PUNK" src="assets/asset-punk.png" alt="" />
-  <img id="ast-HH" src="assets/asset-hh.png" alt="" />
-  <img id="ast-HIPPIE" src="assets/asset-hippie.png" alt="" />
-  <img id="ast-RASTA" src="assets/asset-rasta.png" alt="" />
-  <img id="ast-TECHNO" src="assets/asset-techno.png" alt="" />
-  <img id="ast-NERD" src="assets/asset-nerd.png" alt="" />
+  <img id="ast-PUNK" src="assets/mascot-punk.png" alt="" />
+  <img id="ast-HH" src="assets/mascot-hh.png" alt="" />
+  <img id="ast-HIPPIE" src="assets/mascot-hippie.png" alt="" />
+  <img id="ast-RASTA" src="assets/mascot-rasta.png" alt="" />
+  <img id="ast-TECHNO" src="assets/mascot-techno.png" alt="" />
+  <img id="ast-NERD" src="assets/mascot-nerd.png" alt="" />
   <img id="ast-WWWLOGO" src="assets/wwwlogo_new.png" alt="" />
   <img id="ast-SIGNINIMAGE" src="assets/asset-signinimage.png" alt="" />
 </div>
