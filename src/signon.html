@@ -6,7 +6,8 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body {
   width: 1236px; height: 980px;
-  background: #1a1a2e;
+  /* TRANSPARENT — skin PNG alpha shapes the window */
+  background: transparent !important;
   overflow: hidden;
   -webkit-app-region: drag;
   user-select: none;
@@ -53,56 +54,60 @@ input, button, label, canvas, .nodrag {
   transition: box-shadow 0.12s;
 }
 .mascot-cell:hover { box-shadow: 0 0 12px rgba(129,255,40,0.5); }
-.mascot-cell.sel { box-shadow: 0 0 16px rgba(129,255,40,0.8), inset 0 0 0 2px #81ff28; }
-.mascot-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mascot-cell.sel { box-shadow: 0 0 16px rgba(129,255,40,0.9), inset 0 0 0 2px #81ff28; outline: 2px solid #81ff28; }
+.mascot-cell img { width: 100%; height: 100%; object-fit: contain; object-position: bottom; display: block; }
 </style>
 </head>
 <body>
 
-<img id="skin" src="assets/login_empty.png"/>
+<img id="skin" src=""/>
 
-<!-- Screen Name -->
+<!-- Screen Name — moved up to sit inside the panel -->
 <input id="s-name" class="field" type="text" placeholder="Screen Name"
-  style="top:42%; left:8%;" value="YourScreenName"/>
+  style="top:38%; left:8%;"/>
 
 <!-- Password -->
 <input id="s-pass" class="field" type="password" placeholder="Password"
-  style="top:52%; left:8%;"/>
+  style="top:47%; left:8%;"
+  onkeydown="if(event.key==='Enter')doSignOn()"/>
 
 <!-- Remember row -->
-<div class="nodrag" style="top:61.5%; left:8%; width:36%; display:flex; align-items:center; gap:8px; font-family:Tahoma;">
-  <input type="checkbox" checked style="accent-color:#4888e8; width:14px; height:14px; -webkit-app-region:no-drag; flex-shrink:0;"/>
-  <label style="color:#92d9ff; font-size:11px; cursor:pointer;">Remember my password</label>
+<div class="nodrag" style="top:56%; left:8%; width:36%; display:flex; align-items:center; gap:8px; font-family:Tahoma;">
+  <input type="checkbox" id="s-remember" checked style="accent-color:#4888e8; width:14px; height:14px; -webkit-app-region:no-drag; flex-shrink:0;"/>
+  <label for="s-remember" style="color:#92d9ff; font-size:11px; cursor:pointer;">Remember my password</label>
   <span style="color:#4888e8; font-size:10px; margin-left:auto; cursor:pointer;">Forgot?</span>
 </div>
 
 <!-- Status -->
-<div id="status" style="top:67.5%; left:8%; width:36%; color:#81ff28; font-size:11px; font-family:Tahoma; font-weight:bold; text-align:center;"></div>
+<div id="status" style="top:62%; left:8%; width:36%; color:#81ff28; font-size:11px; font-family:Tahoma; font-weight:bold; text-align:center;"></div>
 
 <!-- Switch User -->
 <button class="btn" onclick="switchUser()"
-  style="top:72%; left:8%; width:16%; padding:8px 4px;
+  style="top:66%; left:8%; width:16%; padding:8px 4px;
   background:linear-gradient(180deg,#1e3f78,#0c1e4a);
   border-color:rgba(100,150,255,0.6);">Switch User</button>
 
 <!-- Sign On -->
 <button class="btn" onclick="doSignOn()"
-  style="top:72%; left:26%; width:18%; padding:8px 4px;
+  style="top:66%; left:26%; width:18%; padding:8px 4px;
   background:linear-gradient(180deg,#3a78e8,#1438c0);
   border-color:rgba(146,217,255,0.6);">▶ Sign On</button>
 
-<!-- Mascot cells — positioned over the 6 pre-drawn slots in the skin -->
-<!-- Row 1 -->
-<div class="mascot-cell sel" data-key="PUNK"   style="top:38.5%; left:52.2%; width:11.8%; height:17.5%;" onclick="selectMascot(this)"><img id="img-PUNK"   alt="PUNK"/></div>
-<div class="mascot-cell"     data-key="HH"     style="top:38.5%; left:65.5%; width:11.8%; height:17.5%;" onclick="selectMascot(this)"><img id="img-HH"     alt="HH"/></div>
-<div class="mascot-cell"     data-key="HIPPIE" style="top:38.5%; left:78.8%; width:11.8%; height:17.5%;" onclick="selectMascot(this)"><img id="img-HIPPIE" alt="HIPPIE"/></div>
-<!-- Row 2 -->
-<div class="mascot-cell"     data-key="RASTA"  style="top:57.5%; left:52.2%; width:11.8%; height:17.5%;" onclick="selectMascot(this)"><img id="img-RASTA"  alt="RASTA"/></div>
-<div class="mascot-cell"     data-key="TECHNO" style="top:57.5%; left:65.5%; width:11.8%; height:17.5%;" onclick="selectMascot(this)"><img id="img-TECHNO" alt="TECHNO"/></div>
-<div class="mascot-cell"     data-key="NERD"   style="top:57.5%; left:78.8%; width:11.8%; height:17.5%;" onclick="selectMascot(this)"><img id="img-NERD"   alt="NERD"/></div>
+<!-- Mascot cells — sized to fit inside the pre-drawn slots -->
+<!-- Row 1: PUNK, HH, HIPPIE -->
+<div class="mascot-cell sel" data-key="PUNK"   style="top:36%; left:53.5%; width:11.5%; height:19%;" onclick="selectMascot(this)"><img id="img-PUNK"   alt="PUNK"/></div>
+<div class="mascot-cell"     data-key="HH"     style="top:36%; left:66%;   width:11.5%; height:19%;" onclick="selectMascot(this)"><img id="img-HH"     alt="HH"/></div>
+<div class="mascot-cell"     data-key="HIPPIE" style="top:36%; left:78.5%; width:11.5%; height:19%;" onclick="selectMascot(this)"><img id="img-HIPPIE" alt="HIPPIE"/></div>
+<!-- Row 2: RASTA, TECHNO, NERD -->
+<div class="mascot-cell"     data-key="RASTA"  style="top:57%; left:53.5%; width:11.5%; height:19%;" onclick="selectMascot(this)"><img id="img-RASTA"  alt="RASTA"/></div>
+<div class="mascot-cell"     data-key="TECHNO" style="top:57%; left:66%;   width:11.5%; height:19%;" onclick="selectMascot(this)"><img id="img-TECHNO" alt="TECHNO"/></div>
+<div class="mascot-cell"     data-key="NERD"   style="top:57%; left:78.5%; width:11.5%; height:19%;" onclick="selectMascot(this)"><img id="img-NERD"   alt="NERD"/></div>
 
-<!-- Oscilloscope — over the teal grid circle bottom right -->
-<canvas id="osc" style="top:82%; left:87.5%; width:9.5%; height:10.5%; z-index:2; border-radius:50%; -webkit-app-region:no-drag;"></canvas>
+<!-- Oscilloscope over the teal screen bottom right -->
+<canvas id="osc" style="top:83%; left:88%; width:9%; height:10%; z-index:2; border-radius:50%; -webkit-app-region:no-drag;"></canvas>
+
+<!-- Dialup audio — only plays during loading screen, NOT here -->
+<audio id="dialup-snd" preload="auto"></audio>
 
 <script>
 let myMascot = 'PUNK';
@@ -110,35 +115,45 @@ let CFG = {};
 try { const s = localStorage.getItem('www_cfg'); if(s) CFG = JSON.parse(s); } catch(e){}
 myMascot = CFG.mascot || 'PUNK';
 
-// Mascot images — load from assets/ (browser) or readAssetBase64 (Electron)
-const MASCOT_FILES = {
-  PUNK:'mascot-punk.png', HH:'mascot-hh.png', HIPPIE:'mascot-hippie.png',
-  RASTA:'mascot-rasta.png', TECHNO:'mascot-techno.png', NERD:'mascot-nerd.png'
-};
+// If no config, go to setup
+if (!CFG.screenName || !CFG.ablyKey) {
+  if (window.electronAPI) window.electronAPI.signonComplete();
+  else window.location.href = 'index.html';
+}
 
 async function loadAssets() {
-  for (const [key, file] of Object.entries(MASCOT_FILES)) {
-    const img = document.getElementById('img-'+key);
-    if (!img) continue;
+  const files = {
+    skin:    'login_empty.png',
+    PUNK:    'mascot-punk.png',
+    HH:      'mascot-hh.png',
+    HIPPIE:  'mascot-hippie.png',
+    RASTA:   'mascot-rasta.png',
+    TECHNO:  'mascot-techno.png',
+    NERD:    'mascot-nerd.png',
+    dialup:  'dialup.mp3',
+  };
+  for (const [key, file] of Object.entries(files)) {
+    let src;
     if (window.electronAPI && window.electronAPI.readAssetBase64) {
-      const data = await window.electronAPI.readAssetBase64(file);
-      if (data) img.src = data;
-    } else {
-      img.src = 'assets/' + file;
+      src = await window.electronAPI.readAssetBase64(file);
     }
-  }
-  // Skin
-  if (window.electronAPI && window.electronAPI.readAssetBase64) {
-    const d = await window.electronAPI.readAssetBase64('login_empty.png');
-    if (d) document.getElementById('skin').src = d;
+    if (!src) src = 'assets/' + file;
+    if (key === 'skin') {
+      document.getElementById('skin').src = src;
+    } else if (key === 'dialup') {
+      document.getElementById('dialup-snd').src = src;
+    } else {
+      const img = document.getElementById('img-' + key);
+      if (img) img.src = src;
+    }
   }
 }
 loadAssets();
 
-// Set initial selection
-document.querySelectorAll('.mascot-cell').forEach(c => {
-  c.classList.toggle('sel', c.dataset.key === myMascot);
-});
+// Set initial mascot selection
+document.getElementById('s-name').value = CFG.screenName || '';
+try { const p = localStorage.getItem('www_pass'); if(p) document.getElementById('s-pass').value = atob(p); } catch(e){}
+document.querySelectorAll('.mascot-cell').forEach(c => c.classList.toggle('sel', c.dataset.key === myMascot));
 
 function selectMascot(cell) {
   myMascot = cell.dataset.key;
@@ -154,22 +169,18 @@ function doSignOn() {
     status.style.color = '#ff6060';
     return;
   }
+  if (document.getElementById('s-remember').checked) {
+    try { localStorage.setItem('www_pass', btoa(CFG.password || '')); } catch(e){}
+  }
   CFG.mascot = myMascot;
   try { localStorage.setItem('www_cfg', JSON.stringify(CFG)); } catch(e){}
-  status.textContent = 'Connecting...';
+  status.textContent = 'Signing on...';
   status.style.color = '#81ff28';
-  // Play dialup then sign on
-  try {
-    const snd = document.getElementById('dialup-snd');
-    if (snd) { snd.currentTime = 0; snd.play().catch(()=>{}); }
-  } catch(e){}
-  // Wait for dialup sound to finish (6s), then sign on
-  const snd2 = document.getElementById('dialup-snd');
-  const waitMs = snd2 && snd2.duration ? (snd2.duration * 1000) : 6000;
+  // NO dialup here — dialup plays on the loading screen in index.html
   setTimeout(() => {
     if (window.electronAPI) window.electronAPI.signonComplete();
     else window.location.href = 'index.html';
-  }, waitMs);
+  }, 300);
 }
 
 function switchUser() {
@@ -180,16 +191,16 @@ function switchUser() {
 // Oscilloscope
 (function() {
   const canvas = document.getElementById('osc');
-  function resize() { canvas.width = canvas.offsetWidth || 120; canvas.height = canvas.offsetHeight || 105; }
+  function resize() { canvas.width = canvas.offsetWidth || 110; canvas.height = canvas.offsetHeight || 98; }
   resize();
   const ctx = canvas.getContext('2d');
   let phase = 0;
   function draw() {
     const cw = canvas.width, ch = canvas.height;
     ctx.clearRect(0,0,cw,ch);
-    ctx.fillStyle = 'rgba(0,8,30,0.75)';
+    ctx.fillStyle = 'rgba(0,8,30,0.7)';
     ctx.fillRect(0,0,cw,ch);
-    ctx.strokeStyle = 'rgba(0,80,160,0.3)'; ctx.lineWidth = 0.5;
+    ctx.strokeStyle = 'rgba(0,80,160,0.25)'; ctx.lineWidth = 0.5;
     for(let y=ch/5;y<ch;y+=ch/5){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(cw,y);ctx.stroke();}
     ctx.strokeStyle = '#81ff28'; ctx.lineWidth = 1.5;
     ctx.shadowColor = '#81ff28'; ctx.shadowBlur = 6;
@@ -205,6 +216,5 @@ function switchUser() {
   draw();
 })();
 </script>
-<audio id="dialup-snd" src="assets/dialup.mp3" preload="auto"></audio>
 </body>
 </html>

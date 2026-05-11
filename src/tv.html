@@ -5,35 +5,40 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{width:850px;height:569px;background:transparent!important;overflow:hidden;-webkit-app-region:drag;user-select:none;}
-#skin{position:absolute;top:0;left:0;width:850px;height:569px;pointer-events:none;}
+#skin{position:absolute;top:0;left:0;width:850px;height:569px;pointer-events:none;z-index:1;}
 input,button,select,webview,iframe,.nodrag{-webkit-app-region:no-drag;user-select:text;}
-.skin-btn{position:absolute;cursor:pointer;-webkit-app-region:no-drag;background:transparent;border:none;padding:0;transition:filter 0.1s,transform 0.1s;}
-.skin-btn:hover{filter:brightness(1.25);transform:scale(1.08);}
+.skin-btn{position:absolute;cursor:pointer;z-index:3;-webkit-app-region:no-drag;background:transparent;border:none;padding:0;transition:filter 0.1s,transform 0.1s;}
+.skin-btn:hover{filter:brightness(1.3) drop-shadow(0 0 4px rgba(255,255,255,0.5));transform:scale(1.05);}
 .skin-btn:active{filter:brightness(0.8);transform:scale(0.95);}
 .skin-btn img{width:100%;height:100%;object-fit:contain;}
-#screen-area{position:absolute;top:17%;left:17%;width:54%;height:59%;background:#000;overflow:hidden;}
+
+/* Screen area — inset black area in the skin */
+#screen-area{position:absolute;z-index:2;top:14%;left:4%;width:67%;height:57%;background:#000;overflow:hidden;}
 webview,iframe{width:100%;height:100%;border:none;}
-#no-signal{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;color:#555;font-family:Tahoma;font-size:12px;text-align:center;background:#000;position:absolute;top:0;left:0;}
-#info-bar{position:absolute;top:77%;left:17%;width:54%;display:flex;font-family:Tahoma;font-size:10px;color:#81ff28;pointer-events:none;}
-.info-cell{flex:1;padding:2px 6px;}
+#no-signal{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;color:#555;font-family:Tahoma;font-size:12px;text-align:center;background:#000;}
+
+/* Info bar */
+#info-bar{position:absolute;z-index:2;top:73%;left:4%;width:67%;display:flex;font-family:Tahoma;font-size:10px;color:#81ff28;pointer-events:none;}
+.info-cell{flex:1;padding:1px 4px;}
 .info-lbl{color:#92d9ff;}
-#playlist-panel{position:absolute;top:17%;left:72%;width:26%;height:64%;overflow-y:auto;-webkit-app-region:no-drag;}
-.pl-item{display:flex;align-items:center;gap:4px;padding:3px 6px;cursor:pointer;font-size:10px;font-family:Tahoma;color:#92d9ff;border-bottom:1px solid rgba(72,136,255,0.1);}
+
+/* Playlist panel — right side */
+#playlist-panel{position:absolute;z-index:2;top:14%;left:73%;width:24%;height:68%;overflow-y:auto;-webkit-app-region:no-drag;}
+.pl-item{display:flex;align-items:center;gap:3px;padding:3px 4px;cursor:pointer;font-size:10px;font-family:Tahoma;color:#92d9ff;border-bottom:1px solid rgba(72,136,255,0.1);}
 .pl-item:hover{background:rgba(72,136,255,0.15);}
 .pl-item.active{color:#81ff28;background:rgba(0,80,0,0.2);}
-#vol-slider{position:absolute;top:83%;left:47%;width:25%;accent-color:#81ff28;cursor:pointer;-webkit-app-region:no-drag;}
+
+#vol-slider{position:absolute;z-index:3;top:89%;left:52%;width:20%;accent-color:#81ff28;cursor:pointer;-webkit-app-region:no-drag;}
 </style>
 </head>
 <body>
-
-<!-- Skin loaded via readAssetBase64 to preserve PNG alpha channel -->
 <img id="skin" src=""/>
 
 <div id="screen-area">
   <div id="no-signal">
-    <div style="font-size:24px;margin-bottom:6px;">📺</div>
-    <div>NO SIGNAL</div>
-    <div style="font-size:10px;color:#333;margin-top:4px;">Double-click a channel to tune in</div>
+    <div style="font-size:28px;margin-bottom:6px;">📺</div>
+    <div style="color:#666;">NO SIGNAL</div>
+    <div style="font-size:10px;color:#444;margin-top:4px;">Double-click a channel</div>
   </div>
   <webview id="tv-webview" style="display:none;width:100%;height:100%;" allowpopups
     useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"></webview>
@@ -46,51 +51,34 @@ webview,iframe{width:100%;height:100%;border:none;}
 </div>
 
 <div id="playlist-panel"></div>
-
 <input type="range" id="vol-slider" min="0" max="100" value="80" oninput="setVol(this.value)"/>
 
-<!-- Window controls -->
-<button class="skin-btn" style="top:7%;left:85%;width:4%;height:8%;" onclick="if(window.electronAPI)window.electronAPI.minimizeTV();else window.close();"><img id="btn-min" src=""/></button>
-<button class="skin-btn" style="top:7%;left:89%;width:4%;height:8%;" onclick="tvToggleFullscreen()"><img id="btn-max" src=""/></button>
-<button class="skin-btn" style="top:7%;left:93%;width:4%;height:8%;" onclick="if(window.electronAPI)window.electronAPI.closeTV();else window.close();"><img id="btn-close" src=""/></button>
+<!-- Window controls: top right 3 circles at ~84,88,93% x, ~9-17% y -->
+<button class="skin-btn" style="top:8%;left:82%;width:4%;height:9%;" onclick="if(window.electronAPI)window.electronAPI.minimizeTV();else window.close();"><img id="btn-min" src=""/></button>
+<button class="skin-btn" style="top:8%;left:87%;width:4%;height:9%;" onclick="tvToggleFullscreen()"><img id="btn-max" src=""/></button>
+<button class="skin-btn" style="top:8%;left:92%;width:4%;height:9%;" onclick="if(window.electronAPI)window.electronAPI.closeTV();else window.close();"><img id="btn-close" src=""/></button>
 
-<!-- Transport buttons -->
-<button class="skin-btn" style="top:83%;left:14%;width:5%;height:9%;" onclick="skipBack()"><img id="btn-back" src=""/></button>
-<button class="skin-btn" style="top:83%;left:20%;width:5%;height:9%;" onclick="stopTV()"><img id="btn-stop" src=""/></button>
-<button class="skin-btn" style="top:81%;left:25%;width:9%;height:13%;" onclick="playSelected()"><img id="btn-play" src=""/></button>
-<button class="skin-btn" style="top:83%;left:34%;width:5%;height:9%;" onclick="pauseTV()"><img id="btn-pause" src=""/></button>
-<button class="skin-btn" style="top:83%;left:40%;width:5%;height:9%;" onclick="skipNext()"><img id="btn-forward" src=""/></button>
+<!-- Transport buttons — circles in bottom strip -->
+<!-- Back ~10-14%, Stop ~16-20%, Play(big) ~22-30%, Pause ~31-36%, Forward ~38-43% -->
+<button class="skin-btn" style="top:80%;left:9%;width:6%;height:13%;" onclick="skipBack()"><img id="btn-back" src=""/></button>
+<button class="skin-btn" style="top:80%;left:16%;width:6%;height:13%;" onclick="stopTV()"><img id="btn-stop" src=""/></button>
+<button class="skin-btn" style="top:78%;left:22%;width:10%;height:17%;" onclick="playSelected()"><img id="btn-play" src=""/></button>
+<button class="skin-btn" style="top:80%;left:33%;width:6%;height:13%;" onclick="pauseTV()"><img id="btn-pause" src=""/></button>
+<button class="skin-btn" style="top:80%;left:40%;width:6%;height:13%;" onclick="skipNext()"><img id="btn-forward" src=""/></button>
 
 <script>
-// ── Load all assets via readAssetBase64 to preserve PNG transparency ──
 async function loadAssets() {
-  if (window.electronAPI && window.electronAPI.readAssetBase64) {
-    const files = {
-      'skin':       'tv2.png',
-      'btn-min':    'btn-tv-minimize.png',
-      'btn-max':    'btn-tv-fullscreen.png',
-      'btn-close':  'btn-tv-close.png',
-      'btn-back':   'btn-back.png',
-      'btn-stop':   'btn-stop.png',
-      'btn-play':   'btn-play.png',
-      'btn-pause':  'btn-resume.png',
-      'btn-forward':'btn-foward.png',
-    };
-    for (const [id, file] of Object.entries(files)) {
-      const data = await window.electronAPI.readAssetBase64(file);
-      if (data) document.getElementById(id).src = data;
-    }
-  } else {
-    // Browser fallback
-    document.getElementById('skin').src = 'assets/tv2.png';
-    document.getElementById('btn-min').src = 'assets/btn-tv-minimize.png';
-    document.getElementById('btn-max').src = 'assets/btn-tv-fullscreen.png';
-    document.getElementById('btn-close').src = 'assets/btn-tv-close.png';
-    document.getElementById('btn-back').src = 'assets/btn-back.png';
-    document.getElementById('btn-stop').src = 'assets/btn-stop.png';
-    document.getElementById('btn-play').src = 'assets/btn-play.png';
-    document.getElementById('btn-pause').src = 'assets/btn-resume.png';
-    document.getElementById('btn-forward').src = 'assets/btn-foward.png';
+  const files = {
+    'skin':'tv2.png',
+    'btn-min':'btn-tv-minimize.png','btn-max':'btn-tv-fullscreen.png','btn-close':'btn-tv-close.png',
+    'btn-back':'btn-back.png','btn-stop':'btn-stop.png','btn-play':'btn-play.png',
+    'btn-pause':'btn-resume.png','btn-forward':'btn-foward.png',
+  };
+  for (const [id, file] of Object.entries(files)) {
+    let src;
+    if (window.electronAPI && window.electronAPI.readAssetBase64) src = await window.electronAPI.readAssetBase64(file);
+    if (!src) src = 'assets/' + file;
+    document.getElementById(id).src = src;
   }
 }
 loadAssets();
@@ -111,12 +99,11 @@ const CHANNELS=[
 ];
 let currentIdx=null;
 
-(function buildPlaylist(){
+(function(){
   const panel=document.getElementById('playlist-panel');
   CHANNELS.forEach((ch,i)=>{
-    const div=document.createElement('div');
-    div.className='pl-item';div.id='pl-'+i;
-    div.innerHTML=`<span style="color:#4a7aaa;width:18px;font-size:9px;">${String(i+1).padStart(2,'0')}</span><span style="flex:1;">${ch.name}</span>`;
+    const div=document.createElement('div');div.className='pl-item';div.id='pl-'+i;
+    div.innerHTML=`<span style="color:#4a7aaa;width:16px;font-size:9px;">${String(i+1).padStart(2,'0')}</span><span style="flex:1;">${ch.name}</span>`;
     div.ondblclick=()=>tuneChannel(i);
     div.onclick=()=>document.querySelectorAll('.pl-item').forEach((r,j)=>r.classList.toggle('active',j===i));
     panel.appendChild(div);
@@ -133,14 +120,9 @@ function tuneChannel(i){
   const wv=document.getElementById('tv-webview');
   wv.style.display='block';wv.src=ch.url;
 }
-function playSelected(){
-  const a=document.querySelector('.pl-item.active');
-  if(a)tuneChannel(parseInt(a.id.split('-')[1]));
-  else tuneChannel(0);
-}
+function playSelected(){const a=document.querySelector('.pl-item.active');tuneChannel(a?parseInt(a.id.split('-')[1]):0);}
 function stopTV(){
-  const wv=document.getElementById('tv-webview');
-  wv.style.display='none';wv.src='';
+  const wv=document.getElementById('tv-webview');wv.style.display='none';wv.src='';
   document.getElementById('no-signal').style.display='flex';
   document.getElementById('info-channel').textContent='—';
   document.getElementById('info-title').textContent='Stopped';
@@ -150,10 +132,10 @@ function skipBack(){tuneChannel(Math.max(0,(currentIdx||0)-1));}
 function skipNext(){tuneChannel(Math.min(CHANNELS.length-1,(currentIdx||0)+1));}
 function pauseTV(){const wv=document.getElementById('tv-webview');if(wv.src)wv.reload();}
 function setVol(v){}
-function tvToggleFullscreen(){if(window.electronAPI&&window.electronAPI.toggleTVFullscreen)window.electronAPI.toggleTVFullscreen();}
+function tvToggleFullscreen(){}
 window.addEventListener('load',()=>{
   const wv=document.getElementById('tv-webview');
-  wv.addEventListener('did-finish-load',()=>{try{wv.insertCSS('header,.site-header,nav{display:none!important;}body{padding-top:0!important;}')}catch(e){}});
+  wv.addEventListener('did-finish-load',()=>{try{wv.insertCSS('header,.site-header,nav,#navbar{display:none!important;}body{padding-top:0!important;}')}catch(e){}});
 });
 </script>
 </body>

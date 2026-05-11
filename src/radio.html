@@ -11,63 +11,68 @@ html,body{
   -webkit-app-region:drag;
   user-select:none;
 }
-#skin{position:absolute;top:0;left:0;width:850px;height:367px;pointer-events:none;}
+#skin{position:absolute;top:0;left:0;width:850px;height:367px;pointer-events:none;z-index:1;}
 input,button,canvas,select,.nodrag{-webkit-app-region:no-drag;user-select:text;}
 
 .skin-btn{
-  position:absolute;cursor:pointer;
+  position:absolute;cursor:pointer;z-index:3;
   -webkit-app-region:no-drag;
   background:transparent;border:none;padding:0;
   transition:filter 0.1s,transform 0.08s;
 }
-.skin-btn:hover{filter:brightness(1.25);transform:scale(1.08);}
+.skin-btn:hover{filter:brightness(1.3) drop-shadow(0 0 4px rgba(255,255,255,0.5));transform:scale(1.05);}
 .skin-btn:active{filter:brightness(0.8);transform:scale(0.95);}
 .skin-btn img{width:100%;height:100%;object-fit:contain;}
 
+/* LCD screen overlay */
 #lcd{
-  position:absolute;
-  top:27%;left:7%;width:63%;height:45%;
+  position:absolute;z-index:2;
+  top:27%;left:7%;width:62%;height:44%;
   display:flex;flex-direction:column;
   align-items:center;justify-content:center;
   pointer-events:none;
 }
 #freq-display{
-  font-size:42px;font-weight:bold;
+  font-size:38px;font-weight:bold;
   font-family:'Courier New',monospace;
   color:#81ff28;
   text-shadow:0 0 10px #81ff28,0 0 20px rgba(129,255,40,0.3);
   letter-spacing:2px;line-height:1;
 }
-#station-name{font-size:13px;color:#81ff28;font-family:Tahoma,Arial;text-shadow:0 0 8px rgba(129,255,40,0.5);margin-top:4px;}
+#station-name{font-size:13px;color:#81ff28;font-family:Tahoma;text-shadow:0 0 8px rgba(129,255,40,0.5);margin-top:4px;}
 #station-genre{font-size:10px;color:rgba(129,255,40,0.7);font-family:Tahoma;margin-top:2px;}
-#stereo-lbl{position:absolute;top:29%;left:8%;font-size:9px;color:#81ff28;font-family:'Courier New';pointer-events:none;}
-#rds-lbl{position:absolute;top:34%;left:8%;font-size:9px;color:#81ff28;font-family:'Courier New';pointer-events:none;}
-#signal-lbl{position:absolute;top:29%;right:30%;font-size:9px;color:#81ff28;font-family:'Courier New';pointer-events:none;}
-#signal-bars{position:absolute;top:33%;right:29%;display:flex;gap:2px;align-items:flex-end;pointer-events:none;}
+
+#stereo-lbl{position:absolute;z-index:2;top:28%;left:8%;font-size:9px;color:#81ff28;font-family:'Courier New';pointer-events:none;}
+#signal-bars{position:absolute;z-index:2;top:30%;right:31%;display:flex;gap:2px;align-items:flex-end;pointer-events:none;}
 .sig-bar{width:5px;background:#81ff28;box-shadow:0 0 4px #81ff28;}
-#tuner-canvas{position:absolute;top:64%;left:7%;width:63%;height:14%;pointer-events:none;}
-#status-bar{
-  position:absolute;top:80%;left:47%;width:32%;
-  display:flex;align-items:center;justify-content:center;gap:6px;
-  pointer-events:none;
-  font-size:11px;font-family:'Courier New';color:#81ff28;
-  text-shadow:0 0 6px #81ff28;
+
+#tuner-canvas{position:absolute;z-index:2;top:63%;left:7%;width:62%;height:13%;pointer-events:none;}
+
+/* Volume slider sits in the volume bar area */
+#vol-slider{
+  position:absolute;z-index:3;
+  top:84%;left:54%;width:23%;
+  accent-color:#81ff28;cursor:pointer;
+  -webkit-app-region:no-drag;
 }
-#vol-slider{position:absolute;top:84%;left:47%;width:28%;accent-color:#81ff28;cursor:pointer;-webkit-app-region:no-drag;}
-#presets-panel{position:absolute;top:27%;left:72%;width:25%;height:50%;-webkit-app-region:no-drag;overflow-y:auto;}
-.preset-row{display:flex;align-items:center;gap:4px;padding:3px 6px;cursor:pointer;font-size:10px;font-family:Tahoma;color:#92d9ff;border-bottom:1px solid rgba(72,136,255,0.1);}
+
+/* Presets panel over the right blue panel */
+#presets-panel{
+  position:absolute;z-index:2;
+  top:28%;left:72%;width:25%;height:52%;
+  -webkit-app-region:no-drag;
+  overflow-y:auto;
+}
+.preset-row{display:flex;align-items:center;gap:4px;padding:3px 4px;cursor:pointer;font-size:10px;font-family:Tahoma;color:#92d9ff;border-bottom:1px solid rgba(72,136,255,0.1);}
 .preset-row:hover{background:rgba(72,136,255,0.15);}
 .preset-row.active{color:#81ff28;background:rgba(0,60,0,0.3);}
 </style>
 </head>
 <body>
 
-<!-- Skin loaded via readAssetBase64 to preserve PNG alpha channel -->
 <img id="skin" src=""/>
 
-<div id="stereo-lbl">STEREO</div>
-<div id="rds-lbl">⟳ RDS</div>
-<div id="signal-lbl">SIGNAL</div>
+<div id="stereo-lbl">STEREO ● RDS</div>
 <div id="signal-bars">
   <div class="sig-bar" style="height:5px;"></div>
   <div class="sig-bar" style="height:8px;"></div>
@@ -79,7 +84,7 @@ input,button,canvas,select,.nodrag{-webkit-app-region:no-drag;user-select:text;}
 <div id="lcd">
   <div style="display:flex;align-items:flex-end;gap:4px;">
     <span id="freq-display">88.5</span>
-    <span style="font-size:18px;color:#81ff28;font-family:'Courier New';text-shadow:0 0 8px #81ff28;margin-bottom:4px;">FM</span>
+    <span style="font-size:16px;color:#81ff28;font-family:'Courier New';text-shadow:0 0 8px #81ff28;margin-bottom:4px;">FM</span>
   </div>
   <div id="station-name">Chill FM</div>
   <div id="station-genre">Easy Listening</div>
@@ -87,61 +92,35 @@ input,button,canvas,select,.nodrag{-webkit-app-region:no-drag;user-select:text;}
 
 <canvas id="tuner-canvas"></canvas>
 
-<div id="status-bar">
-  <span id="status-freq">88.5 FM</span>
-  <span>STEREO</span>
-  <span>📡</span>
-</div>
-
 <input type="range" id="vol-slider" min="0" max="100" value="80" oninput="setVol(this.value)"/>
-
 <div id="presets-panel"></div>
 
-<!-- Window controls -->
-<button class="skin-btn" style="top:12%;left:83%;width:4%;height:12%;" onclick="minimize()"><img id="btn-min" src=""/></button>
-<button class="skin-btn" style="top:12%;left:87%;width:4%;height:12%;" onclick="toggleMax()"><img id="btn-max" src=""/></button>
-<button class="skin-btn" style="top:12%;left:91%;width:4%;height:12%;" onclick="closeWin()"><img id="btn-close" src=""/></button>
+<!-- Window controls: 3 circles at x=82%,87%,92% y=18-27% -->
+<button class="skin-btn" style="top:16%;left:80%;width:5%;height:14%;" onclick="minimize()"><img id="btn-min" src=""/></button>
+<button class="skin-btn" style="top:16%;left:86%;width:5%;height:14%;" onclick="toggleMax()"><img id="btn-max" src=""/></button>
+<button class="skin-btn" style="top:16%;left:91%;width:5%;height:14%;" onclick="closeWin()"><img id="btn-close" src=""/></button>
 
-<!-- Transport buttons -->
-<button class="skin-btn" style="top:76%;left:14%;width:5%;height:13%;" onclick="radioSkipPrev()"><img id="btn-rew" src=""/></button>
-<button class="skin-btn" style="top:76%;left:20%;width:5%;height:13%;" onclick="radioStop()"><img id="btn-stop" src=""/></button>
-<button class="skin-btn" style="top:76%;left:26%;width:5%;height:13%;" onclick="togglePlay()"><img id="btn-play" src=""/></button>
-<button class="skin-btn" style="top:76%;left:32%;width:5%;height:13%;" onclick="togglePlay()"><img id="btn-pause" src=""/></button>
-<button class="skin-btn" style="top:76%;left:38%;width:5%;height:13%;" onclick="scanNext()"><img id="btn-scan" src=""/></button>
-<button class="skin-btn" style="top:76%;left:44%;width:5%;height:13%;" onclick="nextPreset()"><img id="btn-preset" src=""/></button>
+<!-- Transport buttons: 7 circles at y=78-93%, x centers ~22,29,36,43,50,57,64% -->
+<button class="skin-btn" style="top:76%;left:19%;width:7%;height:17%;" onclick="radioSkipPrev()"><img id="btn-rew" src=""/></button>
+<button class="skin-btn" style="top:76%;left:26%;width:7%;height:17%;" onclick="radioStop()"><img id="btn-stop" src=""/></button>
+<button class="skin-btn" style="top:76%;left:33%;width:7%;height:17%;" onclick="togglePlay()"><img id="btn-play" src=""/></button>
+<button class="skin-btn" style="top:76%;left:40%;width:7%;height:17%;" onclick="togglePlay()"><img id="btn-pause" src=""/></button>
+<button class="skin-btn" style="top:76%;left:47%;width:7%;height:17%;" onclick="scanNext()"><img id="btn-scan" src=""/></button>
+<button class="skin-btn" style="top:76%;left:54%;width:7%;height:17%;" onclick="nextPreset()"><img id="btn-preset" src=""/></button>
 
 <script>
-// ── Load all assets via readAssetBase64 to preserve PNG transparency ──
 async function loadAssets() {
-  if (window.electronAPI && window.electronAPI.readAssetBase64) {
-    const files = {
-      'skin':       'radio2.png',
-      'btn-min':    'btn-minimize.png',
-      'btn-max':    'btn-fullscreen.png',
-      'btn-close':  'btn-close.png',
-      'btn-rew':    'radio-btn-rew.png',
-      'btn-stop':   'radio-btn-stop.png',
-      'btn-play':   'radio-btn-play.png',
-      'btn-pause':  'radio-btn-pause.png',
-      'btn-scan':   'radio-btn-scan.png',
-      'btn-preset': 'radio-btn-preset.png',
-    };
-    for (const [id, file] of Object.entries(files)) {
-      const data = await window.electronAPI.readAssetBase64(file);
-      if (data) document.getElementById(id).src = data;
-    }
-  } else {
-    // Browser fallback
-    document.getElementById('skin').src = 'assets/radio2.png';
-    document.getElementById('btn-min').src = 'assets/btn-minimize.png';
-    document.getElementById('btn-max').src = 'assets/btn-fullscreen.png';
-    document.getElementById('btn-close').src = 'assets/btn-close.png';
-    document.getElementById('btn-rew').src = 'assets/radio-btn-rew.png';
-    document.getElementById('btn-stop').src = 'assets/radio-btn-stop.png';
-    document.getElementById('btn-play').src = 'assets/radio-btn-play.png';
-    document.getElementById('btn-pause').src = 'assets/radio-btn-pause.png';
-    document.getElementById('btn-scan').src = 'assets/radio-btn-scan.png';
-    document.getElementById('btn-preset').src = 'assets/radio-btn-preset.png';
+  const files = {
+    'skin':'radio2.png',
+    'btn-min':'btn-minimize.png','btn-max':'btn-fullscreen.png','btn-close':'btn-close.png',
+    'btn-rew':'radio-btn-rew.png','btn-stop':'radio-btn-stop.png','btn-play':'radio-btn-play.png',
+    'btn-pause':'radio-btn-pause.png','btn-scan':'radio-btn-scan.png','btn-preset':'radio-btn-preset.png',
+  };
+  for (const [id, file] of Object.entries(files)) {
+    let src;
+    if (window.electronAPI && window.electronAPI.readAssetBase64) src = await window.electronAPI.readAssetBase64(file);
+    if (!src) src = 'assets/' + file;
+    document.getElementById(id).src = src;
   }
 }
 loadAssets();
@@ -154,41 +133,32 @@ const PRESETS=[
   {num:'05',freq:'101.7',name:'Future FM',genre:'Electronic',url:'https://stream.zeno.fm/yn65dy4vhs8uv'},
   {num:'06',freq:'104.9',name:'Analog Dreams',genre:'Indie',url:'https://stream.zeno.fm/0r0xa792kwzuv'},
 ];
-
-let audio=null, playing=false, currentPreset=null, tunerPos=0.15;
+let audio=null,playing=false,currentPreset=null,tunerPos=0.15;
 
 (function(){
   const list=document.getElementById('presets-panel');
   PRESETS.forEach((p,i)=>{
     const row=document.createElement('div');
     row.className='preset-row';row.id='pr-'+i;
-    row.innerHTML=`<span style="color:#4a7aaa;width:16px;font-size:9px;">${p.num}</span><span style="width:32px;font-size:9px;">${p.freq}</span><span style="flex:1;">${p.name}</span>`;
+    row.innerHTML=`<span style="color:#4a7aaa;width:16px;font-size:9px;">${p.num}</span><span style="width:28px;font-size:9px;">${p.freq}</span><span style="flex:1;">${p.name}</span>`;
     row.onclick=()=>tunePreset(i);
     list.appendChild(row);
   });
 })();
 
 function tunePreset(i){
-  const p=PRESETS[i]; currentPreset=i;
+  const p=PRESETS[i];currentPreset=i;
   document.querySelectorAll('.preset-row').forEach((r,j)=>r.classList.toggle('active',j===i));
   document.getElementById('freq-display').textContent=p.freq;
   document.getElementById('station-name').textContent=p.name;
   document.getElementById('station-genre').textContent=p.genre;
-  document.getElementById('status-freq').textContent=p.freq+' FM';
-  tunerPos=i/(PRESETS.length-1)*0.85+0.05;
-  drawTuner();
+  tunerPos=i/(PRESETS.length-1)*0.85+0.05; drawTuner();
   if(audio){audio.pause();audio.src='';}
-  audio=new Audio(p.url);
-  audio.crossOrigin='anonymous';
+  audio=new Audio(p.url); audio.crossOrigin='anonymous';
   audio.volume=document.getElementById('vol-slider').value/100;
-  audio.play().then(()=>{playing=true;animateBars();}).catch(e=>console.log('Stream error:',e));
+  audio.play().then(()=>{playing=true;animateBars();}).catch(e=>console.log('Stream:',e));
 }
-
-function togglePlay(){
-  if(!audio&&PRESETS.length){tunePreset(0);return;}
-  if(playing){audio.pause();playing=false;}
-  else{audio.play().then(()=>{playing=true;animateBars();}).catch(()=>{});}
-}
+function togglePlay(){if(!audio&&PRESETS.length){tunePreset(0);return;}if(playing){audio.pause();playing=false;}else{audio.play().then(()=>{playing=true;animateBars();}).catch(()=>{});}}
 function radioStop(){if(audio){audio.pause();audio.currentTime=0;playing=false;}}
 function radioSkipPrev(){tunePreset(Math.max(0,(currentPreset||0)-1));}
 function scanNext(){tunePreset(((currentPreset||0)+1)%PRESETS.length);}
@@ -197,32 +167,24 @@ function setVol(v){if(audio)audio.volume=v/100;}
 function minimize(){if(window.electronAPI)window.electronAPI.minimizeRadio();}
 function toggleMax(){}
 function closeWin(){if(window.electronAPI)window.electronAPI.closeRadio();else window.close();}
-
-function animateBars(){
-  if(!playing)return;
-  document.querySelectorAll('.sig-bar').forEach(b=>{b.style.height=(4+Math.random()*12)+'px';});
-  setTimeout(animateBars,200);
-}
+function animateBars(){if(!playing)return;document.querySelectorAll('.sig-bar').forEach(b=>{b.style.height=(4+Math.random()*12)+'px';});setTimeout(animateBars,200);}
 
 function drawTuner(){
   const c=document.getElementById('tuner-canvas');
-  const w=c.offsetWidth||580,h=c.offsetHeight||55;
+  const w=c.offsetWidth||527,h=c.offsetHeight||48;
   c.width=w;c.height=h;
   const ctx=c.getContext('2d');
   ctx.clearRect(0,0,w,h);
   const freqs=[88,90,92,94,96,98,100,102,104,106,108];
-  ctx.fillStyle='#81ff28';ctx.font='9px Courier New';ctx.textAlign='center';
+  ctx.fillStyle='#81ff28';ctx.font='8px Courier New';ctx.textAlign='center';
   freqs.forEach((f,i)=>{
     const x=(i/(freqs.length-1))*w;
-    ctx.fillText(f,x,12);
-    ctx.fillRect(x-0.5,16,1,7);
-    if(i<freqs.length-1){for(let m=1;m<5;m++){const mx=x+(m/5)*(w/(freqs.length-1));ctx.fillRect(mx-0.5,19,1,4);}}
+    ctx.fillText(f,x,10); ctx.fillRect(x-0.5,13,1,6);
+    if(i<freqs.length-1){for(let m=1;m<5;m++){const mx=x+(m/5)*(w/(freqs.length-1));ctx.fillRect(mx-0.5,16,1,3);}}
   });
-  ctx.fillText('FM',w-8,12);
   const nx=tunerPos*w;
   ctx.strokeStyle='#81ff28';ctx.lineWidth=2;ctx.shadowColor='#81ff28';ctx.shadowBlur=8;
-  ctx.beginPath();ctx.moveTo(nx,16);ctx.lineTo(nx,h);ctx.stroke();
-  ctx.shadowBlur=0;
+  ctx.beginPath();ctx.moveTo(nx,13);ctx.lineTo(nx,h);ctx.stroke();ctx.shadowBlur=0;
 }
 drawTuner();
 window.addEventListener('resize',drawTuner);
