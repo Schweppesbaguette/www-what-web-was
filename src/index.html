@@ -1434,13 +1434,13 @@ window.addEventListener('load',()=>{
         const cl=document.getElementById('conn-logo-img');if(cl)cl.src=A.WWWLOGO||'';
         playDialup();
       },300);
-      const steps=[[200,'Dialing...',3,'Picking up the line...'],[1200,'Connecting...',18,'Carrier detected!'],[2400,'Handshaking...',38,'Negotiating 56Kbps...'],[3600,'Authenticating...',58,'Sending credentials...'],[4800,'Loading...',78,'Building your world...'],[6200,'Connected!',100,'Welcome to What Web Was!']];
+      const steps=[[200,'Dialing...',2,'Picking up the line...'],[1100,'Dialing...',7,'Listening for carrier...'],[2100,'Connecting...',14,'Carrier detected!'],[3100,'Handshaking...',24,'Negotiating 56Kbps...'],[4100,'Handshaking...',32,'Trading secrets with the modem...'],[5100,'Authenticating...',42,'Sending credentials...'],[6100,'Authenticating...',52,'Configuring TCP/IP stack...'],[7100,'Loading...',64,'Cleaning the dust off old bookmarks...'],[8100,'Loading...',76,'Defragging your past...'],[9100,'Loading...',88,'Synchronizing buddy list...'],[10100,'Connected!',100,'Welcome to What Web Was!']];
       steps.forEach(([d,s,p,det])=>setTimeout(()=>{
         const c=document.getElementById('conn-status-txt');if(c)c.textContent=s;
         const b=document.getElementById('conn-bar');if(b)b.style.width=p+'%';
         const e=document.getElementById('conn-detail');if(e)e.textContent=det;
       },d));
-      setTimeout(bootDesktop,7000);
+      setTimeout(bootDesktop,10500);
     } else {
       setTimeout(bootDesktop,500);
     }
@@ -3917,50 +3917,10 @@ setInterval(()=>{if(gmailToken)fetchGmailMessages(true);},60000);
 'use strict';
 console.log('WWW May 11 Patch loading...');
 
-// ─── FIX 3 (sync half): Boot fires when dialup audio ends ───────────
-let _bootFired = false;
-function _wrapBoot(){
-  if(typeof window.bootDesktop !== 'function' || window.bootDesktop._wwwWrapped) return;
-  const _origBoot = window.bootDesktop;
-  window.bootDesktop = function(){
-    if(_bootFired) return;
-    _bootFired = true;
-    _origBoot.apply(this, arguments);
-  };
-  window.bootDesktop._wwwWrapped = true;
-}
-_wrapBoot();
-// In case bootDesktop is defined after this script runs, retry once DOM ready
-if(document.readyState === 'loading'){
-  document.addEventListener('DOMContentLoaded', _wrapBoot);
-}
-
-// Watch for the connecting screen showing, then bind audio.ended → boot.
-const _bootObserver = new MutationObserver(()=>{
-  const cs = document.getElementById('conn-screen');
-  if(cs && cs.style.display === 'flex' && window._currentDialupAudio && !window._currentDialupAudio._wwwBound){
-    window._currentDialupAudio._wwwBound = true;
-    _wrapBoot(); // make sure boot is wrapped before we trigger it
-    window._currentDialupAudio.addEventListener('ended', ()=>{
-      console.log('WWW: dialup audio ended → booting desktop');
-      if(typeof window.bootDesktop === 'function') window.bootDesktop();
-    });
-    // Safety: if audio errors out or never fires 'ended', boot at 9.5s
-    setTimeout(()=>{
-      if(!_bootFired){
-        console.log('WWW: dialup safety timeout (9.5s) → booting');
-        if(typeof window.bootDesktop === 'function') window.bootDesktop();
-      }
-    }, 9500);
-  }
-});
-if(document.body){
-  _bootObserver.observe(document.body, {attributes:true, subtree:true, attributeFilter:['style']});
-} else {
-  document.addEventListener('DOMContentLoaded', ()=>{
-    _bootObserver.observe(document.body, {attributes:true, subtree:true, attributeFilter:['style']});
-  });
-}
+// Round 3: Round 1's audio-sync boot also disabled — see Round 3 patch.
+// Loading screen timing is now controlled entirely by the steps array
+// in the load handler. No audio-end → boot binding.
+console.log('WWW R3: Round 1 audio-sync also disabled');
 
 // ─── FIX 4: Desktop-only video ──────────────────────────────────────
 function isMobileDevice(){
@@ -4671,42 +4631,10 @@ function _runExtraSteps(then){
   tick();
 }
 
-// Replace the previous boot-on-audio-end logic with extended version
-let _bootFired = false;
-const _origBootDesktop = window.bootDesktop;
-if(typeof _origBootDesktop === 'function' && !window.bootDesktop._wwwR2Wrapped){
-  window.bootDesktop = function(){
-    if(_bootFired) return;
-    _bootFired = true;
-    _origBootDesktop.apply(this, arguments);
-  };
-  window.bootDesktop._wwwR2Wrapped = true;
-}
-
-// Watch conn-screen; when dialup audio ends, run extra steps THEN boot.
-const _bootObserver2 = new MutationObserver(()=>{
-  const cs = document.getElementById('conn-screen');
-  if(cs && cs.style.display === 'flex' && window._currentDialupAudio && !window._currentDialupAudio._wwwR2Bound){
-    window._currentDialupAudio._wwwR2Bound = true;
-    window._currentDialupAudio.addEventListener('ended', ()=>{
-      console.log('WWW: dialup ended → running extra loading steps');
-      _runExtraSteps(()=>{
-        console.log('WWW: extra steps done → booting');
-        if(typeof window.bootDesktop === 'function') window.bootDesktop();
-      });
-    });
-    // Safety: hard timeout at 14s (9.5s audio + 3.5s steps + 1s buffer)
-    setTimeout(()=>{
-      if(!_bootFired){
-        console.log('WWW: dialup R2 safety timeout (14s) → booting');
-        if(typeof window.bootDesktop === 'function') window.bootDesktop();
-      }
-    }, 14000);
-  }
-});
-if(document.body){
-  _bootObserver2.observe(document.body, {attributes:true, subtree:true, attributeFilter:['style']});
-}
+// Round 3: Round 2's audio-sync boot was disabled. Loading is now driven
+// by the deterministic step array in the load handler (10.5s total).
+// Keeping this block here as a stub for safety.
+console.log('WWW R3: extended loading runs via steps array, audio-sync disabled');
 
 // ─── Weather widget on homepage ─────────────────────────────────────
 // Hook loadHomepage to inject a small weather card in the right column.

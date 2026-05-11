@@ -10,11 +10,13 @@ html, body {
   overflow: hidden;
   user-select: none;
 }
-/* Fixed-size stage centered in viewport — percentages resolve against this */
+/* Fixed stage at native PNG size, scaled to fit window */
 #stage {
-  position: relative;
+  position: absolute;
   width: 1236px; height: 980px;
-  margin: 0 auto;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(0.8);
+  transform-origin: center center;
   -webkit-app-region: drag;
 }
 #skin {
@@ -30,20 +32,19 @@ input, button, label, canvas, .nodrag {
   z-index: 2;
 }
 .field {
-  padding: 8px 14px;
+  padding: 10px 14px;
   background: rgba(2, 10, 52, 0.75);
   border: 1px solid rgba(70, 120, 230, 0.4);
   border-radius: 5px;
   color: white;
-  font-size: 14px;
+  font-size: 16px;
   font-family: Tahoma, Arial, sans-serif;
   outline: none;
-  width: 36%;
 }
 .field:focus { border-color: #92d9ff; background: rgba(2,10,72,0.85); }
 .btn {
-  cursor: pointer; border-radius: 20px;
-  font-size: 13px; font-weight: bold;
+  cursor: pointer; border-radius: 25px;
+  font-size: 14px; font-weight: bold;
   font-family: Tahoma, Arial, sans-serif;
   color: white; border: 2px solid;
   transition: filter 0.1s;
@@ -53,29 +54,30 @@ input, button, label, canvas, .nodrag {
 .mascot-cell {
   position: absolute;
   cursor: pointer;
-  border-radius: 10px;
-  overflow: hidden;
+  border-radius: 8px;
   z-index: 2;
   -webkit-app-region: no-drag;
-  transition: box-shadow 0.12s, transform 0.12s;
+  transition: box-shadow 0.12s;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
-.mascot-cell:hover { box-shadow: 0 0 12px rgba(129,255,40,0.5); }
+.mascot-cell:hover { box-shadow: 0 0 10px rgba(129,255,40,0.5); }
 .mascot-cell.sel {
-  box-shadow: 0 0 18px rgba(129,255,40,1), inset 0 0 0 3px #81ff28;
+  box-shadow: 0 0 14px rgba(129,255,40,1), inset 0 0 0 3px #81ff28;
 }
 .mascot-cell img {
-  max-width: 90%; max-height: 95%;
-  object-fit: contain; object-position: bottom;
+  width: 100%; height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
   display: block;
 }
-/* Oscilloscope clipped to round chrome bezel */
+/* Oscilloscope clipped circle */
 #osc-wrap {
   position: absolute;
-  top: 778px; left: 1015px;
-  width: 170px; height: 170px;
+  top: 780px; left: 1040px;
+  width: 140px; height: 145px;
   border-radius: 50%;
   overflow: hidden;
   z-index: 2;
@@ -93,48 +95,63 @@ input, button, label, canvas, .nodrag {
 <div id="stage">
 <img id="skin" src=""/>
 
-<!-- Screen Name — top-left panel, ~y=472, x=128, width=440 -->
+<!-- Screen Name input — left panel, top -->
 <input id="s-name" class="field" type="text" placeholder="Screen Name"
-  style="top:472px; left:128px; width:440px;"/>
+  style="top:445px; left:175px; width:430px;"/>
 
-<!-- Password — y=552 -->
+<!-- Password -->
 <input id="s-pass" class="field" type="password" placeholder="Password"
-  style="top:552px; left:128px; width:440px;"
+  style="top:520px; left:175px; width:430px;"
   onkeydown="if(event.key==='Enter')doSignOn()"/>
 
-<!-- Remember row — y=624 -->
-<div class="nodrag" style="top:624px; left:128px; width:440px; display:flex; align-items:center; gap:8px; font-family:Tahoma;">
-  <input type="checkbox" id="s-remember" checked style="accent-color:#4888e8; width:14px; height:14px; -webkit-app-region:no-drag; flex-shrink:0; position:static;"/>
-  <label for="s-remember" style="color:#92d9ff; font-size:11px; cursor:pointer; position:static;">Remember my password</label>
-  <span style="color:#4888e8; font-size:10px; margin-left:auto; cursor:pointer;">Forgot?</span>
+<!-- Remember row -->
+<div class="nodrag" style="top:595px; left:175px; width:430px; display:flex; align-items:center; gap:8px; font-family:Tahoma;">
+  <input type="checkbox" id="s-remember" checked
+    style="accent-color:#4888e8; width:16px; height:16px; -webkit-app-region:no-drag; flex-shrink:0; position:static;"/>
+  <label for="s-remember"
+    style="color:#92d9ff; font-size:13px; cursor:pointer; position:static;">Remember my password</label>
+  <span style="color:#4888e8; font-size:12px; margin-left:auto; cursor:pointer;">Forgot?</span>
 </div>
 
-<!-- Status — y=668 -->
-<div id="status" style="top:668px; left:128px; width:440px; color:#81ff28; font-size:11px; font-family:Tahoma; font-weight:bold; text-align:center;"></div>
+<!-- Status -->
+<div id="status" style="top:645px; left:175px; width:430px;
+  color:#81ff28; font-size:12px; font-family:Tahoma; font-weight:bold; text-align:center;"></div>
 
-<!-- Switch User — y=720 -->
+<!-- Switch User -->
 <button class="btn" onclick="switchUser()"
-  style="top:720px; left:128px; width:190px; padding:10px 4px;
+  style="top:695px; left:175px; width:175px; padding:11px 4px;
   background:linear-gradient(180deg,#1e3f78,#0c1e4a);
   border-color:rgba(100,150,255,0.6);">Switch User</button>
 
-<!-- Sign On — y=720 -->
+<!-- Sign On -->
 <button class="btn" onclick="doSignOn()"
-  style="top:720px; left:340px; width:225px; padding:10px 4px;
+  style="top:695px; left:370px; width:235px; padding:11px 4px;
   background:linear-gradient(180deg,#3a78e8,#1438c0);
   border-color:rgba(146,217,255,0.6);">▶ Sign On</button>
 
-<!-- Mascot cells — pixel-aligned to chrome PNG slots -->
-<!-- Row 1: y=448, h=170 / x=663,816,969 each w=145 -->
-<div class="mascot-cell sel" data-key="PUNK"   style="top:448px; left:663px; width:145px; height:170px;" onclick="selectMascot(this)"><img id="img-PUNK"   alt="PUNK"/></div>
-<div class="mascot-cell"     data-key="HH"     style="top:448px; left:816px; width:145px; height:170px;" onclick="selectMascot(this)"><img id="img-HH"     alt="HH"/></div>
-<div class="mascot-cell"     data-key="HIPPIE" style="top:448px; left:969px; width:145px; height:170px;" onclick="selectMascot(this)"><img id="img-HIPPIE" alt="HIPPIE"/></div>
-<!-- Row 2: y=635 -->
-<div class="mascot-cell"     data-key="RASTA"  style="top:635px; left:663px; width:145px; height:170px;" onclick="selectMascot(this)"><img id="img-RASTA"  alt="RASTA"/></div>
-<div class="mascot-cell"     data-key="TECHNO" style="top:635px; left:816px; width:145px; height:170px;" onclick="selectMascot(this)"><img id="img-TECHNO" alt="TECHNO"/></div>
-<div class="mascot-cell"     data-key="NERD"   style="top:635px; left:969px; width:145px; height:170px;" onclick="selectMascot(this)"><img id="img-NERD"   alt="NERD"/></div>
+<!-- Mascot cells — PIXEL-MEASURED from login_empty.png -->
+<!-- Row 1: top=401, height=126 -->
+<div class="mascot-cell sel" data-key="PUNK"
+  style="top:401px; left:767px; width:113px; height:126px;"
+  onclick="selectMascot(this)"><img id="img-PUNK" alt="PUNK"/></div>
+<div class="mascot-cell" data-key="HH"
+  style="top:401px; left:896px; width:113px; height:126px;"
+  onclick="selectMascot(this)"><img id="img-HH" alt="HH"/></div>
+<div class="mascot-cell" data-key="HIPPIE"
+  style="top:401px; left:1024px; width:112px; height:126px;"
+  onclick="selectMascot(this)"><img id="img-HIPPIE" alt="HIPPIE"/></div>
+<!-- Row 2: top=540, height=145 -->
+<div class="mascot-cell" data-key="RASTA"
+  style="top:540px; left:767px; width:113px; height:145px;"
+  onclick="selectMascot(this)"><img id="img-RASTA" alt="RASTA"/></div>
+<div class="mascot-cell" data-key="TECHNO"
+  style="top:540px; left:896px; width:113px; height:145px;"
+  onclick="selectMascot(this)"><img id="img-TECHNO" alt="TECHNO"/></div>
+<div class="mascot-cell" data-key="NERD"
+  style="top:540px; left:1024px; width:112px; height:145px;"
+  onclick="selectMascot(this)"><img id="img-NERD" alt="NERD"/></div>
 
-<!-- Oscilloscope — clipped circle inside the chrome bezel -->
+<!-- Oscilloscope clipped to chrome bezel circle -->
 <div id="osc-wrap"><canvas id="osc"></canvas></div>
 
 <audio id="dialup-snd" preload="auto"></audio>
@@ -182,7 +199,6 @@ async function loadAssets() {
 }
 loadAssets();
 
-// Set initial mascot selection
 document.getElementById('s-name').value = CFG.screenName || '';
 try { const p = localStorage.getItem('www_pass'); if(p) document.getElementById('s-pass').value = atob(p); } catch(e){}
 document.querySelectorAll('.mascot-cell').forEach(c => c.classList.toggle('sel', c.dataset.key === myMascot));
@@ -208,7 +224,6 @@ function doSignOn() {
   try { localStorage.setItem('www_cfg', JSON.stringify(CFG)); } catch(e){}
   status.textContent = 'Signing on...';
   status.style.color = '#81ff28';
-  // NO dialup here — dialup plays on the loading screen in index.html
   setTimeout(() => {
     if (window.electronAPI) window.electronAPI.signonComplete();
     else window.location.href = 'index.html';
@@ -220,13 +235,12 @@ function switchUser() {
   window.location.reload();
 }
 
-// Oscilloscope
+// Oscilloscope animation, clipped to the round bezel
 (function() {
   const canvas = document.getElementById('osc');
   function resize() {
-    const w = canvas.offsetWidth || 170;
-    const h = canvas.offsetHeight || 170;
-    canvas.width = w; canvas.height = h;
+    canvas.width = canvas.offsetWidth || 140;
+    canvas.height = canvas.offsetHeight || 145;
   }
   resize();
   const ctx = canvas.getContext('2d');
@@ -234,19 +248,19 @@ function switchUser() {
   function draw() {
     const cw = canvas.width, ch = canvas.height;
     ctx.clearRect(0,0,cw,ch);
-    ctx.fillStyle = 'rgba(0,8,30,0.7)';
-    ctx.fillRect(0,0,cw,ch);
-    ctx.strokeStyle = 'rgba(0,80,160,0.25)'; ctx.lineWidth = 0.5;
-    for(let y=ch/5;y<ch;y+=ch/5){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(cw,y);ctx.stroke();}
-    ctx.strokeStyle = '#81ff28'; ctx.lineWidth = 1.5;
-    ctx.shadowColor = '#81ff28'; ctx.shadowBlur = 6;
+    // Don't draw background — let chrome PNG show through
+    ctx.strokeStyle = '#81ff28';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#81ff28';
+    ctx.shadowBlur = 8;
     ctx.beginPath();
     for(let x=0;x<cw;x++){
-      const y = ch/2 + Math.sin((x/cw)*Math.PI*5+phase)*ch*0.2 + Math.sin((x/cw)*Math.PI*9+phase*1.3)*ch*0.08;
+      const y = ch/2 + Math.sin((x/cw)*Math.PI*4+phase)*ch*0.22 + Math.sin((x/cw)*Math.PI*8+phase*1.3)*ch*0.07;
       x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
     }
-    ctx.stroke(); ctx.shadowBlur=0;
-    phase += 0.07;
+    ctx.stroke();
+    ctx.shadowBlur=0;
+    phase += 0.08;
     requestAnimationFrame(draw);
   }
   draw();
