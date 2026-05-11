@@ -11,61 +11,91 @@ html,body{
   -webkit-app-region:drag;
   user-select:none;
 }
-#skin{position:absolute;top:0;left:0;width:850px;height:367px;pointer-events:none;z-index:1;}
-input,button,canvas,select,.nodrag{-webkit-app-region:no-drag;user-select:text;}
+#skin{
+  position:absolute;top:0;left:0;
+  width:850px;height:367px;
+  pointer-events:none;z-index:1;
+}
+input,button,canvas,select,.nodrag{
+  -webkit-app-region:no-drag;
+  user-select:text;
+}
 
 .skin-btn{
   position:absolute;cursor:pointer;z-index:3;
   -webkit-app-region:no-drag;
   background:transparent;border:none;padding:0;
+  border-radius:50%;
   transition:filter 0.1s,transform 0.08s;
 }
-.skin-btn:hover{filter:brightness(1.3) drop-shadow(0 0 4px rgba(255,255,255,0.5));transform:scale(1.05);}
-.skin-btn:active{filter:brightness(0.8);transform:scale(0.95);}
+.skin-btn:hover{filter:brightness(1.6) drop-shadow(0 0 6px rgba(255,255,255,0.7));transform:scale(1.08);}
+.skin-btn:active{filter:brightness(0.7);transform:scale(0.92);}
 .skin-btn img{width:100%;height:100%;object-fit:contain;}
 
-/* LCD screen overlay */
+/* LCD frequency display — center of the radio */
 #lcd{
   position:absolute;z-index:2;
-  top:27%;left:7%;width:62%;height:44%;
+  top:100px;left:80px;width:540px;height:160px;
   display:flex;flex-direction:column;
   align-items:center;justify-content:center;
   pointer-events:none;
 }
 #freq-display{
-  font-size:38px;font-weight:bold;
+  font-size:48px;font-weight:bold;
   font-family:'Courier New',monospace;
   color:#81ff28;
-  text-shadow:0 0 10px #81ff28,0 0 20px rgba(129,255,40,0.3);
-  letter-spacing:2px;line-height:1;
+  text-shadow:0 0 12px #81ff28,0 0 24px rgba(129,255,40,0.4);
+  letter-spacing:3px;line-height:1;
 }
-#station-name{font-size:13px;color:#81ff28;font-family:Tahoma;text-shadow:0 0 8px rgba(129,255,40,0.5);margin-top:4px;}
-#station-genre{font-size:10px;color:rgba(129,255,40,0.7);font-family:Tahoma;margin-top:2px;}
+#station-name{font-size:16px;color:#81ff28;font-family:Tahoma;text-shadow:0 0 8px rgba(129,255,40,0.5);margin-top:6px;}
+#station-genre{font-size:11px;color:rgba(129,255,40,0.7);font-family:Tahoma;margin-top:3px;}
 
-#stereo-lbl{position:absolute;z-index:2;top:28%;left:8%;font-size:9px;color:#81ff28;font-family:'Courier New';pointer-events:none;}
-#signal-bars{position:absolute;z-index:2;top:30%;right:31%;display:flex;gap:2px;align-items:flex-end;pointer-events:none;}
+#stereo-lbl{position:absolute;z-index:2;top:118px;left:92px;font-size:10px;color:#81ff28;font-family:'Courier New';pointer-events:none;}
+#signal-bars{
+  position:absolute;z-index:2;
+  top:118px;right:235px;
+  display:flex;gap:2px;align-items:flex-end;
+  pointer-events:none;
+}
 .sig-bar{width:5px;background:#81ff28;box-shadow:0 0 4px #81ff28;}
 
-#tuner-canvas{position:absolute;z-index:2;top:63%;left:7%;width:62%;height:13%;pointer-events:none;}
+#tuner-canvas{
+  position:absolute;z-index:2;
+  top:215px;left:80px;width:540px;height:50px;
+  pointer-events:none;
+}
 
-/* Volume slider sits in the volume bar area */
+/* Volume slider — in the bottom bar between buttons and right edge */
 #vol-slider{
   position:absolute;z-index:3;
-  top:84%;left:54%;width:23%;
+  top:325px;left:480px;width:170px;
   accent-color:#81ff28;cursor:pointer;
   -webkit-app-region:no-drag;
 }
 
-/* Presets panel over the right blue panel */
+/* Presets panel — top right */
 #presets-panel{
   position:absolute;z-index:2;
-  top:28%;left:72%;width:25%;height:52%;
+  top:108px;left:645px;width:185px;height:160px;
   -webkit-app-region:no-drag;
   overflow-y:auto;
 }
-.preset-row{display:flex;align-items:center;gap:4px;padding:3px 4px;cursor:pointer;font-size:10px;font-family:Tahoma;color:#92d9ff;border-bottom:1px solid rgba(72,136,255,0.1);}
+.preset-row{display:flex;align-items:center;gap:4px;padding:3px 5px;cursor:pointer;font-size:10px;font-family:Tahoma;color:#92d9ff;border-bottom:1px solid rgba(72,136,255,0.1);}
 .preset-row:hover{background:rgba(72,136,255,0.15);}
 .preset-row.active{color:#81ff28;background:rgba(0,60,0,0.3);}
+
+/* Small unobtrusive close button top right (chrome has no controls baked in) */
+#win-close{
+  position:absolute;top:8px;right:12px;
+  width:22px;height:22px;
+  background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.3);
+  border-radius:50%;
+  color:#fff;font-size:11px;line-height:18px;text-align:center;
+  cursor:pointer;z-index:10;
+  -webkit-app-region:no-drag;
+  font-family:Tahoma;
+}
+#win-close:hover{background:rgba(255,80,80,0.6);}
 </style>
 </head>
 <body>
@@ -82,9 +112,9 @@ input,button,canvas,select,.nodrag{-webkit-app-region:no-drag;user-select:text;}
 </div>
 
 <div id="lcd">
-  <div style="display:flex;align-items:flex-end;gap:4px;">
+  <div style="display:flex;align-items:flex-end;gap:6px;">
     <span id="freq-display">88.5</span>
-    <span style="font-size:16px;color:#81ff28;font-family:'Courier New';text-shadow:0 0 8px #81ff28;margin-bottom:4px;">FM</span>
+    <span style="font-size:20px;color:#81ff28;font-family:'Courier New';text-shadow:0 0 8px #81ff28;margin-bottom:6px;">FM</span>
   </div>
   <div id="station-name">Chill FM</div>
   <div id="station-genre">Easy Listening</div>
@@ -95,27 +125,20 @@ input,button,canvas,select,.nodrag{-webkit-app-region:no-drag;user-select:text;}
 <input type="range" id="vol-slider" min="0" max="100" value="80" oninput="setVol(this.value)"/>
 <div id="presets-panel"></div>
 
-<!-- Window controls: 3 circles at x=82%,87%,92% y=18-27% -->
-<button class="skin-btn" style="top:16%;left:80%;width:5%;height:14%;" onclick="minimize()"><img id="btn-min" src=""/></button>
-<button class="skin-btn" style="top:16%;left:86%;width:5%;height:14%;" onclick="toggleMax()"><img id="btn-max" src=""/></button>
-<button class="skin-btn" style="top:16%;left:91%;width:5%;height:14%;" onclick="closeWin()"><img id="btn-close" src=""/></button>
+<button id="win-close" onclick="closeWin()" title="Close">✕</button>
 
-<!-- Transport buttons: 7 circles at y=78-93%, x centers ~22,29,36,43,50,57,64% -->
-<button class="skin-btn" style="top:76%;left:19%;width:7%;height:17%;" onclick="radioSkipPrev()"><img id="btn-rew" src=""/></button>
-<button class="skin-btn" style="top:76%;left:26%;width:7%;height:17%;" onclick="radioStop()"><img id="btn-stop" src=""/></button>
-<button class="skin-btn" style="top:76%;left:33%;width:7%;height:17%;" onclick="togglePlay()"><img id="btn-play" src=""/></button>
-<button class="skin-btn" style="top:76%;left:40%;width:7%;height:17%;" onclick="togglePlay()"><img id="btn-pause" src=""/></button>
-<button class="skin-btn" style="top:76%;left:47%;width:7%;height:17%;" onclick="scanNext()"><img id="btn-scan" src=""/></button>
-<button class="skin-btn" style="top:76%;left:54%;width:7%;height:17%;" onclick="nextPreset()"><img id="btn-preset" src=""/></button>
+<!-- 6 transport buttons — PIXEL-PERFECT to chrome circles -->
+<!-- Centers: x=147,195,245,293,339,390  y=299-339 (40 wide × 40 tall) -->
+<button class="skin-btn" style="left:127px;top:299px;width:40px;height:40px;" onclick="radioSkipPrev()" title="Previous"></button>
+<button class="skin-btn" style="left:175px;top:299px;width:40px;height:40px;" onclick="radioStop()" title="Stop"></button>
+<button class="skin-btn" style="left:225px;top:299px;width:40px;height:40px;" onclick="togglePlay()" title="Play"></button>
+<button class="skin-btn" style="left:273px;top:299px;width:40px;height:40px;" onclick="togglePlay()" title="Pause"></button>
+<button class="skin-btn" style="left:319px;top:299px;width:40px;height:40px;" onclick="scanNext()" title="Scan"></button>
+<button class="skin-btn" style="left:370px;top:299px;width:40px;height:40px;" onclick="nextPreset()" title="Preset"></button>
 
 <script>
 async function loadAssets() {
-  const files = {
-    'skin':'radio2.png',
-    'btn-min':'btn-minimize.png','btn-max':'btn-fullscreen.png','btn-close':'btn-close.png',
-    'btn-rew':'radio-btn-rew.png','btn-stop':'radio-btn-stop.png','btn-play':'radio-btn-play.png',
-    'btn-pause':'radio-btn-pause.png','btn-scan':'radio-btn-scan.png','btn-preset':'radio-btn-preset.png',
-  };
+  const files = {'skin':'radio2.png'};
   for (const [id, file] of Object.entries(files)) {
     let src;
     if (window.electronAPI && window.electronAPI.readAssetBase64) src = await window.electronAPI.readAssetBase64(file);
@@ -140,7 +163,7 @@ let audio=null,playing=false,currentPreset=null,tunerPos=0.15;
   PRESETS.forEach((p,i)=>{
     const row=document.createElement('div');
     row.className='preset-row';row.id='pr-'+i;
-    row.innerHTML=`<span style="color:#4a7aaa;width:16px;font-size:9px;">${p.num}</span><span style="width:28px;font-size:9px;">${p.freq}</span><span style="flex:1;">${p.name}</span>`;
+    row.innerHTML=`<span style="color:#4a7aaa;width:18px;font-size:9px;">${p.num}</span><span style="width:32px;font-size:10px;">${p.freq}</span><span style="flex:1;">${p.name}</span>`;
     row.onclick=()=>tunePreset(i);
     list.appendChild(row);
   });
@@ -164,30 +187,27 @@ function radioSkipPrev(){tunePreset(Math.max(0,(currentPreset||0)-1));}
 function scanNext(){tunePreset(((currentPreset||0)+1)%PRESETS.length);}
 function nextPreset(){tunePreset(((currentPreset||0)+1)%PRESETS.length);}
 function setVol(v){if(audio)audio.volume=v/100;}
-function minimize(){if(window.electronAPI)window.electronAPI.minimizeRadio();}
-function toggleMax(){}
 function closeWin(){if(window.electronAPI)window.electronAPI.closeRadio();else window.close();}
 function animateBars(){if(!playing)return;document.querySelectorAll('.sig-bar').forEach(b=>{b.style.height=(4+Math.random()*12)+'px';});setTimeout(animateBars,200);}
 
 function drawTuner(){
   const c=document.getElementById('tuner-canvas');
-  const w=c.offsetWidth||527,h=c.offsetHeight||48;
+  const w=540,h=50;
   c.width=w;c.height=h;
   const ctx=c.getContext('2d');
   ctx.clearRect(0,0,w,h);
   const freqs=[88,90,92,94,96,98,100,102,104,106,108];
-  ctx.fillStyle='#81ff28';ctx.font='8px Courier New';ctx.textAlign='center';
+  ctx.fillStyle='#81ff28';ctx.font='9px Courier New';ctx.textAlign='center';
   freqs.forEach((f,i)=>{
     const x=(i/(freqs.length-1))*w;
-    ctx.fillText(f,x,10); ctx.fillRect(x-0.5,13,1,6);
-    if(i<freqs.length-1){for(let m=1;m<5;m++){const mx=x+(m/5)*(w/(freqs.length-1));ctx.fillRect(mx-0.5,16,1,3);}}
+    ctx.fillText(f,x,11); ctx.fillRect(x-0.5,15,1,7);
+    if(i<freqs.length-1){for(let m=1;m<5;m++){const mx=x+(m/5)*(w/(freqs.length-1));ctx.fillRect(mx-0.5,18,1,4);}}
   });
   const nx=tunerPos*w;
   ctx.strokeStyle='#81ff28';ctx.lineWidth=2;ctx.shadowColor='#81ff28';ctx.shadowBlur=8;
-  ctx.beginPath();ctx.moveTo(nx,13);ctx.lineTo(nx,h);ctx.stroke();ctx.shadowBlur=0;
+  ctx.beginPath();ctx.moveTo(nx,15);ctx.lineTo(nx,h);ctx.stroke();ctx.shadowBlur=0;
 }
 drawTuner();
-window.addEventListener('resize',drawTuner);
 setTimeout(()=>tunePreset(0),400);
 </script>
 </body>
