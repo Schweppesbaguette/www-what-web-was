@@ -141,9 +141,9 @@ function createMainWindow() {
 function createRadioWindow() {
   if (radioWindow) { radioWindow.focus(); return; }
   radioWindow = new BrowserWindow({
-    width: 800, height: 420,
+    width: 910, height: 394,
     frame: false, transparent: true,
-    resizable: true, hasShadow: true,
+    resizable: false, hasShadow: true,
     backgroundColor: '#00000000',
     webPreferences: {
       nodeIntegration: false, contextIsolation: true,
@@ -160,9 +160,9 @@ function createRadioWindow() {
 function createTVWindow() {
   if (tvWindow) { tvWindow.focus(); return; }
   tvWindow = new BrowserWindow({
-    width: 900, height: 700,
+    width: 900, height: 602,
     frame: false, transparent: true,
-    resizable: true, hasShadow: true,
+    resizable: false, hasShadow: true,
     backgroundColor: '#00000000',
     webPreferences: {
       nodeIntegration: false, contextIsolation: true,
