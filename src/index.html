@@ -4159,44 +4159,9 @@ window.handleRTCOffer = async function(from, sdp){
   if(typeof sendSig === 'function') sendSig(from, {type:'answer', sdp:answer.sdp});
 };
 
-// ─── FIX 6e: Override signal channel — buffer ICE before remote desc ─
-function _wrapGetSigCh(){
-  if(typeof window.getSigCh !== 'function' || window.getSigCh._wwwWrapped) return;
-  window.getSigCh = function(buddy){
-    const name = 'www-sig-' + [CFG.screenName, buddy].sort().join('-');
-    if(!window.sigChannels[name] && window.ablyClient){
-      window.sigChannels[name] = window.ablyClient.channels.get(name);
-      window.sigChannels[name].subscribe('sig', async msg => {
-        const d = msg.data;
-        if(d.from === CFG.screenName) return;
-        console.log('WWW sig:', d.type, 'from:', d.from);
-        if(d.type === 'offer') await window.handleRTCOffer(d.from, d.sdp);
-        if(d.type === 'answer' && window.peerConn){
-          await window.peerConn.setRemoteDescription({type:'answer', sdp:d.sdp});
-          await _flushIce(d.from);
-        }
-        if(d.type === 'ice'){
-          if(window.peerConn && window.peerConn.remoteDescription){
-            try{ await window.peerConn.addIceCandidate(d.candidate); }
-            catch(e){ console.warn('WWW ICE add:', e); }
-          } else {
-            _bufIce(d.from, d.candidate);
-          }
-        }
-        if(d.type === 'reject'){
-          if(typeof showToast === 'function') showToast(d.from + ' declined the call', '');
-          if(typeof endVideoCall === 'function') endVideoCall();
-        }
-      });
-    }
-    return window.sigChannels[name];
-  };
-  window.getSigCh._wwwWrapped = true;
-}
-_wrapGetSigCh();
-if(document.readyState === 'loading'){
-  document.addEventListener('DOMContentLoaded', _wrapGetSigCh);
-}
+// ─── FIX 6e (R3.6): Removed broken getSigCh wrapper.
+// Was trying to access window.sigChannels which is a local let, not on window.
+// Original getSigCh at line ~2012 handles signal channel correctly already.
 
 // ─── FIX 5: Wayback Machine — scrub branding from address bar + iframe ───
 function _wrapWayback(){

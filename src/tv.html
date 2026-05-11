@@ -139,6 +139,20 @@ let currentIdx=null;
   });
 })();
 
+function transformYouTubeUrl(url){
+  // youtube.com/watch?v=XYZ → youtube.com/embed/XYZ?autoplay=1
+  let m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  if(m){
+    return 'https://www.youtube.com/embed/' + m[1] + '?autoplay=1&modestbranding=1&controls=0&rel=0&showinfo=0&iv_load_policy=3&disablekb=1';
+  }
+  // youtube.com/embed/XYZ (already embed, just add autoplay)
+  m = url.match(/youtube\.com\/embed\/([A-Za-z0-9_-]{11})/);
+  if(m){
+    return 'https://www.youtube.com/embed/' + m[1] + '?autoplay=1&modestbranding=1&controls=0&rel=0&showinfo=0&iv_load_policy=3&disablekb=1';
+  }
+  return url; // not YouTube, leave as-is
+}
+
 function tuneChannel(i){
   const ch=CHANNELS[i];currentIdx=i;
   document.querySelectorAll('.pl-item').forEach((r,j)=>r.classList.toggle('active',j===i));
@@ -147,7 +161,8 @@ function tuneChannel(i){
   document.getElementById('info-bitrate').textContent=ch.bitrate;
   document.getElementById('no-signal').style.display='none';
   const wv=document.getElementById('tv-webview');
-  wv.style.display='block';wv.src=ch.url;
+  wv.style.display='block';
+  wv.src=transformYouTubeUrl(ch.url);
 }
 function playSelected(){const a=document.querySelector('.pl-item.active');tuneChannel(a?parseInt(a.id.split('-')[1]):0);}
 function stopTV(){
@@ -164,7 +179,12 @@ function setVol(v){}
 function closeTV(){if(window.electronAPI)window.electronAPI.closeTV();else window.close();}
 window.addEventListener('load',()=>{
   const wv=document.getElementById('tv-webview');
-  wv.addEventListener('did-finish-load',()=>{try{wv.insertCSS('header,.site-header,nav,#navbar{display:none!important;}body{padding-top:0!important;}')}catch(e){}});
+  wv.addEventListener('did-finish-load',()=>{
+    try{
+      // Hide site chrome for non-embed sites (retro tv etc)
+      wv.insertCSS('header,.site-header,nav,#navbar,.ytp-pause-overlay,.ytp-watermark,.ytp-show-cards-title{display:none!important;}body,html{margin:0!important;padding:0!important;overflow:hidden!important;}');
+    }catch(e){}
+  });
 });
 </script>
 </body>
