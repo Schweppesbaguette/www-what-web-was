@@ -5,252 +5,206 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body {
-  width: 900px; height: 713px;
-  background: transparent !important;
+  width: 1236px; height: 980px;
+  background: #1a1a2e;
   overflow: hidden;
   -webkit-app-region: drag;
   user-select: none;
 }
 #skin {
-  position: absolute;
-  top: 0; left: 0;
-  width: 900px; height: 713px;
-  pointer-events: none;
+  position: absolute; top: 0; left: 0;
+  width: 1236px; height: 980px;
+  pointer-events: none; z-index: 1;
 }
-input, button, label, .nodrag {
+input, button, label, canvas, .nodrag {
   -webkit-app-region: no-drag;
   user-select: text;
+  position: absolute;
+  z-index: 2;
 }
 .field {
-  position: absolute;
-  padding: 7px 12px;
-  background: rgba(2, 10, 52, 0.90);
-  border: 1px solid rgba(70, 120, 230, 0.55);
+  padding: 8px 14px;
+  background: rgba(2, 10, 52, 0.75);
+  border: 1px solid rgba(70, 120, 230, 0.4);
   border-radius: 5px;
   color: white;
-  font-size: 13px;
+  font-size: 14px;
   font-family: Tahoma, Arial, sans-serif;
-  box-shadow: inset 0 2px 6px rgba(0,0,60,0.8);
   outline: none;
-  -webkit-app-region: no-drag;
+  width: 36%;
 }
-.field:focus { border-color: #92d9ff; box-shadow: inset 0 2px 6px rgba(0,0,60,0.8), 0 0 6px rgba(146,217,255,0.3); }
-.mascot-cell {
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  border: 2px solid transparent;
-  border-radius: 8px;
-  padding: 4px;
-  transition: all 0.12s;
-  -webkit-app-region: no-drag;
-}
-.mascot-cell:hover { border-color: rgba(72,136,255,0.6); background: rgba(0,20,80,0.25); }
-.mascot-cell.sel { border-color: #81ff28; background: rgba(0,50,0,0.2); box-shadow: 0 0 10px rgba(129,255,40,0.4); }
-.mascot-cell img { width: 80px; height: 96px; object-fit: contain; pointer-events: none; }
+.field:focus { border-color: #92d9ff; background: rgba(2,10,72,0.85); }
 .btn {
-  cursor: pointer; border-radius: 8px;
-  font-size: 13px; font-weight: bold; font-family: Tahoma, Arial, sans-serif;
+  cursor: pointer; border-radius: 20px;
+  font-size: 13px; font-weight: bold;
+  font-family: Tahoma, Arial, sans-serif;
   color: white; border: 2px solid;
-  -webkit-app-region: no-drag;
   transition: filter 0.1s;
-}
-.btn:hover { filter: brightness(1.15); }
-.btn-switch {
-  background: linear-gradient(180deg, #1e3f78, #0c1e4a);
-  border-color: rgba(100,150,255,0.6);
-  box-shadow: 0 2px 8px rgba(0,20,80,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
-}
-.btn-sign {
-  background: linear-gradient(180deg, #3a78e8, #1438c0);
-  border-color: rgba(146,217,255,0.6);
-  box-shadow: 0 2px 10px rgba(72,120,255,0.5), inset 0 1px 0 rgba(255,255,255,0.15);
-}
-#signon-status {
-  position: absolute;
-  color: #81ff28; font-size: 10px; font-family: Tahoma; font-weight: bold;
-  text-shadow: 0 0 6px rgba(129,255,40,0.6);
-  text-align: center;
   -webkit-app-region: no-drag;
 }
+.btn:hover { filter: brightness(1.2); }
+.mascot-cell {
+  position: absolute;
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  z-index: 2;
+  -webkit-app-region: no-drag;
+  transition: box-shadow 0.12s;
+}
+.mascot-cell:hover { box-shadow: 0 0 12px rgba(129,255,40,0.5); }
+.mascot-cell.sel { box-shadow: 0 0 16px rgba(129,255,40,0.8), inset 0 0 0 2px #81ff28; }
+.mascot-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
 </style>
 </head>
 <body>
 
-<!-- Skin image — src set by JS via readAssetBase64 to preserve PNG alpha -->
-<img id="skin" src=""/>
+<img id="skin" src="assets/login_empty.png"/>
 
-<input id="s-name" class="field" readonly
-  style="top:45%;left:18%;width:37%;"/>
+<!-- Screen Name -->
+<input id="s-name" class="field" type="text" placeholder="Screen Name"
+  style="top:42%; left:8%;" value="YourScreenName"/>
 
-<input id="s-pass" class="field" type="password"
-  style="top:54%;left:18%;width:37%;"
-  onkeydown="if(event.key==='Enter')doSignOn()"/>
+<!-- Password -->
+<input id="s-pass" class="field" type="password" placeholder="Password"
+  style="top:52%; left:8%;"/>
 
-<div class="nodrag" style="position:absolute;top:62.5%;left:15%;width:40%;display:flex;align-items:center;gap:8px;">
-  <input type="checkbox" id="s-remember" checked style="accent-color:#4888e8;width:15px;height:15px;-webkit-app-region:no-drag;"/>
-  <label for="s-remember" style="color:#92d9ff;font-size:11px;font-family:Tahoma;cursor:pointer;">Remember my password</label>
-  <span style="color:#4888e8;font-size:10px;font-family:Tahoma;margin-left:auto;cursor:pointer;">Forgot Password?</span>
+<!-- Remember row -->
+<div class="nodrag" style="top:61.5%; left:8%; width:36%; display:flex; align-items:center; gap:8px; font-family:Tahoma;">
+  <input type="checkbox" checked style="accent-color:#4888e8; width:14px; height:14px; -webkit-app-region:no-drag; flex-shrink:0;"/>
+  <label style="color:#92d9ff; font-size:11px; cursor:pointer;">Remember my password</label>
+  <span style="color:#4888e8; font-size:10px; margin-left:auto; cursor:pointer;">Forgot?</span>
 </div>
 
-<div id="signon-status" style="top:68%;left:16%;width:38%;"></div>
+<!-- Status -->
+<div id="status" style="top:67.5%; left:8%; width:36%; color:#81ff28; font-size:11px; font-family:Tahoma; font-weight:bold; text-align:center;"></div>
 
-<button class="btn btn-switch" style="position:absolute;top:72%;left:13%;width:18%;padding:8px 4px;" onclick="switchUser()">Switch User</button>
-<button class="btn btn-sign" style="position:absolute;top:72%;left:33%;width:22%;padding:8px 4px;" onclick="doSignOn()">▶ Sign On</button>
+<!-- Switch User -->
+<button class="btn" onclick="switchUser()"
+  style="top:72%; left:8%; width:16%; padding:8px 4px;
+  background:linear-gradient(180deg,#1e3f78,#0c1e4a);
+  border-color:rgba(100,150,255,0.6);">Switch User</button>
 
-<div id="mascot-grid" style="
-  position:absolute;top:35%;left:54%;width:38%;height:42%;
-  display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;
-  gap:3%;align-items:center;justify-items:center;
-  -webkit-app-region:no-drag;
-"></div>
+<!-- Sign On -->
+<button class="btn" onclick="doSignOn()"
+  style="top:72%; left:26%; width:18%; padding:8px 4px;
+  background:linear-gradient(180deg,#3a78e8,#1438c0);
+  border-color:rgba(146,217,255,0.6);">▶ Sign On</button>
 
-<canvas id="osc" style="position:absolute;top:80%;left:80%;width:13%;height:11%;"></canvas>
+<!-- Mascot cells — positioned over the 6 pre-drawn slots in the skin -->
+<!-- Row 1 -->
+<div class="mascot-cell sel" data-key="PUNK"   style="top:38.5%; left:52.2%; width:11.8%; height:17.5%;" onclick="selectMascot(this)"><img id="img-PUNK"   alt="PUNK"/></div>
+<div class="mascot-cell"     data-key="HH"     style="top:38.5%; left:65.5%; width:11.8%; height:17.5%;" onclick="selectMascot(this)"><img id="img-HH"     alt="HH"/></div>
+<div class="mascot-cell"     data-key="HIPPIE" style="top:38.5%; left:78.8%; width:11.8%; height:17.5%;" onclick="selectMascot(this)"><img id="img-HIPPIE" alt="HIPPIE"/></div>
+<!-- Row 2 -->
+<div class="mascot-cell"     data-key="RASTA"  style="top:57.5%; left:52.2%; width:11.8%; height:17.5%;" onclick="selectMascot(this)"><img id="img-RASTA"  alt="RASTA"/></div>
+<div class="mascot-cell"     data-key="TECHNO" style="top:57.5%; left:65.5%; width:11.8%; height:17.5%;" onclick="selectMascot(this)"><img id="img-TECHNO" alt="TECHNO"/></div>
+<div class="mascot-cell"     data-key="NERD"   style="top:57.5%; left:78.8%; width:11.8%; height:17.5%;" onclick="selectMascot(this)"><img id="img-NERD"   alt="NERD"/></div>
+
+<!-- Oscilloscope — over the teal grid circle bottom right -->
+<canvas id="osc" style="top:82%; left:87.5%; width:9.5%; height:10.5%; z-index:2; border-radius:50%; -webkit-app-region:no-drag;"></canvas>
 
 <script>
 let myMascot = 'PUNK';
 let CFG = {};
-
-try { const s = localStorage.getItem('www_cfg'); if(s) CFG = JSON.parse(s); } catch(e) {}
+try { const s = localStorage.getItem('www_cfg'); if(s) CFG = JSON.parse(s); } catch(e){}
 myMascot = CFG.mascot || 'PUNK';
 
-if(!CFG.screenName || !CFG.ablyKey) {
-  if(window.electronAPI) {
-    window.electronAPI.signonComplete();
-  } else {
-    window.location.href = 'index.html';
-  }
-}
-
-const MASCOTS = {
-  PUNK:   { name:'W.W. Punk',     color:'#FF0066', accent:'#FF66BB' },
-  HH:     { name:'W.W. Hip Hop',  color:'#4040FF', accent:'#FFD700' },
-  HIPPIE: { name:'W.W. Hippie',   color:'#00AA00', accent:'#88DD44' },
-  RASTA:  { name:'W.W. Rasta',    color:'#CC4400', accent:'#FFCC00' },
-  TECHNO: { name:'W.W. Techno',   color:'#0088AA', accent:'#00FFFF' },
-  NERD:   { name:'W.W. Nerd Girl',color:'#D97706', accent:'#FDE68A' },
+// Mascot images — load from assets/ (browser) or readAssetBase64 (Electron)
+const MASCOT_FILES = {
+  PUNK:'mascot-punk.png', HH:'mascot-hh.png', HIPPIE:'mascot-hippie.png',
+  RASTA:'mascot-rasta.png', TECHNO:'mascot-techno.png', NERD:'mascot-nerd.png'
 };
-const MKEYS = ['PUNK','HH','HIPPIE','RASTA','TECHNO','NERD'];
 
-// ── Load skin via readAssetBase64 (preserves PNG alpha channel) ──
-async function loadSkins() {
-  if (window.electronAPI && window.electronAPI.readAssetBase64) {
-    // Load login skin
-    const skinData = await window.electronAPI.readAssetBase64('login2.png');
-    if (skinData) document.getElementById('skin').src = skinData;
-
-    // Load mascot images
-    const mascotFiles = {
-      PUNK: 'mascot-punk.png', HH: 'mascot-hh.png',
-      HIPPIE: 'mascot-hippie.png', RASTA: 'mascot-rasta.png',
-      TECHNO: 'mascot-techno.png', NERD: 'mascot-nerd.png',
-    };
-    for (const [key, file] of Object.entries(mascotFiles)) {
+async function loadAssets() {
+  for (const [key, file] of Object.entries(MASCOT_FILES)) {
+    const img = document.getElementById('img-'+key);
+    if (!img) continue;
+    if (window.electronAPI && window.electronAPI.readAssetBase64) {
       const data = await window.electronAPI.readAssetBase64(file);
-      if (data) {
-        document.querySelectorAll(`.mascot-cell[data-key="${key}"] img`).forEach(img => img.src = data);
-      }
+      if (data) img.src = data;
+    } else {
+      img.src = 'assets/' + file;
     }
-
-    // Load dialup sound
-    const dialupData = await window.electronAPI.readAssetBase64('dialup.mp3');
-    if (dialupData) document.getElementById('dialup-snd').src = dialupData;
-    else document.getElementById('dialup-snd').src = 'assets/dialup.mp3';
-  } else {
-    // Browser fallback — use relative paths
-    document.getElementById('skin').src = 'assets/login2.png';
-    document.getElementById('dialup-snd').src = 'assets/dialup.mp3';
-    document.querySelectorAll('.mascot-cell').forEach(cell => {
-      const key = cell.dataset.key;
-      const img = cell.querySelector('img');
-      if (img) img.src = `assets/mascot-${key.toLowerCase()}.png`;
-    });
+  }
+  // Skin
+  if (window.electronAPI && window.electronAPI.readAssetBase64) {
+    const d = await window.electronAPI.readAssetBase64('login_empty.png');
+    if (d) document.getElementById('skin').src = d;
   }
 }
+loadAssets();
 
-document.getElementById('s-name').value = CFG.screenName || '';
-try { const p = localStorage.getItem('www_pass'); if(p) document.getElementById('s-pass').value = atob(p); } catch(e){}
+// Set initial selection
+document.querySelectorAll('.mascot-cell').forEach(c => {
+  c.classList.toggle('sel', c.dataset.key === myMascot);
+});
 
-function buildGrid() {
-  const grid = document.getElementById('mascot-grid');
-  grid.innerHTML = '';
-  MKEYS.forEach(key => {
-    const cell = document.createElement('div');
-    cell.className = 'mascot-cell' + (key === myMascot ? ' sel' : '');
-    cell.dataset.key = key;
-    const img = document.createElement('img');
-    img.alt = key;
-    cell.appendChild(img);
-    cell.onclick = () => {
-      myMascot = key;
-      document.querySelectorAll('.mascot-cell').forEach(c => c.classList.remove('sel'));
-      cell.classList.add('sel');
-    };
-    grid.appendChild(cell);
-  });
+function selectMascot(cell) {
+  myMascot = cell.dataset.key;
+  document.querySelectorAll('.mascot-cell').forEach(c => c.classList.remove('sel'));
+  cell.classList.add('sel');
 }
-buildGrid();
-
-// Load skins after grid is built
-loadSkins();
-
-// ── Oscilloscope ──
-(function() {
-  const canvas = document.getElementById('osc');
-  canvas.width = 130; canvas.height = 65;
-  const ctx = canvas.getContext('2d');
-  let phase = 0;
-  function draw() {
-    const acc = (MASCOTS[myMascot] && MASCOTS[myMascot].accent) || '#00ccff';
-    ctx.clearRect(0,0,130,65);
-    ctx.fillStyle = 'rgba(0,10,40,0.7)';
-    ctx.fillRect(0,0,130,65);
-    ctx.strokeStyle = 'rgba(0,80,160,0.4)'; ctx.lineWidth = 0.5;
-    for(let y=10;y<65;y+=13){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(130,y);ctx.stroke();}
-    ctx.strokeStyle = acc; ctx.lineWidth = 2;
-    ctx.shadowColor = acc; ctx.shadowBlur = 6;
-    ctx.beginPath();
-    for(let x=0;x<130;x++){
-      const y = 32 + Math.sin((x/130)*Math.PI*5+phase)*13 + Math.sin((x/130)*Math.PI*10+phase*1.5)*5;
-      x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
-    }
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-    phase += 0.07;
-    requestAnimationFrame(draw);
-  }
-  draw();
-})();
 
 function doSignOn() {
+  const status = document.getElementById('status');
   const pass = document.getElementById('s-pass').value;
-  const status = document.getElementById('signon-status');
-  if(CFG.password && pass !== CFG.password) {
+  if (CFG.password && pass !== CFG.password) {
     status.textContent = 'Incorrect password.';
     status.style.color = '#ff6060';
     return;
   }
-  if(document.getElementById('s-remember').checked) {
-    try { localStorage.setItem('www_pass', btoa(CFG.password||'')); } catch(e){}
-  }
   CFG.mascot = myMascot;
   try { localStorage.setItem('www_cfg', JSON.stringify(CFG)); } catch(e){}
-  try { const snd = document.getElementById('dialup-snd'); snd.currentTime=0; snd.play().catch(()=>{}); } catch(e){}
   status.textContent = 'Connecting...';
   status.style.color = '#81ff28';
-  if(window.electronAPI) {
-    window.electronAPI.signonComplete(CFG);
-  } else {
-    window.location.href = 'index.html';
-  }
+  // Play dialup then sign on
+  try {
+    const snd = document.getElementById('dialup-snd');
+    if (snd) { snd.currentTime = 0; snd.play().catch(()=>{}); }
+  } catch(e){}
+  // Wait for dialup sound to finish (6s), then sign on
+  const snd2 = document.getElementById('dialup-snd');
+  const waitMs = snd2 && snd2.duration ? (snd2.duration * 1000) : 6000;
+  setTimeout(() => {
+    if (window.electronAPI) window.electronAPI.signonComplete();
+    else window.location.href = 'index.html';
+  }, waitMs);
 }
 
 function switchUser() {
   try { localStorage.removeItem('www_cfg'); localStorage.removeItem('www_pass'); } catch(e){}
   window.location.reload();
 }
-</script>
 
-<!-- Dialup sound -->
-<audio id="dialup-snd" preload="auto"></audio>
+// Oscilloscope
+(function() {
+  const canvas = document.getElementById('osc');
+  function resize() { canvas.width = canvas.offsetWidth || 120; canvas.height = canvas.offsetHeight || 105; }
+  resize();
+  const ctx = canvas.getContext('2d');
+  let phase = 0;
+  function draw() {
+    const cw = canvas.width, ch = canvas.height;
+    ctx.clearRect(0,0,cw,ch);
+    ctx.fillStyle = 'rgba(0,8,30,0.75)';
+    ctx.fillRect(0,0,cw,ch);
+    ctx.strokeStyle = 'rgba(0,80,160,0.3)'; ctx.lineWidth = 0.5;
+    for(let y=ch/5;y<ch;y+=ch/5){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(cw,y);ctx.stroke();}
+    ctx.strokeStyle = '#81ff28'; ctx.lineWidth = 1.5;
+    ctx.shadowColor = '#81ff28'; ctx.shadowBlur = 6;
+    ctx.beginPath();
+    for(let x=0;x<cw;x++){
+      const y = ch/2 + Math.sin((x/cw)*Math.PI*5+phase)*ch*0.2 + Math.sin((x/cw)*Math.PI*9+phase*1.3)*ch*0.08;
+      x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.stroke(); ctx.shadowBlur=0;
+    phase += 0.07;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+<audio id="dialup-snd" src="assets/dialup.mp3" preload="auto"></audio>
 </body>
 </html>
