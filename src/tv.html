@@ -3,247 +3,127 @@
 <head>
 <meta charset="UTF-8">
 <style>
-* { box-sizing:border-box; margin:0; padding:0; }
-html, body {
-  width:900px; height:700px;
-  background:transparent !important;
-  overflow:hidden;
-  -webkit-app-region:drag;
-  user-select:none;
-  margin:0;
-  padding:0;
-}
-#skin { position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none; }
-input,button,select,webview,iframe,.nodrag { -webkit-app-region:no-drag; user-select:text; }
-
-/* Nav sidebar items */
-.nav-item {
-  display:flex; align-items:center; gap:8px;
-  padding:8px 12px; cursor:pointer;
-  font-size:12px; font-family:Tahoma; color:#92d9ff;
-  border-radius:4px; margin:1px 4px;
-  transition:all 0.1s; -webkit-app-region:no-drag;
-}
-.nav-item:hover { background:rgba(72,136,255,0.25); }
-.nav-item.active { background:linear-gradient(90deg,#1848c8,#0a2880); color:white; }
-.nav-icon { font-size:14px; flex-shrink:0; }
-
-/* Playlist items */
-.pl-item {
-  display:flex; align-items:center; gap:6px;
-  padding:4px 8px; cursor:pointer;
-  font-size:11px; font-family:Tahoma; color:#92d9ff;
-  border-bottom:1px solid rgba(72,136,255,0.1);
-  -webkit-app-region:no-drag;
-}
-.pl-item:hover { background:rgba(72,136,255,0.15); }
-.pl-item.active { color:#81ff28; }
-.pl-num { width:20px; color:#4a7aaa; flex-shrink:0; font-size:10px; }
-.pl-name { flex:1; }
-.pl-time { color:#4a7aaa; font-size:10px; }
-
-/* Bottom info bar */
-.info-cell { font-size:11px; font-family:Tahoma; }
-.info-lbl { color:#92d9ff; }
-.info-val { color:#81ff28; font-weight:bold; }
-
-button { cursor:pointer; }
-.win-btn { position:absolute; background:transparent; border:none; cursor:pointer; border-radius:3px; -webkit-app-region:no-drag; }
-.win-btn:hover { background:rgba(255,255,255,0.1); }
-.tb { position:absolute; background:transparent; border:none; cursor:pointer; border-radius:50%; -webkit-app-region:no-drag; }
-.tb:hover { background:rgba(129,255,40,0.15); }
-.tb:active { background:rgba(129,255,40,0.3); }
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:900px;height:602px;background:transparent!important;overflow:hidden;-webkit-app-region:drag;user-select:none;}
+#skin{position:absolute;top:0;left:0;width:900px;height:602px;pointer-events:none;}
+input,button,select,webview,iframe,.nodrag{-webkit-app-region:no-drag;user-select:text;}
+.skin-btn{position:absolute;cursor:pointer;-webkit-app-region:no-drag;background:transparent;border:none;padding:0;transition:filter 0.1s,transform 0.1s;}
+.skin-btn:hover{filter:brightness(1.25);transform:scale(1.08);}
+.skin-btn:active{filter:brightness(0.8);transform:scale(0.95);}
+.skin-btn img{width:100%;height:100%;object-fit:contain;}
+#screen-area{position:absolute;top:17%;left:17%;width:54%;height:59%;background:#000;overflow:hidden;}
+webview,iframe{width:100%;height:100%;border:none;}
+#no-signal{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;color:#555;font-family:Tahoma;font-size:12px;text-align:center;background:#000;position:absolute;top:0;left:0;}
+#info-bar{position:absolute;top:77%;left:17%;width:54%;display:flex;font-family:Tahoma;font-size:10px;color:#81ff28;pointer-events:none;}
+.info-cell{flex:1;padding:2px 6px;}
+.info-lbl{color:#92d9ff;}
+#playlist-panel{position:absolute;top:17%;left:72%;width:26%;height:64%;overflow-y:auto;-webkit-app-region:no-drag;}
+.pl-item{display:flex;align-items:center;gap:4px;padding:3px 6px;cursor:pointer;font-size:10px;font-family:Tahoma;color:#92d9ff;border-bottom:1px solid rgba(72,136,255,0.1);}
+.pl-item:hover{background:rgba(72,136,255,0.15);}
+.pl-item.active{color:#81ff28;background:rgba(0,80,0,0.2);}
+#vol-slider{position:absolute;top:83%;left:47%;width:25%;accent-color:#81ff28;cursor:pointer;-webkit-app-region:no-drag;}
 </style>
 </head>
 <body>
+<img id="skin" src="assets/tv2.png" alt=""/>
 
-<img id="skin" src="assets/tv.png" alt="" style="position:absolute;top:0;left:0;width:900px;height:700px;pointer-events:none;"/>
-
-<!-- Window controls - visible -->
-<div style="position:absolute;top:8%;right:5.5%;display:flex;gap:3px;-webkit-app-region:no-drag;">
-  <button onclick="minimize()" style="width:22px;height:22px;background:linear-gradient(180deg,#5ab8f0,#3a98d8);border:1px solid rgba(255,255,255,0.4);border-radius:4px;cursor:pointer;color:white;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:bold;">─</button>
-  <button onclick="toggleMax()" style="width:22px;height:22px;background:linear-gradient(180deg,#5ab8f0,#3a98d8);border:1px solid rgba(255,255,255,0.4);border-radius:4px;cursor:pointer;color:white;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:bold;">□</button>
-  <button onclick="if(window.electronAPI)window.electronAPI.closeTV();else window.close();" style="width:22px;height:22px;background:linear-gradient(180deg,#f05858,#c02828);border:1px solid rgba(255,255,255,0.4);border-radius:4px;cursor:pointer;color:white;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:bold;">✕</button>
+<!-- Screen -->
+<div id="screen-area">
+  <div id="no-signal">
+    <div style="font-size:24px;margin-bottom:6px;">📺</div>
+    <div>NO SIGNAL</div>
+    <div style="font-size:10px;color:#333;margin-top:4px;">Double-click a channel to tune in</div>
+  </div>
+  <webview id="tv-webview" style="display:none;width:100%;height:100%;" allowpopups
+    useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"></webview>
 </div>
 
-<!-- Left nav sidebar (overlaid on skin nav area) -->
-<div style="position:absolute;top:19%;left:2%;width:14%;height:62%;display:flex;flex-direction:column;overflow:hidden;">
-  <div class="nav-item active" id="nav-now" onclick="navClick('now')"><span class="nav-icon">▶</span>Now Playing</div>
-  <div class="nav-item" id="nav-guide" onclick="navClick('guide')"><span class="nav-icon">🎵</span>Media Guide</div>
-  <div class="nav-item" id="nav-channels" onclick="navClick('channels')"><span class="nav-icon">📺</span>TV Channels</div>
-  <div class="nav-item" id="nav-library" onclick="navClick('library')"><span class="nav-icon">📁</span>My Library</div>
-  <div class="nav-item" id="nav-radio" onclick="navClick('radio')"><span class="nav-icon">📻</span>Radio</div>
-  <div class="nav-item" id="nav-playlists" onclick="navClick('playlists')"><span class="nav-icon">☰</span>Playlists</div>
-  <div class="nav-item" id="nav-services" onclick="navClick('services')"><span class="nav-icon">🌐</span>Services</div>
-  <div class="nav-item" id="nav-skins" onclick="navClick('skins')"><span class="nav-icon">🎨</span>Skins</div>
+<!-- Info bar -->
+<div id="info-bar">
+  <div class="info-cell"><span class="info-lbl">Channel: </span><span id="info-channel">—</span></div>
+  <div class="info-cell"><span class="info-lbl">Title: </span><span id="info-title">Select a channel</span></div>
+  <div class="info-cell"><span class="info-lbl">Bitrate: </span><span id="info-bitrate">—</span></div>
 </div>
 
-<!-- Main video screen (overlaid on the black screen area of skin) -->
-<div style="position:absolute;top:19%;left:17%;width:54%;height:55%;background:#000;overflow:hidden;">
-  <webview id="tv-webview" style="width:100%;height:100%;display:none;" allowpopups></webview>
-  <iframe id="tv-iframe" style="width:100%;height:100%;border:none;display:none;" allow="autoplay;encrypted-media" allowfullscreen></iframe>
-  <canvas id="tv-static" style="width:100%;height:100%;display:block;"></canvas>
-</div>
+<!-- Playlist -->
+<div id="playlist-panel"></div>
 
-<!-- Info bar under screen -->
-<div style="position:absolute;top:75%;left:17%;width:54%;display:flex;gap:0;overflow:hidden;">
-  <div style="flex:1;padding:3px 8px;border-right:1px solid rgba(72,120,255,0.3);">
-    <div class="info-cell"><span class="info-lbl">Channel: </span><span class="info-val" id="info-channel">—</span></div>
-  </div>
-  <div style="flex:1;padding:3px 8px;border-right:1px solid rgba(72,120,255,0.3);">
-    <div class="info-cell"><span class="info-lbl">Title: </span><span class="info-val" id="info-title">Select a channel</span></div>
-  </div>
-  <div style="flex:1;padding:3px 8px;">
-    <div class="info-cell"><span class="info-lbl">Bitrate: </span><span class="info-val" id="info-bitrate">—</span></div>
-  </div>
-</div>
+<!-- Volume -->
+<input type="range" id="vol-slider" min="0" max="100" value="80" oninput="setVol(this.value)"/>
 
-<!-- Playlist (right panel) -->
-<div style="position:absolute;top:19%;left:72%;width:25%;height:62%;display:flex;flex-direction:column;overflow:hidden;">
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px;">
-    <span style="color:#92d9ff;font-size:11px;font-family:Tahoma;font-weight:bold;">Playlist</span>
-    <span style="color:#4a7aaa;font-size:12px;cursor:pointer;">▼</span>
-  </div>
-  <div id="playlist" style="flex:1;overflow-y:auto;"></div>
-  <div style="display:flex;gap:2px;padding:3px;border-top:1px solid rgba(72,120,255,0.2);">
-    <button onclick="" style="flex:1;background:rgba(72,136,255,0.2);border:1px solid #4878c8;color:#92d9ff;font-size:10px;padding:3px;border-radius:3px;cursor:pointer;-webkit-app-region:no-drag;">+ Add</button>
-    <button onclick="" style="flex:1;background:rgba(72,136,255,0.2);border:1px solid #4878c8;color:#92d9ff;font-size:10px;padding:3px;border-radius:3px;cursor:pointer;-webkit-app-region:no-drag;">− Remove</button>
-    <button onclick="" style="flex:1;background:rgba(72,136,255,0.2);border:1px solid #4878c8;color:#92d9ff;font-size:10px;padding:3px;border-radius:3px;cursor:pointer;-webkit-app-region:no-drag;">Save</button>
-  </div>
-  <div style="padding:3px 8px;border-top:1px solid rgba(72,120,255,0.2);display:flex;align-items:center;justify-content:space-between;">
-    <span style="color:#4a7aaa;font-size:10px;font-family:Tahoma;" id="playlist-count">0 Items</span>
-    <div style="display:flex;gap:6px;">
-      <span style="color:#4a7aaa;font-size:14px;cursor:pointer;-webkit-app-region:no-drag;" onclick="">⇌</span>
-      <span style="color:#4a7aaa;font-size:14px;cursor:pointer;-webkit-app-region:no-drag;" onclick="">↺</span>
-    </div>
-  </div>
-</div>
+<!-- Window controls (top-right 3 circles at ~87/90/93% width, ~12% height) -->
+<button class="skin-btn" style="top:7%;left:85%;width:4%;height:8%;" onclick="if(window.electronAPI)window.electronAPI.minimizeTV();else window.close();"><img src="assets/btn-minimize.png"/></button>
+<button class="skin-btn" style="top:7%;left:89%;width:4%;height:8%;" onclick="tvToggleFullscreen()"><img src="assets/btn-fullscreen.png"/></button>
+<button class="skin-btn" style="top:7%;left:93%;width:4%;height:8%;" onclick="if(window.electronAPI)window.electronAPI.closeTV();else window.close();"><img src="assets/btn-close.png"/></button>
 
-<!-- Transport buttons (overlaid on bottom chrome buttons) -->
-<button class="tb" style="top:87%;left:15%;width:4%;height:6%;" onclick="skipBack()"></button>
-<button class="tb" style="top:87%;left:20%;width:4%;height:6%;" onclick="stopTV()"></button>
-<button class="tb" style="top:87%;left:25%;width:5%;height:7%;" onclick="playSelected()"></button>
-<button class="tb" style="top:87%;left:31%;width:4%;height:6%;" onclick="pauseTV()"></button>
-<button class="tb" style="top:87%;left:36%;width:4%;height:6%;" onclick="skipNext()"></button>
-
-<!-- Progress/time display -->
-<div style="position:absolute;top:87%;left:46%;width:22%;display:flex;align-items:center;justify-content:center;gap:6px;pointer-events:none;">
-  <span style="color:#81ff28;font-size:11px;font-family:'Courier New';text-shadow:0 0 6px #81ff28;" id="time-display">00:00 / --:--</span>
-</div>
-
-<!-- Volume slider -->
-<input type="range" id="vol-slider" min="0" max="100" value="80" 
-  style="position:absolute;top:91.5%;left:72%;width:16%;accent-color:#81ff28;cursor:pointer;-webkit-app-region:no-drag;"
-  oninput="setVol(this.value)"/>
+<!-- Transport buttons (bottom row: Back/Stop/Play/Pause/Forward) -->
+<button class="skin-btn" style="top:83%;left:14%;width:5%;height:9%;" onclick="skipBack()"><img src="assets/btn-back.png"/></button>
+<button class="skin-btn" style="top:83%;left:20%;width:5%;height:9%;" onclick="stopTV()"><img src="assets/btn-stop.png"/></button>
+<button class="skin-btn" style="top:81%;left:25%;width:9%;height:13%;" onclick="playSelected()"><img src="assets/btn-play.png"/></button>
+<button class="skin-btn" style="top:83%;left:34%;width:5%;height:9%;" onclick="pauseTV()"><img src="assets/btn-resume.png"/></button>
+<button class="skin-btn" style="top:83%;left:40%;width:5%;height:9%;" onclick="skipNext()"><img src="assets/btn-foward.png"/></button>
 
 <script>
-const CHANNELS = [
-  {name:'Retro TV Live',channel:'RetroTV',url:'https://90s.myretrotvs.com/'},
-  {name:'Lo-Fi Hip Hop',channel:'LoFiTV',url:'https://www.youtube.com/watch?v=jfKfPfyJRdk'},
-  {name:'Chillhop Radio',channel:'ChillTV',url:'https://www.youtube.com/watch?v=5yx6BWlEVcY'},
-  {name:'Y2K Aesthetic',channel:'Y2KTV',url:'https://www.youtube.com/watch?v=BPzrwXhUxTM'},
-  {name:'Vaporwave Vibes',channel:'VaporTV',url:'https://www.youtube.com/watch?v=Km71Rr9K-Bw'},
-  {name:'90s MTV Hits',channel:'MTVRetro',url:'https://www.youtube.com/watch?v=09R8_2nJtjg'},
-  {name:'Synthwave Radio',channel:'SynthTV',url:'https://www.youtube.com/watch?v=4xDzrJKXOOY'},
-  {name:'Space Ambient',channel:'SpaceTV',url:'https://www.youtube.com/watch?v=pXRviuL6vMY'},
-  {name:'City Pop Radio',channel:'CityTV',url:'https://www.youtube.com/watch?v=SnL1vOVJGVg'},
-  {name:'Winamp Vibes',channel:'WinampTV',url:'https://www.youtube.com/watch?v=bFSMtZgONss'},
-  {name:'Cassette Tape',channel:'CassetteTV',url:'https://www.youtube.com/watch?v=zLXl5AYKM_E'},
-  {name:'Electric Flow',channel:'ElectricTV',url:'https://www.youtube.com/watch?v=tDexBj46oNI'},
+const CHANNELS=[
+  {name:'Retro TV Live',channel:'RetroTV',url:'https://90s.myretrotvs.com/',bitrate:'128 kbps'},
+  {name:'Lo-Fi Hip Hop',channel:'LoFiTV',url:'https://www.youtube.com/watch?v=jfKfPfyJRdk',bitrate:'192 kbps'},
+  {name:'Chillhop Radio',channel:'ChillTV',url:'https://www.youtube.com/watch?v=5yx6BWlEVcY',bitrate:'128 kbps'},
+  {name:'Y2K Aesthetic',channel:'Y2KTV',url:'https://www.youtube.com/watch?v=BPzrwXhUxTM',bitrate:'192 kbps'},
+  {name:'Vaporwave',channel:'VaporTV',url:'https://www.youtube.com/watch?v=Km71Rr9K-Bw',bitrate:'128 kbps'},
+  {name:'90s MTV Hits',channel:'MTVRetro',url:'https://www.youtube.com/watch?v=09R8_2nJtjg',bitrate:'256 kbps'},
+  {name:'Synthwave',channel:'SynthTV',url:'https://www.youtube.com/watch?v=4xDzrJKXOOY',bitrate:'192 kbps'},
+  {name:'Space Ambient',channel:'SpaceTV',url:'https://www.youtube.com/watch?v=pXRviuL6vMY',bitrate:'128 kbps'},
+  {name:'City Pop Radio',channel:'CityTV',url:'https://www.youtube.com/watch?v=SnL1vOVJGVg',bitrate:'192 kbps'},
+  {name:'Winamp Vibes',channel:'WinampTV',url:'https://www.youtube.com/watch?v=bFSMtZgONss',bitrate:'128 kbps'},
+  {name:'Cassette Tape',channel:'CassetteTV',url:'https://www.youtube.com/watch?v=zLXl5AYKM_E',bitrate:'128 kbps'},
+  {name:'Electric Flow',channel:'ElectricTV',url:'https://www.youtube.com/watch?v=tDexBj46oNI',bitrate:'256 kbps'},
 ];
+let currentIdx=null;
 
-let currentIdx = null;
+(function buildPlaylist(){
+  const panel=document.getElementById('playlist-panel');
+  CHANNELS.forEach((ch,i)=>{
+    const div=document.createElement('div');
+    div.className='pl-item';div.id='pl-'+i;
+    div.innerHTML=`<span style="color:#4a7aaa;width:18px;font-size:9px;">${String(i+1).padStart(2,'0')}</span><span style="flex:1;">${ch.name}</span>`;
+    div.ondblclick=()=>tuneChannel(i);
+    div.onclick=()=>document.querySelectorAll('.pl-item').forEach((r,j)=>r.classList.toggle('active',j===i));
+    panel.appendChild(div);
+  });
+})();
 
-// Build playlist
-const pl = document.getElementById('playlist');
-CHANNELS.forEach((c,i) => {
-  const row = document.createElement('div');
-  row.className = 'pl-item' + (i===0?' active':'');
-  row.id = 'pl-'+i;
-  row.innerHTML = '<span class=pl-num>'+(i<9?'0':'')+(i+1)+'</span><span class=pl-name>'+c.name+'</span><span class=pl-time>03:45</span>';
-  row.ondblclick = () => tuneChannel(i);
-  row.onclick = () => { document.querySelectorAll('.pl-item').forEach((r,j)=>r.classList.toggle('active',j===i)); };
-  pl.appendChild(row);
-});
-document.getElementById('playlist-count').textContent = CHANNELS.length + ' Items — 1:03:45';
-
-function tuneChannel(i) {
-  const ch = CHANNELS[i]; currentIdx=i;
+function tuneChannel(i){
+  const ch=CHANNELS[i];currentIdx=i;
   document.querySelectorAll('.pl-item').forEach((r,j)=>r.classList.toggle('active',j===i));
-  document.getElementById('info-channel').textContent = ch.channel;
-  document.getElementById('info-title').textContent = ch.name;
-  document.getElementById('info-bitrate').textContent = ch.bitrate;
-  
-  const isElectron = typeof process!=='undefined' && process.versions && process.versions.electron;
-  const wv = document.getElementById('tv-webview');
-  const iframe = document.getElementById('tv-iframe');
-  const staticCanvas = document.getElementById('tv-static');
-  staticCanvas.style.display='none';
-
-  if(isElectron && ch.useWebview) {
-    wv.style.display='block'; iframe.style.display='none';
-    wv.setAttribute('src', ch.url);
-  } else {
-    wv.style.display='none'; iframe.style.display='block';
-    iframe.src = ch.url;
-  }
-  startTimeCounter();
+  document.getElementById('info-channel').textContent=ch.channel;
+  document.getElementById('info-title').textContent=ch.name;
+  document.getElementById('info-bitrate').textContent=ch.bitrate;
+  document.getElementById('no-signal').style.display='none';
+  const wv=document.getElementById('tv-webview');
+  wv.style.display='block';wv.src=ch.url;
 }
-
-function playSelected() {
-  const active = document.querySelector('.pl-item.active');
-  if(active) { const i=parseInt(active.id.split('-')[1]); tuneChannel(i); }
+function playSelected(){
+  const a=document.querySelector('.pl-item.active');
+  if(a)tuneChannel(parseInt(a.id.split('-')[1]));
   else tuneChannel(0);
 }
-function stopTV() {
-  const wv=document.getElementById('tv-webview'),iframe=document.getElementById('tv-iframe'),st=document.getElementById('tv-static');
-  wv.style.display='none'; iframe.style.display='none'; iframe.src=''; 
-  wv.setAttribute('src',''); st.style.display='block'; drawStatic(); currentIdx=null;
+function stopTV(){
+  const wv=document.getElementById('tv-webview');
+  wv.style.display='none';wv.src='';
+  document.getElementById('no-signal').style.display='flex';
+  document.getElementById('info-channel').textContent='—';
+  document.getElementById('info-title').textContent='Stopped';
+  currentIdx=null;
 }
-function skipBack() { tuneChannel(Math.max(0,(currentIdx||0)-1)); }
-function skipNext() { tuneChannel(Math.min(CHANNELS.length-1,(currentIdx||0)+1)); }
-function pauseTV() { const iframe=document.getElementById('tv-iframe'); iframe.src=iframe.src; }
-function setVol(v) {}
-function minimize(){if(window.electronAPI)window.electronAPI.minimizeTV();}
-function toggleMax() {}
-function navClick(id) {
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  document.getElementById('nav-'+id).classList.add('active');
-  if(id==='channels') playSelected();
-}
-
-// Time counter
-let timeStart=null, timeInterval=null;
-function startTimeCounter() {
-  timeStart=Date.now(); clearInterval(timeInterval);
-  timeInterval=setInterval(()=>{
-    const s=Math.floor((Date.now()-timeStart)/1000);
-    const m=Math.floor(s/60), sec=s%60;
-    document.getElementById('time-display').textContent=(m<10?'0':'')+m+':'+(sec<10?'0':'')+sec+' / --:--';
-  },1000);
-}
-
-// Static canvas
-function drawStatic() {
-  const c=document.getElementById('tv-static');
-  const w=c.offsetWidth||600, h=c.offsetHeight||400;
-  c.width=w; c.height=h;
-  const ctx=c.getContext('2d');
-  (function loop(){
-    if(c.style.display==='none')return;
-    const img=ctx.createImageData(w,h);
-    for(let i=0;i<img.data.length;i+=4){
-      const v=Math.random()>0.5?200:30;
-      img.data[i]=img.data[i+1]=img.data[i+2]=v; img.data[i+3]=255;
-    }
-    ctx.putImageData(img,0,0);
-    requestAnimationFrame(loop);
-  })();
-}
-drawStatic();
-
-// Auto-tune first channel
-setTimeout(()=>tuneChannel(0), 300);
+function skipBack(){tuneChannel(Math.max(0,(currentIdx||0)-1));}
+function skipNext(){tuneChannel(Math.min(CHANNELS.length-1,(currentIdx||0)+1));}
+function pauseTV(){const wv=document.getElementById('tv-webview');if(wv.src)wv.reload();}
+function setVol(v){}
+function tvToggleFullscreen(){if(window.electronAPI&&window.electronAPI.toggleTVFullscreen)window.electronAPI.toggleTVFullscreen();}
+window.addEventListener('load',()=>{
+  const wv=document.getElementById('tv-webview');
+  wv.addEventListener('did-finish-load',()=>{try{wv.insertCSS('header,.site-header,nav{display:none!important;}body{padding-top:0!important;}')}catch(e){}});
+});
 </script>
 </body>
 </html>

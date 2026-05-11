@@ -1209,6 +1209,13 @@ function playSound(k,vol){
   }catch(e){}
 }
 function playDialup(){
+  // Use the real dialup MP3 asset
+  try{
+    const audio = new Audio('assets/dialup.mp3');
+    audio.volume = 0.8;
+    audio.play().catch(()=>{});
+    return;
+  }catch(e){}
   if(A['dialup']){playSound('dialup',0.8);return;}
   // Generate dialup sound with WebAudio if no asset
   try{
@@ -3839,7 +3846,7 @@ setInterval(()=>{if(gmailToken)fetchGmailMessages(true);},60000);
   <img id="ast-TECHNO" src="assets/mascot-techno.png" alt="" />
   <img id="ast-NERD" src="assets/mascot-nerd.png" alt="" />
   <img id="ast-WWWLOGO" src="assets/wwwlogo_new.png" alt="" />
-  <img id="ast-SIGNINIMAGE" src="assets/asset-signinimage.png" alt="" />
+  <img id="ast-SIGNINIMAGE" src="assets/login2.png" alt="" />
 </div>
 
 <style id="mobile-css">
