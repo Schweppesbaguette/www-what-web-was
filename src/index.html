@@ -3960,208 +3960,13 @@ if(document.readyState === 'loading'){
   document.addEventListener('DOMContentLoaded', _wrapVideoGuards);
 }
 
-// ─── FIX 6a: ICE candidate buffering ────────────────────────────────
-const _iceBuf = {};
-function _bufIce(buddy, candidate){
-  if(!_iceBuf[buddy]) _iceBuf[buddy] = [];
-  _iceBuf[buddy].push(candidate);
-}
-async function _flushIce(buddy){
-  const buf = _iceBuf[buddy] || [];
-  _iceBuf[buddy] = [];
-  for(const c of buf){
-    try{
-      if(window.peerConn && window.peerConn.remoteDescription){
-        await window.peerConn.addIceCandidate(c);
-      }
-    }catch(e){ console.warn('WWW ICE flush:', e); }
-  }
-}
-
-// ─── FIX 6b: Override setupPeerEvents — keep video rendered for canvas ───
-window.setupPeerEvents = function(buddy){
-  const remoteStream = new MediaStream();
-  window.peerConn.onicecandidate = e => {
-    if(e.candidate && typeof sendSig === 'function') sendSig(buddy, {type:'ice', candidate:e.candidate});
-  };
-  window.peerConn.oniceconnectionstatechange = () => {
-    const s = window.peerConn ? window.peerConn.iceConnectionState : null;
-    console.log('WWW ICE state:', s);
-    const el = document.getElementById('vid-status');
-    if(el){
-      if(s === 'connected' || s === 'completed') el.textContent = '● LIVE';
-      else if(s === 'checking') el.textContent = '● Connecting...';
-      else if(s === 'failed') el.textContent = '⚠ ICE Failed';
-      else if(s === 'disconnected') el.textContent = '⚠ Disconnected';
-    }
-  };
-  window.peerConn.ontrack = e => {
-    console.log('WWW remote track received:', e.track.kind);
-    if(e.streams && e.streams[0]){
-      e.streams[0].getTracks().forEach(t => {
-        if(!remoteStream.getTrackById(t.id)) remoteStream.addTrack(t);
-      });
-    } else {
-      remoteStream.addTrack(e.track);
-    }
-    const remote = document.getElementById('vid-remote');
-    if(!remote) return;
-    remote.srcObject = remoteStream;
-    // Keep video visible so canvas can copy frames from it
-    remote.style.opacity = '1';
-    remote.style.display = 'block';
-    remote.setAttribute('autoplay', '');
-    remote.setAttribute('playsinline', '');
-    const ns = document.getElementById('vid-nosignal');
-    if(ns) ns.style.display = 'none';
-    const peerName = document.getElementById('vid-peer-name');
-    if(peerName) peerName.textContent = buddy + ' ● Live';
-    if(!window.vidTimeStart){
-      window.vidTimeStart = Date.now();
-      clearInterval(window.vidTimer);
-      window.vidTimer = setInterval(window.updateVidTimer, 1000);
-    }
-    remote.play().then(() => {
-      console.log('WWW remote video playing, waiting for frames...');
-      _waitForFrames(remote, () => {
-        console.log('WWW frames ready, starting low-fps filter');
-        window.startLowFps(remote);
-      });
-    }).catch(err => {
-      console.error('WWW remote play err:', err);
-      remote.muted = true;
-      remote.play().then(() => _waitForFrames(remote, () => window.startLowFps(remote))).catch(()=>{});
-    });
-  };
-  window.peerConn.onconnectionstatechange = () => {
-    const s = window.peerConn ? window.peerConn.connectionState : null;
-    console.log('WWW conn state:', s);
-    if(['disconnected','failed','closed'].includes(s)){
-      const el = document.getElementById('vid-status');
-      if(el) el.textContent = '⚠ DISCONNECTED';
-    }
-  };
-};
-
-function _waitForFrames(videoEl, cb, attempts){
-  attempts = attempts || 0;
-  if(attempts > 40){ console.warn('WWW frame wait timeout, starting anyway'); cb(); return; }
-  if(videoEl.readyState >= 3 && videoEl.videoWidth > 0 && !videoEl.paused){
-    try{
-      const tmp = document.createElement('canvas');
-      tmp.width = 4; tmp.height = 4;
-      const ctx = tmp.getContext('2d');
-      ctx.drawImage(videoEl, 0, 0, 4, 4);
-      const px = ctx.getImageData(0, 0, 4, 4).data;
-      let hasContent = false;
-      for(let i = 0; i < px.length; i++){
-        if(i % 4 !== 3 && px[i] > 5){ hasContent = true; break; }
-      }
-      if(hasContent){ cb(); return; }
-    }catch(e){}
-  }
-  setTimeout(() => _waitForFrames(videoEl, cb, attempts + 1), 100);
-}
-
-// ─── FIX 6c: Override startLowFps — keep source video rendered ──────
-window.startLowFps = function(videoEl){
-  clearInterval(window.lowFpsInterval);
-  const container = document.getElementById('vid-body');
-  if(!container) return;
-  let canvas = document.getElementById('vid-fps-canvas');
-  if(!canvas){
-    canvas = document.createElement('canvas');
-    canvas.id = 'vid-fps-canvas';
-    canvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:calc(100% - 48px);object-fit:cover;pointer-events:none;z-index:5;image-rendering:pixelated;image-rendering:crisp-edges;';
-    container.appendChild(canvas);
-  }
-  // Almost invisible but still rendered — drawImage needs real pixels
-  videoEl.style.opacity = '0.01';
-  videoEl.style.position = 'absolute';
-  videoEl.style.top = '0';
-  videoEl.style.left = '0';
-  videoEl.style.width = '100%';
-  videoEl.style.height = 'calc(100% - 48px)';
-  const CW = 160, CH = 120;
-  const tiny = document.createElement('canvas');
-  tiny.width = CW; tiny.height = CH;
-  const tctx = tiny.getContext('2d');
-  canvas.width = CW; canvas.height = CH;
-  const ctx = canvas.getContext('2d');
-  ctx.imageSmoothingEnabled = false;
-  let lastGlitch = 0;
-  let blackFrames = 0;
-  window.lowFpsInterval = setInterval(() => {
-    if(videoEl.readyState < 2 || videoEl.paused) return;
-    try{ tctx.drawImage(videoEl, 0, 0, CW, CH); }catch(e){ return; }
-    const id = tctx.getImageData(0, 0, CW, CH);
-    const d = id.data;
-    let total = 0;
-    for(let i = 0; i < d.length; i += 16) total += d[i] + d[i+1] + d[i+2];
-    if(total < 100){
-      blackFrames++;
-      if(blackFrames > 15) console.log('WWW still black frames, waiting...');
-      return;
-    }
-    blackFrames = 0;
-    for(let i = 0; i < d.length; i += 4){
-      const avg = d[i] * 0.3 + d[i+1] * 0.59 + d[i+2] * 0.11;
-      d[i]   = avg * 0.45 + d[i] * 0.55;
-      d[i+1] = avg * 0.45 + d[i+1] * 0.55;
-      d[i+2] = avg * 0.35 + d[i+2] * 0.65 + 6;
-      if(d[i] > 170){
-        d[i]   = Math.min(255, d[i] * 1.12);
-        d[i+1] = Math.min(255, d[i+1] * 1.1);
-        d[i+2] = Math.min(255, d[i+2] * 1.08);
-      }
-      d[i]   = Math.round(d[i] / 28) * 28;
-      d[i+1] = Math.round(d[i+1] / 28) * 28;
-      d[i+2] = Math.round(d[i+2] / 28) * 28;
-    }
-    tctx.putImageData(id, 0, 0);
-    if(Math.random() < 0.04) return;
-    const now = Date.now();
-    if(now - lastGlitch > 2000 && Math.random() < 0.08){
-      lastGlitch = now;
-      const ty = Math.floor(Math.random() * CH);
-      const th = 2 + Math.floor(Math.random() * 5);
-      try{
-        const tear = tctx.getImageData(0, ty, CW, th);
-        tctx.putImageData(tear, Math.random() > 0.5 ? 2 : -2, ty);
-      }catch(e){}
-    }
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(tiny, 0, 0, CW, CH);
-  }, 100);
-};
-
-// ─── FIX 6d: Override handleRTCOffer — flush buffered ICE after setRemote ───
-window.handleRTCOffer = async function(from, sdp){
-  if(!confirm(from + ' wants to video chat! Answer?')){
-    if(typeof sendSig === 'function') sendSig(from, {type:'reject'});
-    return;
-  }
-  window.vidCallPartner = from;
-  if(typeof openWin === 'function') openWin('video-win');
-  const peerName = document.getElementById('vid-peer-name');
-  if(peerName) peerName.textContent = from + ' (connecting...)';
-  const status = document.getElementById('vid-status');
-  if(status) status.textContent = '● Answering...';
-  if(typeof startLocalVideo === 'function') await startLocalVideo();
-  if(window.peerConn) try{ window.peerConn.close(); }catch(e){}
-  window.peerConn = new RTCPeerConnection(window.ICE);
-  window.setupPeerEvents(from);
-  if(window.vidStream) window.vidStream.getTracks().forEach(t => window.peerConn.addTrack(t, window.vidStream));
-  await window.peerConn.setRemoteDescription({type:'offer', sdp});
-  await _flushIce(from);
-  const answer = await window.peerConn.createAnswer();
-  await window.peerConn.setLocalDescription(answer);
-  if(typeof sendSig === 'function') sendSig(from, {type:'answer', sdp:answer.sdp});
-};
-
-// ─── FIX 6e (R3.6): Removed broken getSigCh wrapper.
-// Was trying to access window.sigChannels which is a local let, not on window.
-// Original getSigCh at line ~2012 handles signal channel correctly already.
+// ─── FIX 6 (R3.8): All video-chat overrides removed.
+// They used window.peerConn / window.setupPeerEvents etc. but peerConn
+// is a local `let`, not on window. Overrides never actually fired
+// (bare callers used the original function declarations) AND when they
+// did fire, they crashed accessing undefined.
+// Original setupPeerEvents (line ~2316), handleRTCOffer (line ~2356),
+// startLowFps (line ~2439), and getSigCh (line ~2012) work correctly.
 
 // ─── FIX 5: Wayback Machine — scrub branding from address bar + iframe ───
 function _wrapWayback(){
@@ -4872,7 +4677,7 @@ function _wrapOpenIM(){
         if(!win){
           console.error('WWW R3.5: imWindows[' + buddy + '] not set! Chat did not open.');
           // Try a fallback: create a minimal chat-like window manually so user has SOMETHING
-          alert('Sorry, chat with ' + buddy + ' could not open. Check developer console (Cmd+Opt+I) for errors.');
+          console.warn('WWW: imWindows[' + buddy + '] not set after openIMTo — likely a timing issue, chat may still work');
           return;
         }
         // Force visibility, height, and z-order
@@ -4890,7 +4695,7 @@ function _wrapOpenIM(){
       }, 50);
     } catch(e) {
       console.error('WWW R3.5: openIMTo threw:', e);
-      alert('Chat window error: ' + e.message + '\n\nOpen developer console (Cmd+Opt+I) for details.');
+      console.error('WWW: openIMTo error:', e);
     }
   };
   window.openIMTo._wwwR35Wrapped = true;
