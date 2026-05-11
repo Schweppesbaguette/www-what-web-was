@@ -1182,13 +1182,14 @@ function doLoadAssets(){
   const _SIGNINIMAGE=document.getElementById('ast-SIGNINIMAGE'); if(_SIGNINIMAGE) A['SIGNINIMAGE']=_SIGNINIMAGE.src;
   // Audio assets
   const _dialup=document.getElementById('ast-dialup'); if(_dialup) A['dialup']=_dialup.src;
-  const _dooropen=document.getElementById('ast-dooropen'); if(_dooropen) A['dooropen']=_dooropen.src;
-  const _doorslam=document.getElementById('ast-doorslam'); if(_doorslam) A['doorslam']=_doorslam.src;
+  const _welcome=document.getElementById('ast-welcome'); if(_welcome) A['welcome']=_welcome.src;
+  const _buddyin=document.getElementById('ast-buddyin'); if(_buddyin) A['dooropen']=_buddyin.src;
+  const _buddyout=document.getElementById('ast-buddyout'); if(_buddyout) A['doorslam']=_buddyout.src;
   const _goodbye=document.getElementById('ast-goodbye'); if(_goodbye) A['goodbye']=_goodbye.src;
   const _imsend=document.getElementById('ast-imsend'); if(_imsend) A['imsend']=_imsend.src;
   const _imrcv=document.getElementById('ast-imrcv'); if(_imrcv) A['imrcv']=_imrcv.src;
-  const _welcome=document.getElementById('ast-welcome'); if(_welcome) A['welcome']=_welcome.src;
-  const _ygm=document.getElementById('ast-ygm'); if(_ygm) A['ygm']=_ygm.src;
+  const _gotmail=document.getElementById('ast-gotmail'); if(_gotmail) A['ygm']=_gotmail.src;
+  const _im=document.getElementById('ast-im'); if(_im) A['im']=_im.src;
   // Refresh UI that depends on assets
   if(document.getElementById('signon-screen')?.style.display !== 'none'){
     buildMascotRows();
