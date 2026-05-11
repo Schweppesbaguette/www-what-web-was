@@ -4878,5 +4878,104 @@ console.log('WWW R3.3: mic echo/noise suppression enabled, local video muted');
 })();
 </script>
 
+
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- WWW R3.5 — Messenger fix: ensure chat window opens visibly        -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+'use strict';
+console.log('WWW R3.5 messenger fix loading...');
+
+// Wrap openIMTo to catch errors and force visibility
+const _origOpenIMTo = window.openIMTo;
+if(typeof _origOpenIMTo !== 'function'){
+  console.error('WWW R3.5: openIMTo not found at script load time, retrying...');
+}
+
+function _wrapOpenIM(){
+  if(typeof window.openIMTo !== 'function' || window.openIMTo._wwwR35Wrapped) return;
+  const _orig = window.openIMTo;
+  window.openIMTo = function(buddy){
+    console.log('WWW R3.5: openIMTo called with buddy:', buddy);
+    try {
+      _orig.call(this, buddy);
+      // After original runs, force the window to be visible with sensible dimensions
+      setTimeout(()=>{
+        const win = window.imWindows && window.imWindows[buddy];
+        if(!win){
+          console.error('WWW R3.5: imWindows[' + buddy + '] not set! Chat did not open.');
+          // Try a fallback: create a minimal chat-like window manually so user has SOMETHING
+          alert('Sorry, chat with ' + buddy + ' could not open. Check developer console (Cmd+Opt+I) for errors.');
+          return;
+        }
+        // Force visibility, height, and z-order
+        win.style.display = 'flex';
+        win.style.height = '440px';
+        win.style.minHeight = '440px';
+        win.style.zIndex = '9999';
+        // Make sure it's not positioned offscreen
+        const r = win.getBoundingClientRect();
+        if(r.top < 0 || r.left < 0 || r.left > window.innerWidth - 100){
+          win.style.top = '80px';
+          win.style.left = '80px';
+        }
+        console.log('WWW R3.5: chat window forced visible at', win.style.top, win.style.left, 'size', win.style.width, 'x', win.style.height);
+      }, 50);
+    } catch(e) {
+      console.error('WWW R3.5: openIMTo threw:', e);
+      alert('Chat window error: ' + e.message + '\n\nOpen developer console (Cmd+Opt+I) for details.');
+    }
+  };
+  window.openIMTo._wwwR35Wrapped = true;
+  console.log('WWW R3.5: openIMTo wrapped successfully');
+}
+
+_wrapOpenIM();
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', _wrapOpenIM);
+}
+// Also try after a short delay in case the function is defined late
+setTimeout(_wrapOpenIM, 500);
+setTimeout(_wrapOpenIM, 2000);
+
+// Inject CSS to ensure IM windows always have a real height
+const _imStyle = document.createElement('style');
+_imStyle.textContent = `
+  .im-wnd {
+    width: 355px !important;
+    min-height: 440px !important;
+    height: 440px !important;
+    max-height: 600px !important;
+  }
+  .im-wnd .im-log {
+    flex: 1 1 auto !important;
+    min-height: 200px !important;
+    overflow-y: auto !important;
+    background: #fff;
+    padding: 6px;
+    font-family: Tahoma;
+    font-size: 12px;
+  }
+  .im-wnd .im-input {
+    width: 100% !important;
+    min-height: 50px !important;
+    height: 60px !important;
+    padding: 6px !important;
+    font-family: Tahoma !important;
+    font-size: 12px !important;
+    border-top: 1px solid #4878c8;
+    resize: none;
+    box-sizing: border-box;
+  }
+`;
+if(document.head) document.head.appendChild(_imStyle);
+else document.addEventListener('DOMContentLoaded', ()=>document.head.appendChild(_imStyle));
+
+console.log('WWW R3.5: messenger fix loaded');
+})();
+</script>
+
 </body>
 </html>

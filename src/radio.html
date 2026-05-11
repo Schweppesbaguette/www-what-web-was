@@ -27,10 +27,11 @@ input,button,canvas,select,.nodrag{
   background:transparent;border:none;padding:0;
   border-radius:50%;
   transition:filter 0.1s,transform 0.08s;
+  overflow:hidden;
 }
-.skin-btn:hover{filter:brightness(1.6) drop-shadow(0 0 6px rgba(255,255,255,0.7));transform:scale(1.08);}
-.skin-btn:active{filter:brightness(0.7);transform:scale(0.92);}
-.skin-btn img{width:100%;height:100%;object-fit:contain;}
+.skin-btn:hover{filter:brightness(1.3) drop-shadow(0 0 4px rgba(255,255,255,0.5));transform:scale(1.05);}
+.skin-btn:active{filter:brightness(0.8);transform:scale(0.95);}
+.skin-btn img{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;}
 
 /* LCD frequency display — center of the radio */
 #lcd{
@@ -65,7 +66,6 @@ input,button,canvas,select,.nodrag{
   pointer-events:none;
 }
 
-/* Volume slider — in the bottom bar between buttons and right edge */
 #vol-slider{
   position:absolute;z-index:3;
   top:325px;left:480px;width:170px;
@@ -73,7 +73,6 @@ input,button,canvas,select,.nodrag{
   -webkit-app-region:no-drag;
 }
 
-/* Presets panel — top right */
 #presets-panel{
   position:absolute;z-index:2;
   top:108px;left:645px;width:185px;height:160px;
@@ -84,7 +83,6 @@ input,button,canvas,select,.nodrag{
 .preset-row:hover{background:rgba(72,136,255,0.15);}
 .preset-row.active{color:#81ff28;background:rgba(0,60,0,0.3);}
 
-/* Small unobtrusive close button top right (chrome has no controls baked in) */
 #win-close{
   position:absolute;top:8px;right:12px;
   width:22px;height:22px;
@@ -127,18 +125,25 @@ input,button,canvas,select,.nodrag{
 
 <button id="win-close" onclick="closeWin()" title="Close">✕</button>
 
-<!-- 6 transport buttons — PIXEL-PERFECT to chrome circles -->
-<!-- Centers: x=147,195,245,293,339,390  y=299-339 (40 wide × 40 tall) -->
-<button class="skin-btn" style="left:127px;top:299px;width:40px;height:40px;" onclick="radioSkipPrev()" title="Previous"></button>
-<button class="skin-btn" style="left:175px;top:299px;width:40px;height:40px;" onclick="radioStop()" title="Stop"></button>
-<button class="skin-btn" style="left:225px;top:299px;width:40px;height:40px;" onclick="togglePlay()" title="Play"></button>
-<button class="skin-btn" style="left:273px;top:299px;width:40px;height:40px;" onclick="togglePlay()" title="Pause"></button>
-<button class="skin-btn" style="left:319px;top:299px;width:40px;height:40px;" onclick="scanNext()" title="Scan"></button>
-<button class="skin-btn" style="left:370px;top:299px;width:40px;height:40px;" onclick="nextPreset()" title="Preset"></button>
+<!-- 6 transport buttons with image overlays, pixel-aligned to chrome holes -->
+<button class="skin-btn" style="left:127px;top:299px;width:40px;height:40px;" onclick="radioSkipPrev()" title="Previous"><img id="btn-rew" src=""/></button>
+<button class="skin-btn" style="left:175px;top:299px;width:40px;height:40px;" onclick="radioStop()" title="Stop"><img id="btn-stop" src=""/></button>
+<button class="skin-btn" style="left:225px;top:299px;width:40px;height:40px;" onclick="togglePlay()" title="Play"><img id="btn-play" src=""/></button>
+<button class="skin-btn" style="left:273px;top:299px;width:40px;height:40px;" onclick="togglePlay()" title="Pause"><img id="btn-pause" src=""/></button>
+<button class="skin-btn" style="left:319px;top:299px;width:40px;height:40px;" onclick="scanNext()" title="Scan"><img id="btn-scan" src=""/></button>
+<button class="skin-btn" style="left:370px;top:299px;width:40px;height:40px;" onclick="nextPreset()" title="Preset"><img id="btn-preset" src=""/></button>
 
 <script>
 async function loadAssets() {
-  const files = {'skin':'radio2.png'};
+  const files = {
+    'skin':'radio2.png',
+    'btn-rew':'radio-btn-rew.png',
+    'btn-stop':'radio-btn-stop.png',
+    'btn-play':'radio-btn-play.png',
+    'btn-pause':'radio-btn-pause.png',
+    'btn-scan':'radio-btn-scan.png',
+    'btn-preset':'radio-btn-preset.png',
+  };
   for (const [id, file] of Object.entries(files)) {
     let src;
     if (window.electronAPI && window.electronAPI.readAssetBase64) src = await window.electronAPI.readAssetBase64(file);
