@@ -126,17 +126,27 @@ ipcMain.handle('read-asset-base64', (event, filename) => {
   }
 });
 
+// ── Shared options for all transparent skin windows ──────
+// Kills the white border / shadow halo on macOS
+const SKIN_WINDOW_OPTS = {
+  frame: false,
+  transparent: true,
+  hasShadow: false,           // <- was true; the shadow renders a halo on transparent windows
+  backgroundColor: '#00000000',
+  titleBarStyle: 'hidden',    // extra insurance against title bar bleed
+  roundedCorners: false,      // prevents macOS auto rounded-corner mask
+  vibrancy: null,             // no Big Sur translucency effects
+  thickFrame: false,          // Windows-specific but harmless on Mac
+};
+
 // ── Signon window ────────────────────────────────────────
 function createSignonWindow() {
   if (signonWindow) { signonWindow.focus(); return; }
   signonWindow = new BrowserWindow({
     width: 1236, height: 980,
-    frame: false,
-    transparent: true,
     resizable: false,
-    hasShadow: true,
     alwaysOnTop: false,
-    backgroundColor: '#00000000',
+    ...SKIN_WINDOW_OPTS,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -183,9 +193,8 @@ function createRadioWindow() {
   if (radioWindow) { radioWindow.focus(); return; }
   radioWindow = new BrowserWindow({
     width: 850, height: 367,
-    frame: false, transparent: true,
-    resizable: true, hasShadow: true,
-    backgroundColor: '#00000000',
+    resizable: false,
+    ...SKIN_WINDOW_OPTS,
     webPreferences: {
       nodeIntegration: false, contextIsolation: true,
       webviewTag: true,
@@ -202,9 +211,8 @@ function createTVWindow() {
   if (tvWindow) { tvWindow.focus(); return; }
   tvWindow = new BrowserWindow({
     width: 850, height: 569,
-    frame: false, transparent: true,
-    resizable: true, hasShadow: true,
-    backgroundColor: '#00000000',
+    resizable: false,
+    ...SKIN_WINDOW_OPTS,
     webPreferences: {
       nodeIntegration: false, contextIsolation: true,
       webviewTag: true,
@@ -223,9 +231,8 @@ function createHistorianWindow() {
   if (historianWindow) { historianWindow.focus(); return; }
   historianWindow = new BrowserWindow({
     width: 900, height: 680,
-    frame: false, transparent: true,
-    resizable: true, hasShadow: true,
-    backgroundColor: '#00000000',
+    resizable: false,
+    ...SKIN_WINDOW_OPTS,
     webPreferences: { nodeIntegration: false, contextIsolation: true, webviewTag: true, webSecurity: false, preload: path.join(__dirname, 'preload.js') },
   });
   historianWindow.loadFile(path.join(__dirname, 'src', 'historian.html'));
