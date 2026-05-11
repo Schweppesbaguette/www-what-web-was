@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body{width:900px;height:602px;background:transparent!important;overflow:hidden;-webkit-app-region:drag;user-select:none;}
-#skin{position:absolute;top:0;left:0;width:900px;height:602px;pointer-events:none;}
+html,body{width:850px;height:569px;background:transparent!important;overflow:hidden;-webkit-app-region:drag;user-select:none;}
+#skin{position:absolute;top:0;left:0;width:850px;height:569px;pointer-events:none;}
 input,button,select,webview,iframe,.nodrag{-webkit-app-region:no-drag;user-select:text;}
 .skin-btn{position:absolute;cursor:pointer;-webkit-app-region:no-drag;background:transparent;border:none;padding:0;transition:filter 0.1s,transform 0.1s;}
 .skin-btn:hover{filter:brightness(1.25);transform:scale(1.08);}
@@ -25,9 +25,10 @@ webview,iframe{width:100%;height:100%;border:none;}
 </style>
 </head>
 <body>
-<img id="skin" src="assets/tv2.png" alt=""/>
 
-<!-- Screen -->
+<!-- Skin loaded via readAssetBase64 to preserve PNG alpha channel -->
+<img id="skin" src=""/>
+
 <div id="screen-area">
   <div id="no-signal">
     <div style="font-size:24px;margin-bottom:6px;">📺</div>
@@ -38,32 +39,62 @@ webview,iframe{width:100%;height:100%;border:none;}
     useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"></webview>
 </div>
 
-<!-- Info bar -->
 <div id="info-bar">
   <div class="info-cell"><span class="info-lbl">Channel: </span><span id="info-channel">—</span></div>
   <div class="info-cell"><span class="info-lbl">Title: </span><span id="info-title">Select a channel</span></div>
   <div class="info-cell"><span class="info-lbl">Bitrate: </span><span id="info-bitrate">—</span></div>
 </div>
 
-<!-- Playlist -->
 <div id="playlist-panel"></div>
 
-<!-- Volume -->
 <input type="range" id="vol-slider" min="0" max="100" value="80" oninput="setVol(this.value)"/>
 
-<!-- Window controls (top-right 3 circles at ~87/90/93% width, ~12% height) -->
-<button class="skin-btn" style="top:7%;left:85%;width:4%;height:8%;" onclick="if(window.electronAPI)window.electronAPI.minimizeTV();else window.close();"><img src="assets/btn-minimize.png"/></button>
-<button class="skin-btn" style="top:7%;left:89%;width:4%;height:8%;" onclick="tvToggleFullscreen()"><img src="assets/btn-fullscreen.png"/></button>
-<button class="skin-btn" style="top:7%;left:93%;width:4%;height:8%;" onclick="if(window.electronAPI)window.electronAPI.closeTV();else window.close();"><img src="assets/btn-close.png"/></button>
+<!-- Window controls -->
+<button class="skin-btn" style="top:7%;left:85%;width:4%;height:8%;" onclick="if(window.electronAPI)window.electronAPI.minimizeTV();else window.close();"><img id="btn-min" src=""/></button>
+<button class="skin-btn" style="top:7%;left:89%;width:4%;height:8%;" onclick="tvToggleFullscreen()"><img id="btn-max" src=""/></button>
+<button class="skin-btn" style="top:7%;left:93%;width:4%;height:8%;" onclick="if(window.electronAPI)window.electronAPI.closeTV();else window.close();"><img id="btn-close" src=""/></button>
 
-<!-- Transport buttons (bottom row: Back/Stop/Play/Pause/Forward) -->
-<button class="skin-btn" style="top:83%;left:14%;width:5%;height:9%;" onclick="skipBack()"><img src="assets/btn-back.png"/></button>
-<button class="skin-btn" style="top:83%;left:20%;width:5%;height:9%;" onclick="stopTV()"><img src="assets/btn-stop.png"/></button>
-<button class="skin-btn" style="top:81%;left:25%;width:9%;height:13%;" onclick="playSelected()"><img src="assets/btn-play.png"/></button>
-<button class="skin-btn" style="top:83%;left:34%;width:5%;height:9%;" onclick="pauseTV()"><img src="assets/btn-resume.png"/></button>
-<button class="skin-btn" style="top:83%;left:40%;width:5%;height:9%;" onclick="skipNext()"><img src="assets/btn-foward.png"/></button>
+<!-- Transport buttons -->
+<button class="skin-btn" style="top:83%;left:14%;width:5%;height:9%;" onclick="skipBack()"><img id="btn-back" src=""/></button>
+<button class="skin-btn" style="top:83%;left:20%;width:5%;height:9%;" onclick="stopTV()"><img id="btn-stop" src=""/></button>
+<button class="skin-btn" style="top:81%;left:25%;width:9%;height:13%;" onclick="playSelected()"><img id="btn-play" src=""/></button>
+<button class="skin-btn" style="top:83%;left:34%;width:5%;height:9%;" onclick="pauseTV()"><img id="btn-pause" src=""/></button>
+<button class="skin-btn" style="top:83%;left:40%;width:5%;height:9%;" onclick="skipNext()"><img id="btn-forward" src=""/></button>
 
 <script>
+// ── Load all assets via readAssetBase64 to preserve PNG transparency ──
+async function loadAssets() {
+  if (window.electronAPI && window.electronAPI.readAssetBase64) {
+    const files = {
+      'skin':       'tv2.png',
+      'btn-min':    'btn-tv-minimize.png',
+      'btn-max':    'btn-tv-fullscreen.png',
+      'btn-close':  'btn-tv-close.png',
+      'btn-back':   'btn-back.png',
+      'btn-stop':   'btn-stop.png',
+      'btn-play':   'btn-play.png',
+      'btn-pause':  'btn-resume.png',
+      'btn-forward':'btn-foward.png',
+    };
+    for (const [id, file] of Object.entries(files)) {
+      const data = await window.electronAPI.readAssetBase64(file);
+      if (data) document.getElementById(id).src = data;
+    }
+  } else {
+    // Browser fallback
+    document.getElementById('skin').src = 'assets/tv2.png';
+    document.getElementById('btn-min').src = 'assets/btn-tv-minimize.png';
+    document.getElementById('btn-max').src = 'assets/btn-tv-fullscreen.png';
+    document.getElementById('btn-close').src = 'assets/btn-tv-close.png';
+    document.getElementById('btn-back').src = 'assets/btn-back.png';
+    document.getElementById('btn-stop').src = 'assets/btn-stop.png';
+    document.getElementById('btn-play').src = 'assets/btn-play.png';
+    document.getElementById('btn-pause').src = 'assets/btn-resume.png';
+    document.getElementById('btn-forward').src = 'assets/btn-foward.png';
+  }
+}
+loadAssets();
+
 const CHANNELS=[
   {name:'Retro TV Live',channel:'RetroTV',url:'https://90s.myretrotvs.com/',bitrate:'128 kbps'},
   {name:'Lo-Fi Hip Hop',channel:'LoFiTV',url:'https://www.youtube.com/watch?v=jfKfPfyJRdk',bitrate:'192 kbps'},

@@ -5,13 +5,13 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{
-  width:910px;height:394px;
+  width:850px;height:367px;
   background:transparent!important;
   overflow:hidden;
   -webkit-app-region:drag;
   user-select:none;
 }
-#skin{position:absolute;top:0;left:0;width:910px;height:394px;pointer-events:none;}
+#skin{position:absolute;top:0;left:0;width:850px;height:367px;pointer-events:none;}
 input,button,canvas,select,.nodrag{-webkit-app-region:no-drag;user-select:text;}
 
 .skin-btn{
@@ -24,7 +24,6 @@ input,button,canvas,select,.nodrag{-webkit-app-region:no-drag;user-select:text;}
 .skin-btn:active{filter:brightness(0.8);transform:scale(0.95);}
 .skin-btn img{width:100%;height:100%;object-fit:contain;}
 
-/* LCD display area overlaid on the black screen */
 #lcd{
   position:absolute;
   top:27%;left:7%;width:63%;height:45%;
@@ -39,30 +38,14 @@ input,button,canvas,select,.nodrag{-webkit-app-region:no-drag;user-select:text;}
   text-shadow:0 0 10px #81ff28,0 0 20px rgba(129,255,40,0.3);
   letter-spacing:2px;line-height:1;
 }
-#station-name{
-  font-size:13px;color:#81ff28;
-  font-family:Tahoma,Arial;
-  text-shadow:0 0 8px rgba(129,255,40,0.5);
-  margin-top:4px;
-}
-#station-genre{
-  font-size:10px;color:rgba(129,255,40,0.7);
-  font-family:Tahoma;margin-top:2px;
-}
+#station-name{font-size:13px;color:#81ff28;font-family:Tahoma,Arial;text-shadow:0 0 8px rgba(129,255,40,0.5);margin-top:4px;}
+#station-genre{font-size:10px;color:rgba(129,255,40,0.7);font-family:Tahoma;margin-top:2px;}
 #stereo-lbl{position:absolute;top:29%;left:8%;font-size:9px;color:#81ff28;font-family:'Courier New';pointer-events:none;}
 #rds-lbl{position:absolute;top:34%;left:8%;font-size:9px;color:#81ff28;font-family:'Courier New';pointer-events:none;}
 #signal-lbl{position:absolute;top:29%;right:30%;font-size:9px;color:#81ff28;font-family:'Courier New';pointer-events:none;}
-#signal-bars{
-  position:absolute;top:33%;right:29%;
-  display:flex;gap:2px;align-items:flex-end;
-  pointer-events:none;
-}
+#signal-bars{position:absolute;top:33%;right:29%;display:flex;gap:2px;align-items:flex-end;pointer-events:none;}
 .sig-bar{width:5px;background:#81ff28;box-shadow:0 0 4px #81ff28;}
-
-/* Tuner canvas */
 #tuner-canvas{position:absolute;top:64%;left:7%;width:63%;height:14%;pointer-events:none;}
-
-/* Status bar overlay */
 #status-bar{
   position:absolute;top:80%;left:47%;width:32%;
   display:flex;align-items:center;justify-content:center;gap:6px;
@@ -70,35 +53,18 @@ input,button,canvas,select,.nodrag{-webkit-app-region:no-drag;user-select:text;}
   font-size:11px;font-family:'Courier New';color:#81ff28;
   text-shadow:0 0 6px #81ff28;
 }
-
-/* Volume slider */
-#vol-slider{
-  position:absolute;top:84%;left:47%;width:28%;
-  accent-color:#81ff28;cursor:pointer;
-  -webkit-app-region:no-drag;
-}
-
-/* Presets panel */
-#presets-panel{
-  position:absolute;top:27%;left:72%;width:25%;height:50%;
-  -webkit-app-region:no-drag;
-  overflow-y:auto;
-}
-.preset-row{
-  display:flex;align-items:center;gap:4px;
-  padding:3px 6px;cursor:pointer;
-  font-size:10px;font-family:Tahoma;color:#92d9ff;
-  border-bottom:1px solid rgba(72,136,255,0.1);
-}
+#vol-slider{position:absolute;top:84%;left:47%;width:28%;accent-color:#81ff28;cursor:pointer;-webkit-app-region:no-drag;}
+#presets-panel{position:absolute;top:27%;left:72%;width:25%;height:50%;-webkit-app-region:no-drag;overflow-y:auto;}
+.preset-row{display:flex;align-items:center;gap:4px;padding:3px 6px;cursor:pointer;font-size:10px;font-family:Tahoma;color:#92d9ff;border-bottom:1px solid rgba(72,136,255,0.1);}
 .preset-row:hover{background:rgba(72,136,255,0.15);}
 .preset-row.active{color:#81ff28;background:rgba(0,60,0,0.3);}
 </style>
 </head>
 <body>
 
-<img id="skin" src="assets/radio2.png" alt=""/>
+<!-- Skin loaded via readAssetBase64 to preserve PNG alpha channel -->
+<img id="skin" src=""/>
 
-<!-- LCD display labels -->
 <div id="stereo-lbl">STEREO</div>
 <div id="rds-lbl">⟳ RDS</div>
 <div id="signal-lbl">SIGNAL</div>
@@ -110,7 +76,6 @@ input,button,canvas,select,.nodrag{-webkit-app-region:no-drag;user-select:text;}
   <div class="sig-bar" style="height:11px;"></div>
 </div>
 
-<!-- LCD screen content -->
 <div id="lcd">
   <div style="display:flex;align-items:flex-end;gap:4px;">
     <span id="freq-display">88.5</span>
@@ -120,37 +85,67 @@ input,button,canvas,select,.nodrag{-webkit-app-region:no-drag;user-select:text;}
   <div id="station-genre">Easy Listening</div>
 </div>
 
-<!-- Tuner bar -->
 <canvas id="tuner-canvas"></canvas>
 
-<!-- Status bar -->
 <div id="status-bar">
   <span id="status-freq">88.5 FM</span>
   <span>STEREO</span>
   <span>📡</span>
 </div>
 
-<!-- Volume slider -->
 <input type="range" id="vol-slider" min="0" max="100" value="80" oninput="setVol(this.value)"/>
 
-<!-- Presets panel -->
 <div id="presets-panel"></div>
 
-<!-- Window controls (top-right 3 circles: 87%,90%,93% width, 18% height) -->
-<button class="skin-btn" style="top:12%;left:83%;width:4%;height:12%;" onclick="minimize()"><img src="assets/btn-minimize.png"/></button>
-<button class="skin-btn" style="top:12%;left:87%;width:4%;height:12%;" onclick="toggleMax()"><img src="assets/btn-fullscreen.png"/></button>
-<button class="skin-btn" style="top:12%;left:91%;width:4%;height:12%;" onclick="closeWin()"><img src="assets/btn-close.png"/></button>
+<!-- Window controls -->
+<button class="skin-btn" style="top:12%;left:83%;width:4%;height:12%;" onclick="minimize()"><img id="btn-min" src=""/></button>
+<button class="skin-btn" style="top:12%;left:87%;width:4%;height:12%;" onclick="toggleMax()"><img id="btn-max" src=""/></button>
+<button class="skin-btn" style="top:12%;left:91%;width:4%;height:12%;" onclick="closeWin()"><img id="btn-close" src=""/></button>
 
-<!-- Transport buttons from sliced radiobuttons strip -->
-<!-- 5 circles at ~17%,23%,29%,34%,40% width, 82% height -->
-<button class="skin-btn" style="top:76%;left:14%;width:5%;height:13%;" onclick="radioSkipPrev()"><img src="assets/radio-btn-rew.png"/></button>
-<button class="skin-btn" style="top:76%;left:20%;width:5%;height:13%;" onclick="radioStop()"><img src="assets/radio-btn-stop.png"/></button>
-<button class="skin-btn" style="top:76%;left:26%;width:5%;height:13%;" onclick="togglePlay()"><img src="assets/radio-btn-play.png"/></button>
-<button class="skin-btn" style="top:76%;left:32%;width:5%;height:13%;" onclick="togglePlay()"><img src="assets/radio-btn-pause.png"/></button>
-<button class="skin-btn" style="top:76%;left:38%;width:5%;height:13%;" onclick="scanNext()"><img src="assets/radio-btn-scan.png"/></button>
-<button class="skin-btn" style="top:76%;left:44%;width:5%;height:13%;" onclick="nextPreset()"><img src="assets/radio-btn-preset.png"/></button>
+<!-- Transport buttons -->
+<button class="skin-btn" style="top:76%;left:14%;width:5%;height:13%;" onclick="radioSkipPrev()"><img id="btn-rew" src=""/></button>
+<button class="skin-btn" style="top:76%;left:20%;width:5%;height:13%;" onclick="radioStop()"><img id="btn-stop" src=""/></button>
+<button class="skin-btn" style="top:76%;left:26%;width:5%;height:13%;" onclick="togglePlay()"><img id="btn-play" src=""/></button>
+<button class="skin-btn" style="top:76%;left:32%;width:5%;height:13%;" onclick="togglePlay()"><img id="btn-pause" src=""/></button>
+<button class="skin-btn" style="top:76%;left:38%;width:5%;height:13%;" onclick="scanNext()"><img id="btn-scan" src=""/></button>
+<button class="skin-btn" style="top:76%;left:44%;width:5%;height:13%;" onclick="nextPreset()"><img id="btn-preset" src=""/></button>
 
 <script>
+// ── Load all assets via readAssetBase64 to preserve PNG transparency ──
+async function loadAssets() {
+  if (window.electronAPI && window.electronAPI.readAssetBase64) {
+    const files = {
+      'skin':       'radio2.png',
+      'btn-min':    'btn-minimize.png',
+      'btn-max':    'btn-fullscreen.png',
+      'btn-close':  'btn-close.png',
+      'btn-rew':    'radio-btn-rew.png',
+      'btn-stop':   'radio-btn-stop.png',
+      'btn-play':   'radio-btn-play.png',
+      'btn-pause':  'radio-btn-pause.png',
+      'btn-scan':   'radio-btn-scan.png',
+      'btn-preset': 'radio-btn-preset.png',
+    };
+    for (const [id, file] of Object.entries(files)) {
+      const data = await window.electronAPI.readAssetBase64(file);
+      if (data) document.getElementById(id).src = data;
+    }
+  } else {
+    // Browser fallback
+    document.getElementById('skin').src = 'assets/radio2.png';
+    document.getElementById('btn-min').src = 'assets/btn-minimize.png';
+    document.getElementById('btn-max').src = 'assets/btn-fullscreen.png';
+    document.getElementById('btn-close').src = 'assets/btn-close.png';
+    document.getElementById('btn-rew').src = 'assets/radio-btn-rew.png';
+    document.getElementById('btn-stop').src = 'assets/radio-btn-stop.png';
+    document.getElementById('btn-play').src = 'assets/radio-btn-play.png';
+    document.getElementById('btn-pause').src = 'assets/radio-btn-pause.png';
+    document.getElementById('btn-scan').src = 'assets/radio-btn-scan.png';
+    document.getElementById('btn-preset').src = 'assets/radio-btn-preset.png';
+  }
+}
+loadAssets();
+
 const PRESETS=[
   {num:'01',freq:'88.5',name:'Chill FM',genre:'Easy Listening',url:'https://stream.zeno.fm/0r0xa792kwzuv'},
   {num:'02',freq:'91.0',name:'90s Alt',genre:'Grunge / Alternative',url:'https://stream.zeno.fm/yn65dy4vhs8uv'},
@@ -162,7 +157,6 @@ const PRESETS=[
 
 let audio=null, playing=false, currentPreset=null, tunerPos=0.15;
 
-// Build presets
 (function(){
   const list=document.getElementById('presets-panel');
   PRESETS.forEach((p,i)=>{
@@ -210,7 +204,6 @@ function animateBars(){
   setTimeout(animateBars,200);
 }
 
-// Tuner canvas
 function drawTuner(){
   const c=document.getElementById('tuner-canvas');
   const w=c.offsetWidth||580,h=c.offsetHeight||55;
@@ -223,12 +216,9 @@ function drawTuner(){
     const x=(i/(freqs.length-1))*w;
     ctx.fillText(f,x,12);
     ctx.fillRect(x-0.5,16,1,7);
-    if(i<freqs.length-1){
-      for(let m=1;m<5;m++){const mx=x+(m/5)*(w/(freqs.length-1));ctx.fillRect(mx-0.5,19,1,4);}
-    }
+    if(i<freqs.length-1){for(let m=1;m<5;m++){const mx=x+(m/5)*(w/(freqs.length-1));ctx.fillRect(mx-0.5,19,1,4);}}
   });
   ctx.fillText('FM',w-8,12);
-  // Needle
   const nx=tunerPos*w;
   ctx.strokeStyle='#81ff28';ctx.lineWidth=2;ctx.shadowColor='#81ff28';ctx.shadowBlur=8;
   ctx.beginPath();ctx.moveTo(nx,16);ctx.lineTo(nx,h);ctx.stroke();
@@ -236,8 +226,6 @@ function drawTuner(){
 }
 drawTuner();
 window.addEventListener('resize',drawTuner);
-
-// Auto-tune first preset
 setTimeout(()=>tunePreset(0),400);
 </script>
 </body>
