@@ -13,7 +13,6 @@ input,button,select,webview,iframe,.nodrag{-webkit-app-region:no-drag;user-selec
 .skin-btn:active{filter:brightness(0.8);transform:scale(0.95);}
 .skin-btn img{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;}
 
-/* Screen area */
 #screen-area{
   position:absolute;z-index:2;
   top:106px;left:150px;width:474px;height:301px;
@@ -48,18 +47,6 @@ webview,iframe{width:100%;height:100%;border:none;}
   accent-color:#81ff28;cursor:pointer;
   -webkit-app-region:no-drag;
 }
-
-#win-close{
-  position:absolute;top:30px;right:130px;
-  width:22px;height:22px;
-  background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.3);
-  border-radius:50%;
-  color:#fff;font-size:11px;line-height:18px;text-align:center;
-  cursor:pointer;z-index:10;
-  -webkit-app-region:no-drag;
-  font-family:Tahoma;
-}
-#win-close:hover{background:rgba(255,80,80,0.6);}
 </style>
 </head>
 <body>
@@ -84,9 +71,12 @@ webview,iframe{width:100%;height:100%;border:none;}
 <div id="playlist-panel"></div>
 <input type="range" id="vol-slider" min="0" max="100" value="80" oninput="setVol(this.value)"/>
 
-<button id="win-close" onclick="closeTV()" title="Close">✕</button>
+<!-- Window control buttons — chrome circles at (741,77) (766,77) (792,77), ~22×22 -->
+<button class="skin-btn" style="left:730px;top:66px;width:22px;height:23px;" onclick="winMin()" title="Minimize"><img id="btn-min" src=""/></button>
+<button class="skin-btn" style="left:755px;top:66px;width:22px;height:23px;" onclick="winMax()" title="Maximize"><img id="btn-max" src=""/></button>
+<button class="skin-btn" style="left:781px;top:66px;width:22px;height:23px;" onclick="closeTV()" title="Close"><img id="btn-close" src=""/></button>
 
-<!-- 5 transport buttons with image overlays -->
+<!-- 5 transport buttons -->
 <button class="skin-btn" style="left:130px;top:488px;width:34px;height:34px;" onclick="skipBack()" title="Back"><img id="btn-back" src=""/></button>
 <button class="skin-btn" style="left:174px;top:488px;width:34px;height:34px;" onclick="stopTV()" title="Stop"><img id="btn-stop" src=""/></button>
 <button class="skin-btn" style="left:218px;top:476px;width:64px;height:62px;" onclick="playSelected()" title="Play"><img id="btn-play" src=""/></button>
@@ -97,6 +87,9 @@ webview,iframe{width:100%;height:100%;border:none;}
 async function loadAssets() {
   const files = {
     'skin':'tv2.png',
+    'btn-min':'btn-tv-minimize.png',
+    'btn-max':'btn-tv-fullscreen.png',
+    'btn-close':'btn-tv-close.png',
     'btn-back':'btn-back.png',
     'btn-stop':'btn-stop.png',
     'btn-play':'btn-play.png',
@@ -128,6 +121,16 @@ const CHANNELS=[
 ];
 let currentIdx=null;
 
+function transformYouTubeUrl(url){
+  // Extract video ID from various YouTube URL formats
+  let m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/);
+  if(m){
+    // Use simple embed params — avoid aggressive flags that cause Error 153
+    return 'https://www.youtube.com/embed/' + m[1] + '?autoplay=1&rel=0';
+  }
+  return url;
+}
+
 (function(){
   const panel=document.getElementById('playlist-panel');
   CHANNELS.forEach((ch,i)=>{
@@ -138,20 +141,6 @@ let currentIdx=null;
     panel.appendChild(div);
   });
 })();
-
-function transformYouTubeUrl(url){
-  // youtube.com/watch?v=XYZ → youtube.com/embed/XYZ?autoplay=1
-  let m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
-  if(m){
-    return 'https://www.youtube.com/embed/' + m[1] + '?autoplay=1&modestbranding=1&controls=0&rel=0&showinfo=0&iv_load_policy=3&disablekb=1';
-  }
-  // youtube.com/embed/XYZ (already embed, just add autoplay)
-  m = url.match(/youtube\.com\/embed\/([A-Za-z0-9_-]{11})/);
-  if(m){
-    return 'https://www.youtube.com/embed/' + m[1] + '?autoplay=1&modestbranding=1&controls=0&rel=0&showinfo=0&iv_load_policy=3&disablekb=1';
-  }
-  return url; // not YouTube, leave as-is
-}
 
 function tuneChannel(i){
   const ch=CHANNELS[i];currentIdx=i;
@@ -176,13 +165,14 @@ function skipBack(){tuneChannel(Math.max(0,(currentIdx||0)-1));}
 function skipNext(){tuneChannel(Math.min(CHANNELS.length-1,(currentIdx||0)+1));}
 function pauseTV(){const wv=document.getElementById('tv-webview');if(wv.src)wv.reload();}
 function setVol(v){}
-function closeTV(){if(window.electronAPI)window.electronAPI.closeTV();else window.close();}
+function winMin(){if(window.electronAPI&&window.electronAPI.minimizeTV)window.electronAPI.minimizeTV();}
+function winMax(){}
+function closeTV(){if(window.electronAPI&&window.electronAPI.closeTV)window.electronAPI.closeTV();else window.close();}
 window.addEventListener('load',()=>{
   const wv=document.getElementById('tv-webview');
   wv.addEventListener('did-finish-load',()=>{
     try{
-      // Hide site chrome for non-embed sites (retro tv etc)
-      wv.insertCSS('header,.site-header,nav,#navbar,.ytp-pause-overlay,.ytp-watermark,.ytp-show-cards-title{display:none!important;}body,html{margin:0!important;padding:0!important;overflow:hidden!important;}');
+      wv.insertCSS('header,.site-header,nav,#navbar{display:none!important;}body,html{margin:0!important;padding:0!important;overflow:hidden!important;}');
     }catch(e){}
   });
 });

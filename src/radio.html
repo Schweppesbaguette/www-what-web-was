@@ -33,7 +33,6 @@ input,button,canvas,select,.nodrag{
 .skin-btn:active{filter:brightness(0.8);transform:scale(0.95);}
 .skin-btn img{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;}
 
-/* LCD frequency display — center of the radio */
 #lcd{
   position:absolute;z-index:2;
   top:100px;left:80px;width:540px;height:160px;
@@ -82,18 +81,6 @@ input,button,canvas,select,.nodrag{
 .preset-row{display:flex;align-items:center;gap:4px;padding:3px 5px;cursor:pointer;font-size:10px;font-family:Tahoma;color:#92d9ff;border-bottom:1px solid rgba(72,136,255,0.1);}
 .preset-row:hover{background:rgba(72,136,255,0.15);}
 .preset-row.active{color:#81ff28;background:rgba(0,60,0,0.3);}
-
-#win-close{
-  position:absolute;top:8px;right:12px;
-  width:22px;height:22px;
-  background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.3);
-  border-radius:50%;
-  color:#fff;font-size:11px;line-height:18px;text-align:center;
-  cursor:pointer;z-index:10;
-  -webkit-app-region:no-drag;
-  font-family:Tahoma;
-}
-#win-close:hover{background:rgba(255,80,80,0.6);}
 </style>
 </head>
 <body>
@@ -123,9 +110,12 @@ input,button,canvas,select,.nodrag{
 <input type="range" id="vol-slider" min="0" max="100" value="80" oninput="setVol(this.value)"/>
 <div id="presets-panel"></div>
 
-<button id="win-close" onclick="closeWin()" title="Close">✕</button>
+<!-- Window control buttons — chrome circles at (740,77) (765,77) (791,77), ~20×20 -->
+<button class="skin-btn" style="left:730px;top:67px;width:20px;height:22px;" onclick="winMin()" title="Minimize"><img id="btn-min" src=""/></button>
+<button class="skin-btn" style="left:755px;top:67px;width:20px;height:22px;" onclick="winMax()" title="Maximize"><img id="btn-max" src=""/></button>
+<button class="skin-btn" style="left:781px;top:67px;width:20px;height:22px;" onclick="closeWin()" title="Close"><img id="btn-close" src=""/></button>
 
-<!-- 6 transport buttons with image overlays, pixel-aligned to chrome holes -->
+<!-- 6 transport buttons -->
 <button class="skin-btn" style="left:127px;top:299px;width:40px;height:40px;" onclick="radioSkipPrev()" title="Previous"><img id="btn-rew" src=""/></button>
 <button class="skin-btn" style="left:175px;top:299px;width:40px;height:40px;" onclick="radioStop()" title="Stop"><img id="btn-stop" src=""/></button>
 <button class="skin-btn" style="left:225px;top:299px;width:40px;height:40px;" onclick="togglePlay()" title="Play"><img id="btn-play" src=""/></button>
@@ -137,6 +127,9 @@ input,button,canvas,select,.nodrag{
 async function loadAssets() {
   const files = {
     'skin':'radio2.png',
+    'btn-min':'btn-minimize.png',
+    'btn-max':'btn-fullscreen.png',
+    'btn-close':'btn-close.png',
     'btn-rew':'radio-btn-rew.png',
     'btn-stop':'radio-btn-stop.png',
     'btn-play':'radio-btn-play.png',
@@ -192,7 +185,9 @@ function radioSkipPrev(){tunePreset(Math.max(0,(currentPreset||0)-1));}
 function scanNext(){tunePreset(((currentPreset||0)+1)%PRESETS.length);}
 function nextPreset(){tunePreset(((currentPreset||0)+1)%PRESETS.length);}
 function setVol(v){if(audio)audio.volume=v/100;}
-function closeWin(){if(window.electronAPI)window.electronAPI.closeRadio();else window.close();}
+function winMin(){if(window.electronAPI&&window.electronAPI.minimizeRadio)window.electronAPI.minimizeRadio();}
+function winMax(){}
+function closeWin(){if(window.electronAPI&&window.electronAPI.closeRadio)window.electronAPI.closeRadio();else window.close();}
 function animateBars(){if(!playing)return;document.querySelectorAll('.sig-bar').forEach(b=>{b.style.height=(4+Math.random()*12)+'px';});setTimeout(animateBars,200);}
 
 function drawTuner(){
