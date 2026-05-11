@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session, ipcMain } = require('electron');
+const { app, BrowserWindow, session, ipcMain, systemPreferences } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
@@ -9,7 +9,31 @@ let radioWindow = null;
 let tvWindow = null;
 let devServer = null;
 
-// ── Dev Server ──────────────────────────────────────────
+// ── Camera permission — trigger immediately on launch ────
+// This makes macOS show the permission popup and add the app
+// to System Settings → Privacy & Security → Camera
+async function requestCameraPermission() {
+  if (process.platform === 'darwin') {
+    try {
+      const status = systemPreferences.getMediaAccessStatus('camera');
+      console.log('Camera status on launch:', status);
+      if (status !== 'granted') {
+        const granted = await systemPreferences.askForMediaAccess('camera');
+        console.log('Camera permission granted:', granted);
+      }
+    } catch(e) {
+      console.log('Camera permission request error:', e.message);
+    }
+    try {
+      const mStatus = systemPreferences.getMediaAccessStatus('microphone');
+      if (mStatus !== 'granted') {
+        await systemPreferences.askForMediaAccess('microphone');
+      }
+    } catch(e) {}
+  }
+}
+
+// ── Dev Server ───────────────────────────────────────────
 function startDevServer() {
   const PORT = 7331;
   const SRC = path.join(__dirname, 'src', 'index.html');
@@ -68,7 +92,7 @@ function startDevServer() {
   devServer.on('error',e=>{ if(e.code!=='EADDRINUSE') console.error(e); });
 }
 
-// ── Permissions ─────────────────────────────────────────
+// ── Permissions ──────────────────────────────────────────
 function setupPermissions(sess) {
   sess = sess || session.defaultSession;
   sess.setPermissionRequestHandler((wc, perm, cb) => cb(true));
@@ -84,9 +108,7 @@ function setupPermissions(sess) {
   });
 }
 
-// ── IPC: read asset as base64 so renderer gets real PNG bytes ──
-// This bypasses the upload-recompression-to-JPEG problem entirely.
-// The file is read directly from disk by the main process.
+// ── IPC: read asset as base64 ────────────────────────────
 ipcMain.handle('read-asset-base64', (event, filename) => {
   try {
     const p = path.join(__dirname, 'src', 'assets', filename);
@@ -108,7 +130,7 @@ ipcMain.handle('read-asset-base64', (event, filename) => {
 function createSignonWindow() {
   if (signonWindow) { signonWindow.focus(); return; }
   signonWindow = new BrowserWindow({
-    width: 900, height: 713,
+    width: 1236, height: 980,
     frame: false,
     transparent: true,
     resizable: false,
@@ -146,10 +168,11 @@ function createMainWindow() {
   setupPermissions();
   mainWindow.loadFile(path.join(__dirname, 'src', 'index.html'));
   mainWindow.webContents.on('did-finish-load', () => {
+    // Warm up camera so it's ready when user clicks Video
     mainWindow.webContents.executeJavaScript(`
-      navigator.mediaDevices && navigator.mediaDevices.enumerateDevices()
-        .then(d => console.log('Media devices ready:', d.length))
-        .catch(e => console.log('Media devices err:', e));
+      navigator.mediaDevices && navigator.mediaDevices.getUserMedia({video:true,audio:true})
+        .then(s => { s.getTracks().forEach(t=>t.stop()); console.log('Camera pre-warmed OK'); })
+        .catch(e => console.log('Camera pre-warm:', e.name, e.message));
     `).catch(()=>{});
   });
   mainWindow.on('closed', () => { mainWindow = null; });
@@ -230,16 +253,19 @@ ipcMain.on('close-historian', () => { if(historianWindow){historianWindow.close(
 ipcMain.on('minimize-historian', () => { if(historianWindow) historianWindow.minimize(); });
 
 // ── App start ─────────────────────────────────────────────
-// NOTE: Do NOT set use-fake-ui-for-media-stream — that flag
-// suppresses the real camera even when set to 'false' as a string.
 app.commandLine.appendSwitch('enable-usermedia-screen-capturing');
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
-app.commandLine.appendSwitch('disable-features', 'IOSurfaceCapturer');
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   startDevServer();
   setupPermissions();
+
+  // Request camera/mic permission FIRST before any window opens
+  // This triggers the macOS popup and adds app to System Settings
+  await requestCameraPermission();
+
   createSignonWindow();
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createSignonWindow();
   });

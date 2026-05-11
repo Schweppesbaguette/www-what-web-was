@@ -13,11 +13,22 @@
     "mac": {
       "category": "public.app-category.entertainment",
       "icon": "build/icon.icns",
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.plist",
+      "extendInfo": {
+        "NSCameraUsageDescription": "WhatWebWas uses your camera for video chat.",
+        "NSMicrophoneUsageDescription": "WhatWebWas uses your microphone for video chat."
+      },
       "target": [
         { "target": "zip", "arch": ["arm64", "x64"] }
       ]
     },
-    "files": ["main.js", "preload.js", "src/**/*"]
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "entitlements.mac.plist"
+    ]
   },
   "devDependencies": {
     "electron": "^29.0.0",
