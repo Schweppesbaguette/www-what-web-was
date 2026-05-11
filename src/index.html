@@ -756,7 +756,7 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 <!-- CONNECTING -->
 <div id="conn-screen">
   <img id="conn-logo-img" src="" alt="WWW"/>
-  <img id="conn-mascot" src="" alt=""/>
+  <img id="conn-mascot" src="" alt="" style="visibility:hidden;"/>
   <div id="conn-status-txt">Initializing...</div>
   <div id="conn-bar-wrap"><div id="conn-bar"></div></div>
   <div id="conn-detail">Please wait...</div>
@@ -1430,17 +1430,17 @@ window.addEventListener('load',()=>{
       const cm=document.getElementById('conn-mascot');
       // Assets may not be loaded yet - wait for them then set mascot
       setTimeout(()=>{
-        if(cm) cm.src=A[myMascot]||'';
+        if(cm){cm.src=A[myMascot]||'';cm.style.visibility='visible';}
         const cl=document.getElementById('conn-logo-img');if(cl)cl.src=A.WWWLOGO||'';
         playDialup();
       },300);
-      const steps=[[200,'Dialing...',2,'Picking up the line...'],[1100,'Dialing...',7,'Listening for carrier...'],[2100,'Connecting...',14,'Carrier detected!'],[3100,'Handshaking...',24,'Negotiating 56Kbps...'],[4100,'Handshaking...',32,'Trading secrets with the modem...'],[5100,'Authenticating...',42,'Sending credentials...'],[6100,'Authenticating...',52,'Configuring TCP/IP stack...'],[7100,'Loading...',64,'Cleaning the dust off old bookmarks...'],[8100,'Loading...',76,'Defragging your past...'],[9100,'Loading...',88,'Synchronizing buddy list...'],[10100,'Connected!',100,'Welcome to What Web Was!']];
+      const steps=[[200,'Dialing...',2,'Picking up the line...'],[1100,'Dialing...',7,'Listening for carrier...'],[2100,'Connecting...',12,'Carrier detected!'],[3100,'Handshaking...',20,'Negotiating 56Kbps...'],[4100,'Handshaking...',28,'Trading secrets with the modem...'],[5100,'Authenticating...',36,'Sending credentials...'],[6100,'Authenticating...',44,'Configuring TCP/IP stack...'],[7100,'Loading...',54,'Cleaning the dust off old bookmarks...'],[8100,'Loading...',64,'Defragging your past...'],[9100,'Loading...',74,'Synchronizing buddy list...'],[10100,'Loading...',82,'Saying hi to your old friends...'],[11100,'Almost ready...',88,'Loading your mascot personality...'],[12100,'Almost ready...',94,'Final preparations...'],[13500,'Connected!',100,'Welcome to What Web Was!']];
       steps.forEach(([d,s,p,det])=>setTimeout(()=>{
         const c=document.getElementById('conn-status-txt');if(c)c.textContent=s;
         const b=document.getElementById('conn-bar');if(b)b.style.width=p+'%';
         const e=document.getElementById('conn-detail');if(e)e.textContent=det;
       },d));
-      setTimeout(bootDesktop,10500);
+      setTimeout(bootDesktop,14000);
     } else {
       setTimeout(bootDesktop,500);
     }
@@ -1471,7 +1471,7 @@ function saveSetup(){
   } else {
     // Browser: show connecting screen then boot
     document.getElementById('conn-screen').style.display='flex';
-    const cm=document.getElementById('conn-mascot'); if(cm) cm.src=A[myMascot]||'';
+    const cm=document.getElementById('conn-mascot'); if(cm){cm.src=A[myMascot]||'';cm.style.visibility='visible';}
     const cl=document.getElementById('conn-logo-img'); if(cl) cl.src=A.WWWLOGO||'';
     setTimeout(()=>playDialup(),100);
     const _steps=[[100,'Dialing...',2,'...'],[1400,'Connecting...',25,'Carrier!'],[2800,'Auth...',55,'Verifying...'],[4000,'Connected!',100,'Welcome!']];
@@ -2964,8 +2964,8 @@ let currentRadioAudio=null,radioPlaying=false,currentRadioYear=null;
 let radioVizInterval=null;
 
 function initRadio(){
-  // Always use in-browser popup (electron routing removed)
-  openWin('radio-win');
+  const isElectron=!!(window.electronAPI);
+  if(isElectron&&window.electronAPI){ window.electronAPI.openRadio(); return; }
   const c=document.getElementById('radio-yr-btns');
   if(!c||c.children.length)return;
   for(let y=1991;y<=2008;y++){
@@ -3152,7 +3152,8 @@ function setRadioVol(v){
 let currentTVChannel=null;
 
 function openTV(){
-  // Always use in-browser popup (electron routing removed)
+  const isElectron=!!(window.electronAPI);
+  if(isElectron&&window.electronAPI){ window.electronAPI.openTV(); return; }
   openWin('tv-win');
 }
 
