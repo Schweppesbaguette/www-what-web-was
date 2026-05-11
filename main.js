@@ -74,7 +74,6 @@ function setupPermissions(sess) {
   sess.setPermissionRequestHandler((wc, perm, cb) => cb(true));
   sess.setPermissionCheckHandler(() => true);
   try { sess.setDevicePermissionHandler(() => true); } catch(e) {}
-  // Allow camera/mic in webviews
   sess.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
@@ -85,11 +84,31 @@ function setupPermissions(sess) {
   });
 }
 
-// ── Signon window — ALWAYS shown first ──────────────────
+// ── IPC: read asset as base64 so renderer gets real PNG bytes ──
+// This bypasses the upload-recompression-to-JPEG problem entirely.
+// The file is read directly from disk by the main process.
+ipcMain.handle('read-asset-base64', (event, filename) => {
+  try {
+    const p = path.join(__dirname, 'src', 'assets', filename);
+    const buf = fs.readFileSync(p);
+    const ext = path.extname(filename).toLowerCase();
+    const mime = ext === '.png' ? 'image/png'
+               : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg'
+               : ext === '.gif' ? 'image/gif'
+               : ext === '.mp3' ? 'audio/mpeg'
+               : 'application/octet-stream';
+    return `data:${mime};base64,${buf.toString('base64')}`;
+  } catch(e) {
+    console.error('read-asset-base64 error:', e.message);
+    return null;
+  }
+});
+
+// ── Signon window ────────────────────────────────────────
 function createSignonWindow() {
   if (signonWindow) { signonWindow.focus(); return; }
   signonWindow = new BrowserWindow({
-    width: 1000, height: 780,
+    width: 900, height: 713,
     frame: false,
     transparent: true,
     resizable: false,
@@ -127,10 +146,9 @@ function createMainWindow() {
   setupPermissions();
   mainWindow.loadFile(path.join(__dirname, 'src', 'index.html'));
   mainWindow.webContents.on('did-finish-load', () => {
-    // Pre-request camera permission so it's ready when user clicks Video
     mainWindow.webContents.executeJavaScript(`
       navigator.mediaDevices && navigator.mediaDevices.enumerateDevices()
-        .then(d => console.log('Media devices:', d.length))
+        .then(d => console.log('Media devices ready:', d.length))
         .catch(e => console.log('Media devices err:', e));
     `).catch(()=>{});
   });
@@ -141,9 +159,9 @@ function createMainWindow() {
 function createRadioWindow() {
   if (radioWindow) { radioWindow.focus(); return; }
   radioWindow = new BrowserWindow({
-    width: 910, height: 394,
+    width: 850, height: 367,
     frame: false, transparent: true,
-    resizable: false, hasShadow: true,
+    resizable: true, hasShadow: true,
     backgroundColor: '#00000000',
     webPreferences: {
       nodeIntegration: false, contextIsolation: true,
@@ -160,9 +178,9 @@ function createRadioWindow() {
 function createTVWindow() {
   if (tvWindow) { tvWindow.focus(); return; }
   tvWindow = new BrowserWindow({
-    width: 900, height: 602,
+    width: 850, height: 569,
     frame: false, transparent: true,
-    resizable: false, hasShadow: true,
+    resizable: true, hasShadow: true,
     backgroundColor: '#00000000',
     webPreferences: {
       nodeIntegration: false, contextIsolation: true,
@@ -175,52 +193,6 @@ function createTVWindow() {
   tvWindow.loadFile(path.join(__dirname, 'src', 'tv.html'));
   tvWindow.on('closed', () => { tvWindow = null; });
 }
-
-// ── IPC ──────────────────────────────────────────────────
-// After signon → open main window
-ipcMain.on('signon-complete', () => {
-  createMainWindow();
-  if (signonWindow) { signonWindow.close(); signonWindow = null; }
-});
-
-// After setup in main → open signon
-ipcMain.on('setup-complete', () => {
-  createSignonWindow();
-});
-
-// Sign off → close main, reopen signon
-ipcMain.on('sign-off', () => {
-  createSignonWindow();
-  if (mainWindow) { mainWindow.close(); mainWindow = null; }
-});
-
-ipcMain.on('open-radio', () => createRadioWindow());
-ipcMain.on('open-tv', () => createTVWindow());
-ipcMain.on('close-radio', () => { if(radioWindow){radioWindow.close();radioWindow=null;} });
-ipcMain.on('close-tv', () => { if(tvWindow){tvWindow.close();tvWindow=null;} });
-ipcMain.on('minimize-radio', () => { if(radioWindow) radioWindow.minimize(); });
-ipcMain.on('minimize-tv', () => { if(tvWindow) tvWindow.minimize(); });
-
-// ── App start — ALWAYS show signon first ─────────────────
-// Enable camera access in Electron
-app.commandLine.appendSwitch('use-fake-ui-for-media-stream', 'false');
-app.commandLine.appendSwitch('enable-usermedia-screen-capturing');
-app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
-
-app.whenReady().then(() => {
-  startDevServer();
-  setupPermissions();
-  // Always open signon first — it decides whether to show setup or login
-  createSignonWindow();
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createSignonWindow();
-  });
-});
-
-app.on('window-all-closed', () => {
-  if (devServer) devServer.close();
-  if (process.platform !== 'darwin') app.quit();
-});
 
 // ── Historian window ─────────────────────────────────────
 let historianWindow = null;
@@ -236,6 +208,44 @@ function createHistorianWindow() {
   historianWindow.loadFile(path.join(__dirname, 'src', 'historian.html'));
   historianWindow.on('closed', () => { historianWindow = null; });
 }
+
+// ── IPC handlers ─────────────────────────────────────────
+ipcMain.on('signon-complete', () => {
+  createMainWindow();
+  if (signonWindow) { signonWindow.close(); signonWindow = null; }
+});
+ipcMain.on('setup-complete', () => { createSignonWindow(); });
+ipcMain.on('sign-off', () => {
+  createSignonWindow();
+  if (mainWindow) { mainWindow.close(); mainWindow = null; }
+});
+ipcMain.on('open-radio', () => createRadioWindow());
+ipcMain.on('open-tv', () => createTVWindow());
+ipcMain.on('close-radio', () => { if(radioWindow){radioWindow.close();radioWindow=null;} });
+ipcMain.on('close-tv', () => { if(tvWindow){tvWindow.close();tvWindow=null;} });
+ipcMain.on('minimize-radio', () => { if(radioWindow) radioWindow.minimize(); });
+ipcMain.on('minimize-tv', () => { if(tvWindow) tvWindow.minimize(); });
 ipcMain.on('open-historian', () => createHistorianWindow());
 ipcMain.on('close-historian', () => { if(historianWindow){historianWindow.close();historianWindow=null;} });
 ipcMain.on('minimize-historian', () => { if(historianWindow) historianWindow.minimize(); });
+
+// ── App start ─────────────────────────────────────────────
+// NOTE: Do NOT set use-fake-ui-for-media-stream — that flag
+// suppresses the real camera even when set to 'false' as a string.
+app.commandLine.appendSwitch('enable-usermedia-screen-capturing');
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+app.commandLine.appendSwitch('disable-features', 'IOSurfaceCapturer');
+
+app.whenReady().then(() => {
+  startDevServer();
+  setupPermissions();
+  createSignonWindow();
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createSignonWindow();
+  });
+});
+
+app.on('window-all-closed', () => {
+  if (devServer) devServer.close();
+  if (process.platform !== 'darwin') app.quit();
+});
