@@ -2964,8 +2964,8 @@ let currentRadioAudio=null,radioPlaying=false,currentRadioYear=null;
 let radioVizInterval=null;
 
 function initRadio(){
-  const isElectron=!!(window.electronAPI);
-  if(isElectron&&window.electronAPI){ window.electronAPI.openRadio(); return; }
+  // Always use in-browser popup (electron routing removed)
+  openWin('radio-win');
   const c=document.getElementById('radio-yr-btns');
   if(!c||c.children.length)return;
   for(let y=1991;y<=2008;y++){
@@ -3152,8 +3152,7 @@ function setRadioVol(v){
 let currentTVChannel=null;
 
 function openTV(){
-  const isElectron=!!(window.electronAPI);
-  if(isElectron&&window.electronAPI){ window.electronAPI.openTV(); return; }
+  // Always use in-browser popup (electron routing removed)
   openWin('tv-win');
 }
 
@@ -3268,11 +3267,7 @@ const TTH_ERAS=[
 let tthCurrentEra=null;
 
 function openTimeHistorian(){
-  const isElectron=!!(window.electronAPI);
-  if(isElectron){
-    window.electronAPI.openHistorian();
-    return;
-  }
+  // Always use in-browser inline render (electron routing removed)
   // Browser fallback - render inline
   const view=document.getElementById('html-view');
   const frame=document.getElementById('site-frame');
@@ -4555,6 +4550,315 @@ window.openWeather = function(){
 };
 
 console.log('WWW May 11 Patch loaded — all 6 fixes applied');
+
+})();
+</script>
+
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- WWW PATCH ROUND 2 — May 11                                         -->
+<!-- - Mobile video gate fix (don't false-positive on Electron+Mac)     -->
+<!-- - Extended dialup loading (extra messages after audio ends)        -->
+<!-- - Weather widget on homepage                                       -->
+<!-- - Weather Time Machine: live historical API for any date           -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+'use strict';
+console.log('WWW Patch Round 2 loading...');
+
+// ─── Mobile video gate fix ──────────────────────────────────────────
+// Old check: ontouchstart || maxTouchPoints > 1. That fires true on
+// macOS Electron when an iPhone is paired (Continuity Camera) — which
+// is exactly your scenario. Better detection: small viewport OR true
+// mobile UA, AND only fire if we're not in Electron.
+function isMobileDevice(){
+  // Electron is never mobile, no matter what
+  if(navigator.userAgent.toLowerCase().indexOf('electron') !== -1) return false;
+  if(window.electronAPI) return false;
+  // True mobile UA strings
+  const ua = navigator.userAgent.toLowerCase();
+  const mobileUA = /android|iphone|ipad|ipod|blackberry|windows phone|opera mini|mobile/i.test(ua);
+  // OR very small viewport (likely a phone)
+  const smallViewport = window.innerWidth < 600 && window.innerHeight < 900;
+  return mobileUA || smallViewport;
+}
+window.isMobileDevice = isMobileDevice;
+
+// Also: when starting local video, prefer the BUILT-IN camera over external
+// (Continuity Camera comes in as an external device). This makes the camera
+// open on the Mac, not the phone.
+const _origStartLocalVideo = window.startLocalVideo;
+if(typeof _origStartLocalVideo === 'function'){
+  window.startLocalVideo = async function(){
+    try {
+      // Enumerate devices; pick built-in camera if available
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cams = devices.filter(d => d.kind === 'videoinput');
+      console.log('WWW available cameras:', cams.map(c => c.label));
+      // Prefer FaceTime HD / built-in / iSight; deprioritize iPhone / Continuity
+      let preferredId = null;
+      const builtinKeywords = ['facetime', 'built-in', 'isight', 'integrated'];
+      const phoneKeywords = ['iphone', 'continuity'];
+      for(const cam of cams){
+        const label = (cam.label || '').toLowerCase();
+        if(builtinKeywords.some(k => label.indexOf(k) !== -1)){
+          preferredId = cam.deviceId; break;
+        }
+      }
+      // If no built-in found, pick the first non-phone
+      if(!preferredId){
+        for(const cam of cams){
+          const label = (cam.label || '').toLowerCase();
+          if(!phoneKeywords.some(k => label.indexOf(k) !== -1)){
+            preferredId = cam.deviceId; break;
+          }
+        }
+      }
+      if(preferredId){
+        console.log('WWW selecting camera:', preferredId);
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: { exact: preferredId } },
+          audio: true
+        });
+        window.vidStream = stream;
+        const local = document.getElementById('vid-local');
+        if(local){
+          local.srcObject = stream;
+          local.muted = true;
+          local.setAttribute('autoplay','');
+          local.setAttribute('playsinline','');
+          local.play().catch(()=>{});
+        }
+        const statusEl = document.getElementById('vid-status');
+        if(statusEl) statusEl.textContent = '● CAM ON';
+        return stream;
+      }
+    } catch(e) {
+      console.warn('WWW camera selection failed, falling back:', e);
+    }
+    // Fall back to original implementation
+    return _origStartLocalVideo.apply(this, arguments);
+  };
+}
+
+// ─── Extended dialup loading screen ─────────────────────────────────
+// When the dialup audio ends, fire 3-5 sec of additional messages
+// before actually booting the desktop.
+const EXTRA_STEPS = [
+  ['Configuring TCP/IP stack...', 'Negotiating MTU size'],
+  ['Loading mascot personality...', 'Tuning attitude levels'],
+  ['Cleaning the dust off old bookmarks...', 'Defragging your past'],
+  ['Synchronizing buddy list...', 'Saying hi to your old friends'],
+  ['Almost there...', 'Just a moment longer']
+];
+let _extraStepsRunning = false;
+function _runExtraSteps(then){
+  if(_extraStepsRunning) return;
+  _extraStepsRunning = true;
+  const status = document.getElementById('conn-status-txt');
+  const detail = document.getElementById('conn-detail');
+  const bar = document.getElementById('conn-bar');
+  let step = 0;
+  const tick = ()=>{
+    if(step >= EXTRA_STEPS.length){ then(); return; }
+    if(status) status.textContent = EXTRA_STEPS[step][0];
+    if(detail) detail.textContent = EXTRA_STEPS[step][1];
+    if(bar) bar.style.width = (60 + (step+1)/EXTRA_STEPS.length * 40) + '%';
+    step++;
+    setTimeout(tick, 700);
+  };
+  tick();
+}
+
+// Replace the previous boot-on-audio-end logic with extended version
+let _bootFired = false;
+const _origBootDesktop = window.bootDesktop;
+if(typeof _origBootDesktop === 'function' && !window.bootDesktop._wwwR2Wrapped){
+  window.bootDesktop = function(){
+    if(_bootFired) return;
+    _bootFired = true;
+    _origBootDesktop.apply(this, arguments);
+  };
+  window.bootDesktop._wwwR2Wrapped = true;
+}
+
+// Watch conn-screen; when dialup audio ends, run extra steps THEN boot.
+const _bootObserver2 = new MutationObserver(()=>{
+  const cs = document.getElementById('conn-screen');
+  if(cs && cs.style.display === 'flex' && window._currentDialupAudio && !window._currentDialupAudio._wwwR2Bound){
+    window._currentDialupAudio._wwwR2Bound = true;
+    window._currentDialupAudio.addEventListener('ended', ()=>{
+      console.log('WWW: dialup ended → running extra loading steps');
+      _runExtraSteps(()=>{
+        console.log('WWW: extra steps done → booting');
+        if(typeof window.bootDesktop === 'function') window.bootDesktop();
+      });
+    });
+    // Safety: hard timeout at 14s (9.5s audio + 3.5s steps + 1s buffer)
+    setTimeout(()=>{
+      if(!_bootFired){
+        console.log('WWW: dialup R2 safety timeout (14s) → booting');
+        if(typeof window.bootDesktop === 'function') window.bootDesktop();
+      }
+    }, 14000);
+  }
+});
+if(document.body){
+  _bootObserver2.observe(document.body, {attributes:true, subtree:true, attributeFilter:['style']});
+}
+
+// ─── Weather widget on homepage ─────────────────────────────────────
+// Hook loadHomepage to inject a small weather card in the right column.
+const _origLoadHomepage = window.loadHomepage;
+if(typeof _origLoadHomepage === 'function'){
+  window.loadHomepage = function(){
+    _origLoadHomepage.apply(this, arguments);
+    // After homepage renders, add weather card to right column
+    setTimeout(_injectHomepageWeather, 50);
+  };
+}
+
+async function _injectHomepageWeather(){
+  const rightCol = document.querySelector('.hp-right');
+  if(!rightCol || document.getElementById('hp-weather-card')) return;
+  // Build a weather card matching the .hp-widget style
+  const card = document.createElement('div');
+  card.id = 'hp-weather-card';
+  card.className = 'hp-widget';
+  card.innerHTML =
+    '<div class="hp-wt">🌤️ Weather</div>' +
+    '<div class="hp-wb" style="padding:6px;">' +
+      '<div id="hp-w-loading" style="font-size:10px;color:#666;text-align:center;font-family:Tahoma;">Fetching...</div>' +
+      '<div id="hp-w-content" style="display:none;">' +
+        '<div style="display:flex;align-items:center;gap:6px;">' +
+          '<div id="hp-w-icon" style="font-size:24px;">🌤️</div>' +
+          '<div style="flex:1;">' +
+            '<div id="hp-w-temp" style="font-size:14px;font-weight:bold;color:#0048c8;font-family:Tahoma;">--°</div>' +
+            '<div id="hp-w-desc" style="font-size:9px;color:#666;font-family:Tahoma;">--</div>' +
+          '</div>' +
+        '</div>' +
+        '<div id="hp-w-loc" style="font-size:9px;color:#888;font-family:Tahoma;margin-top:3px;">--</div>' +
+        '<div onclick="openWeather()" style="font-size:9px;color:#0048c8;text-decoration:underline;cursor:pointer;font-family:Tahoma;margin-top:3px;">Full forecast →</div>' +
+      '</div>' +
+    '</div>';
+  // Insert after the first .hp-widget (Featured) so it's near top
+  const firstWidget = rightCol.querySelector('.hp-widget');
+  if(firstWidget && firstWidget.nextSibling){
+    rightCol.insertBefore(card, firstWidget.nextSibling);
+  } else {
+    rightCol.appendChild(card);
+  }
+  // Fetch live weather
+  const city = localStorage.getItem('www_weather_city') || 'New York';
+  try {
+    const geoRes = await fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(city) + '&count=1&format=json');
+    const geo = await geoRes.json();
+    if(!geo.results || !geo.results.length){
+      document.getElementById('hp-w-loading').textContent = 'No location';
+      return;
+    }
+    const lat = geo.results[0].latitude, lon = geo.results[0].longitude;
+    const cityName = geo.results[0].name;
+    const wRes = await fetch('https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon +
+      '&current=temperature_2m,weather_code&temperature_unit=fahrenheit&timezone=auto');
+    const w = await wRes.json();
+    const c = w.current;
+    const codeMap = {
+      0:['☀️','Clear'],1:['🌤️','Mostly clear'],2:['⛅','Partly cloudy'],3:['☁️','Overcast'],
+      45:['🌫️','Foggy'],48:['🌫️','Foggy'],
+      51:['🌦️','Drizzle'],53:['🌦️','Drizzle'],55:['🌧️','Drizzle'],
+      61:['🌧️','Rain'],63:['🌧️','Rain'],65:['🌧️','Heavy rain'],
+      71:['🌨️','Snow'],73:['❄️','Snow'],75:['❄️','Heavy snow'],
+      80:['🌦️','Showers'],81:['🌧️','Showers'],82:['⛈️','Storms'],
+      95:['⛈️','Thunderstorm'],96:['⛈️','Thunder+hail'],99:['⛈️','Severe storm']
+    };
+    const info = codeMap[c.weather_code] || ['🌡️','--'];
+    document.getElementById('hp-w-icon').textContent = info[0];
+    document.getElementById('hp-w-temp').textContent = Math.round(c.temperature_2m) + '°F';
+    document.getElementById('hp-w-desc').textContent = info[1];
+    document.getElementById('hp-w-loc').textContent = '📍 ' + cityName;
+    document.getElementById('hp-w-loading').style.display = 'none';
+    document.getElementById('hp-w-content').style.display = 'block';
+  } catch(err){
+    console.warn('Homepage weather fetch failed:', err);
+    const loadingEl = document.getElementById('hp-w-loading');
+    if(loadingEl) loadingEl.textContent = 'Offline';
+  }
+}
+
+// ─── Weather Time Machine: use Open-Meteo Historical API for any date ───
+// Replace the era-table-only loadHistoricalWeather with one that hits the
+// real historical weather API. Falls back to era table if API fails.
+const _origLoadHist = window.loadHistoricalWeather;
+window.loadHistoricalWeather = async function(){
+  const dateInput = document.getElementById('w-history-date');
+  if(!dateInput) return;
+  const dateVal = dateInput.value;
+  if(!dateVal) return;
+  const yr = dateVal.substr(0, 4);
+  const result = document.getElementById('w-historical-result');
+  if(!result) return;
+  const month = parseInt(dateVal.substr(5, 2));
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const monthLabel = monthNames[month - 1] + ' ' + parseInt(dateVal.substr(8, 2)) + ', ' + yr;
+
+  // Show loading
+  result.innerHTML =
+    '<div style="font-size:32px;">⏳</div>' +
+    '<div style="color:#92d9ff;font-size:11px;font-family:Tahoma;">Time traveling to ' + monthLabel + '...</div>';
+
+  // Need lat/lon — use the saved city or default to New York
+  const city = localStorage.getItem('www_weather_city') || 'New York';
+  try {
+    const geoRes = await fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(city) + '&count=1&format=json');
+    const geo = await geoRes.json();
+    if(!geo.results || !geo.results.length) throw new Error('city not found');
+    const lat = geo.results[0].latitude, lon = geo.results[0].longitude;
+    const cityName = geo.results[0].name;
+    // Open-Meteo Historical: ERA5 from 1940-onwards
+    const histRes = await fetch('https://archive-api.open-meteo.com/v1/archive?latitude=' + lat + '&longitude=' + lon +
+      '&start_date=' + dateVal + '&end_date=' + dateVal +
+      '&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_sum' +
+      '&temperature_unit=fahrenheit&timezone=auto');
+    const data = await histRes.json();
+    if(!data.daily || !data.daily.weather_code || !data.daily.weather_code.length){
+      throw new Error('no data for this date');
+    }
+    const code = data.daily.weather_code[0];
+    const tmax = data.daily.temperature_2m_max[0];
+    const tmin = data.daily.temperature_2m_min[0];
+    const precip = data.daily.precipitation_sum[0] || 0;
+    const codeMap = {
+      0:['☀️','Clear sky'],1:['🌤️','Mainly clear'],2:['⛅','Partly cloudy'],3:['☁️','Overcast'],
+      45:['🌫️','Foggy'],48:['🌫️','Freezing fog'],
+      51:['🌦️','Light drizzle'],53:['🌦️','Drizzle'],55:['🌧️','Heavy drizzle'],
+      61:['🌧️','Light rain'],63:['🌧️','Moderate rain'],65:['🌧️','Heavy rain'],
+      71:['🌨️','Light snow'],73:['❄️','Moderate snow'],75:['❄️','Heavy snow'],
+      80:['🌦️','Light showers'],81:['🌧️','Showers'],82:['⛈️','Heavy showers'],
+      95:['⛈️','Thunderstorm'],96:['⛈️','Thunderstorm + hail'],99:['⛈️','Severe storm']
+    };
+    const info = codeMap[code] || ['🌡️','Conditions on file'];
+    const tempCMax = Math.round((tmax - 32) * 5 / 9);
+    const tempCMin = Math.round((tmin - 32) * 5 / 9);
+    result.innerHTML =
+      '<div style="font-size:48px;">' + info[0] + '</div>' +
+      '<div style="color:#81ff28;font-size:18px;font-family:\'Courier New\';font-weight:bold;">' + Math.round(tmax) + '°F / ' + Math.round(tmin) + '°F</div>' +
+      '<div style="color:#92d9ff;font-size:11px;font-family:Tahoma;">(' + tempCMax + '°C / ' + tempCMin + '°C)</div>' +
+      '<div style="color:#92d9ff;font-size:13px;font-family:Tahoma;">' + info[1] + '</div>' +
+      '<div style="color:#6090b0;font-size:11px;font-family:Tahoma;">' + monthLabel + ' · ' + cityName + '</div>' +
+      (precip > 0 ? '<div style="color:#4a7aaa;font-size:10px;font-family:Tahoma;">💧 ' + precip.toFixed(1) + '" precipitation</div>' : '') +
+      '<div style="color:#4a7aaa;font-size:9px;font-family:Tahoma;margin-top:4px;">Real historical data · Open-Meteo ERA5</div>';
+    if(typeof showToast === 'function') showToast('🕰️ Time traveled to ' + monthLabel, '');
+  } catch(err) {
+    console.warn('Historical weather fetch failed:', err);
+    // Fall back to original era-table implementation
+    if(typeof _origLoadHist === 'function') _origLoadHist();
+    else result.innerHTML = '<div style="font-size:40px;">⚠️</div><div style="color:#92d9ff;font-size:11px;font-family:Tahoma;">Could not fetch data for ' + monthLabel + '</div>';
+  }
+};
+
+console.log('WWW Patch Round 2 loaded — extended fixes applied');
 
 })();
 </script>
