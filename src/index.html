@@ -25,7 +25,7 @@
 }
 
 *{box-sizing:border-box;margin:0;padding:0;}
-   <style>
+
 /* FIX 1: Signon mascot grid — all 6 render in proper 3×2 */
 .signon-mascot-grid{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:6px!important;width:100%!important;box-sizing:border-box!important;}
 .signon-mascot-pick{cursor:pointer;border:2px solid transparent;border-radius:8px;padding:3px;display:flex;flex-direction:column;align-items:center;gap:2px;transition:all 0.15s;min-width:0;box-sizing:border-box;}
@@ -35,611 +35,7 @@
 /* Weather window */
 #weather-win{min-height:380px;}
 #wpanel-current,#wpanel-machine,#wpanel-settings{box-sizing:border-box;}
-</style>
-<script>
- 
-// ════════════════════════════════════════════════════════════════════
-// WWW PATCH v2 — Applied fixes for build session May 11
-// Fixes: video black screen, mobile camera gate, wayback branding,
-//        dialup sync, mascot grid, weather widget
-// ════════════════════════════════════════════════════════════════════
- 
-// ─── FIX 4: Desktop-only video ───────────────────────────────────────
-function isMobileDevice(){
-  return (('ontouchstart' in window) || (navigator.maxTouchPoints > 1));
-}
- 
-// Override quickVideoTest to block on mobile
-const _origQuickVideo = quickVideoTest;
-quickVideoTest = function(){
-  if(isMobileDevice()){
-    showToast('📹 Video chat is desktop-only — too retro for phones! 💻','');
-    return;
-  }
-  _origQuickVideo.call(this);
-};
- 
-// Override startVideoCall to block on mobile
-const _origStartVideoCall = startVideoCall;
-startVideoCall = async function(buddy){
-  if(isMobileDevice()){
-    showToast('📹 Video chat is desktop-only — too retro for phones! 💻','');
-    return;
-  }
-  await _origStartVideoCall.call(this, buddy);
-};
- 
-// ─── FIX 6a: ICE candidate buffering ────────────────────────────────
-let _iceBuf = {};
-function _bufIce(buddy, candidate){
-  if(!_iceBuf[buddy]) _iceBuf[buddy]=[];
-  _iceBuf[buddy].push(candidate);
-}
-async function _flushIce(buddy){
-  const buf=_iceBuf[buddy]||[];
-  _iceBuf[buddy]=[];
-  for(const c of buf){
-    try{ if(peerConn&&peerConn.remoteDescription) await peerConn.addIceCandidate(c); }
-    catch(e){ console.warn('ICE flush:',e); }
-  }
-}
- 
-// ─── FIX 6b: setupPeerEvents — fix track → canvas pipeline ──────────
-setupPeerEvents = function(buddy){
-  const remoteStream = new MediaStream();
-  peerConn.onicecandidate = e => {
-    if(e.candidate) sendSig(buddy,{type:'ice',candidate:e.candidate});
-  };
-  peerConn.oniceconnectionstatechange = () => {
-    const s = peerConn?.iceConnectionState;
-    console.log('WWW ICE state:', s);
-    const el = document.getElementById('vid-status');
-    if(el){
-      if(s==='connected'||s==='completed') el.textContent='● LIVE';
-      else if(s==='checking') el.textContent='● Connecting...';
-      else if(s==='failed') el.textContent='⚠ ICE Failed';
-      else if(s==='disconnected') el.textContent='⚠ Disconnected';
-    }
-  };
-  peerConn.ontrack = e => {
-    console.log('WWW remote track received:', e.track.kind);
-    if(e.streams && e.streams[0]){
-      e.streams[0].getTracks().forEach(t=>{
-        if(!remoteStream.getTrackById(t.id)) remoteStream.addTrack(t);
-      });
-    } else {
-      remoteStream.addTrack(e.track);
-    }
-    const remote = document.getElementById('vid-remote');
-    if(!remote) return;
-    // Attach stream — keep video VISIBLE so canvas can copy from it
-    remote.srcObject = remoteStream;
-    remote.style.opacity = '1';       // must stay visible for canvas reads
-    remote.style.display = 'block';
-    remote.setAttribute('autoplay','');
-    remote.setAttribute('playsinline','');
-    remote.muted = false;
-    // Hide the no-signal overlay
-    const ns = document.getElementById('vid-nosignal');
-    if(ns) ns.style.display='none';
-    document.getElementById('vid-peer-name').textContent = buddy + ' ● Live';
-    // Start timer
-    if(!vidTimeStart){ vidTimeStart=Date.now(); clearInterval(vidTimer); vidTimer=setInterval(updateVidTimer,1000); }
-    // Play and wait for actual frames before starting canvas filter
-    remote.play().then(()=>{
-      console.log('WWW remote video playing');
-      // Wait for the video to have real pixel data
-      _waitForFrames(remote, ()=>{
-        console.log('WWW remote has frames, starting low-fps filter');
-        startLowFps(remote);
-      });
-    }).catch(err=>{
-      console.error('WWW remote play failed:', err);
-      // Try muted play as fallback (autoplay policy)
-      remote.muted = true;
-      remote.play().then(()=>{
-        _waitForFrames(remote, ()=>startLowFps(remote));
-      }).catch(()=>{});
-    });
-  };
-  peerConn.onconnectionstatechange = () => {
-    const s = peerConn?.connectionState;
-    console.log('WWW connection state:', s);
-    if(['disconnected','failed','closed'].includes(s)){
-      const el=document.getElementById('vid-status');
-      if(el) el.textContent='⚠ DISCONNECTED';
-    }
-  };
-};
- 
-// Wait until the video element has actual frames decoded
-function _waitForFrames(videoEl, cb, attempts){
-  attempts = attempts||0;
-  if(attempts > 40){ console.warn('WWW: frame wait timeout, starting anyway'); cb(); return; }
-  // Check if video has real pixel data (non-zero natural size + playing)
-  if(videoEl.readyState >= 3 && videoEl.videoWidth > 0 && !videoEl.paused){
-    // Double-check by reading a pixel
-    try{
-      const tmp = document.createElement('canvas');
-      tmp.width=4; tmp.height=4;
-      const ctx = tmp.getContext('2d');
-      ctx.drawImage(videoEl,0,0,4,4);
-      const px = ctx.getImageData(0,0,4,4).data;
-      // If not all black, we have frames
-      const hasContent = px.some((v,i)=> i%4!==3 && v>5);
-      if(hasContent){ cb(); return; }
-    }catch(e){}
-  }
-  setTimeout(()=>_waitForFrames(videoEl,cb,attempts+1), 100);
-}
- 
-// ─── FIX 6c: Override startLowFps — don't hide source video ─────────
-startLowFps = function(videoEl){
-  clearInterval(lowFpsInterval);
-  const container = document.getElementById('vid-body');
-  if(!container) return;
-  let canvas = document.getElementById('vid-fps-canvas');
-  if(!canvas){
-    canvas = document.createElement('canvas');
-    canvas.id = 'vid-fps-canvas';
-    // Position OVER the video — but keep source video visible underneath
-    // We'll use the canvas as an overlay with pointer-events:none
-    canvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:calc(100% - 48px);' +
-      'object-fit:cover;pointer-events:none;z-index:5;image-rendering:pixelated;image-rendering:crisp-edges;';
-    container.appendChild(canvas);
-  }
-  // Keep source video visible but hidden BEHIND canvas
-  // We still need it visible for drawImage to work
-  videoEl.style.opacity = '0.01'; // almost invisible but still renders frames
-  videoEl.style.position = 'absolute';
-  videoEl.style.top = '0';
-  videoEl.style.left = '0';
-  videoEl.style.width = '100%';
-  videoEl.style.height = 'calc(100% - 48px)';
-  const CW=160, CH=120;
-  const tiny = document.createElement('canvas');
-  tiny.width=CW; tiny.height=CH;
-  const tctx = tiny.getContext('2d');
-  canvas.width = CW; canvas.height = CH;
-  const ctx = canvas.getContext('2d');
-  ctx.imageSmoothingEnabled = false;
-  let lastGlitch = 0;
-  let frameCount = 0;
-  let blackFrames = 0;
-  lowFpsInterval = setInterval(()=>{
-    if(videoEl.readyState < 2 || videoEl.paused) return;
-    try{
-      tctx.drawImage(videoEl,0,0,CW,CH);
-    }catch(e){ return; }
-    // Check if frame is all black (stream not ready yet)
-    const id = tctx.getImageData(0,0,CW,CH);
-    const d = id.data;
-    let totalBrightness = 0;
-    for(let i=0;i<d.length;i+=16) totalBrightness += d[i]+d[i+1]+d[i+2];
-    if(totalBrightness < 100){
-      blackFrames++;
-      if(blackFrames > 15){ console.log('WWW: still getting black frames, waiting...'); return; }
-      return;
-    }
-    blackFrames = 0;
-    frameCount++;
-    // Apply retro degradation
-    for(let i=0;i<d.length;i+=4){
-      const avg = d[i]*0.3+d[i+1]*0.59+d[i+2]*0.11;
-      d[i]   = avg*0.45+d[i]*0.55;
-      d[i+1] = avg*0.45+d[i+1]*0.55;
-      d[i+2] = avg*0.35+d[i+2]*0.65+6;
-      if(d[i]>170){ d[i]=Math.min(255,d[i]*1.12); d[i+1]=Math.min(255,d[i+1]*1.1); d[i+2]=Math.min(255,d[i+2]*1.08); }
-      d[i]  =Math.round(d[i]/28)*28;
-      d[i+1]=Math.round(d[i+1]/28)*28;
-      d[i+2]=Math.round(d[i+2]/28)*28;
-    }
-    tctx.putImageData(id,0,0);
-    if(Math.random()<0.04) return; // random freeze frame
-    const now=Date.now();
-    if(now-lastGlitch>2000 && Math.random()<0.08){
-      lastGlitch=now;
-      const ty=Math.floor(Math.random()*CH);
-      const th=2+Math.floor(Math.random()*5);
-      try{
-        const tear=tctx.getImageData(0,ty,CW,th);
-        tctx.putImageData(tear,Math.random()>0.5?2:-2,ty);
-      }catch(e){}
-    }
-    ctx.imageSmoothingEnabled=false;
-    ctx.drawImage(tiny,0,0,CW,CH);
-  }, 100); // ~10fps
-};
- 
-// ─── FIX 6d: handleRTCOffer — buffer ICE, flush after setRemote ─────
-handleRTCOffer = async function(from, sdp){
-  if(!confirm(from+' wants to video chat! Answer?')){ sendSig(from,{type:'reject'}); return; }
-  vidCallPartner = from;
-  openWin('video-win');
-  document.getElementById('vid-peer-name').textContent = from+' (connecting...)';
-  document.getElementById('vid-status').textContent = '● Answering...';
-  await startLocalVideo();
-  closePeer();
-  peerConn = new RTCPeerConnection(ICE);
-  setupPeerEvents(from);
-  if(vidStream) vidStream.getTracks().forEach(t=>peerConn.addTrack(t,vidStream));
-  await peerConn.setRemoteDescription({type:'offer', sdp});
-  await _flushIce(from); // flush any buffered candidates now
-  const answer = await peerConn.createAnswer();
-  await peerConn.setLocalDescription(answer);
-  sendSig(from,{type:'answer',sdp:answer.sdp});
-};
- 
-// ─── FIX 6e: Signal channel — buffer ICE before remote desc ─────────
-const _origGetSigCh = getSigCh;
-getSigCh = function(buddy){
-  const name = 'www-sig-'+[CFG.screenName,buddy].sort().join('-');
-  if(!sigChannels[name] && ablyClient){
-    sigChannels[name] = ablyClient.channels.get(name);
-    sigChannels[name].subscribe('sig', async msg=>{
-      const d = msg.data;
-      if(d.from===CFG.screenName) return;
-      console.log('WWW sig received:', d.type, 'from:', d.from);
-      if(d.type==='offer')  await handleRTCOffer(d.from, d.sdp);
-      if(d.type==='answer' && peerConn){
-        await peerConn.setRemoteDescription({type:'answer',sdp:d.sdp});
-        await _flushIce(d.from); // flush buffered candidates
-      }
-      if(d.type==='ice'){
-        if(peerConn && peerConn.remoteDescription){
-          try{ await peerConn.addIceCandidate(d.candidate); }
-          catch(e){ console.warn('ICE add err:',e); }
-        } else {
-          _bufIce(d.from, d.candidate); // buffer until remote desc is set
-        }
-      }
-      if(d.type==='reject'){ showToast(d.from+' declined the call',''); endVideoCall(); }
-    });
-  }
-  return sigChannels[name];
-};
- 
-// Subscribe to signal channels for all buddies on presence connect
-const _origJoinPresence = joinPresence;
-joinPresence = function(){
-  _origJoinPresence.call(this);
-  // Pre-subscribe signal channels for all saved buddies
-  setTimeout(()=>{
-    myBuddyList.forEach(n=>{ if(n!==CFG.screenName) getSigCh(n); });
-  }, 1000);
-};
- 
-// ─── FIX 5: Wayback Machine branding — hide WM UI, clean address bar ──
-const _origLoadInFrame = loadInFrame;
-loadInFrame = function(src){
-  const isWayback = src.includes('web.archive.org');
-  if(isWayback){
-    // Clean address bar — extract original URL from Wayback URL
-    const m = src.match(/web\.archive\.org\/web\/\d+\/(.+)/);
-    if(m){
-      const cleanUrl = m[1];
-      document.getElementById('addr-bar').value = cleanUrl;
-    }
-  }
-  _origLoadInFrame.call(this, src);
-  // After iframe loads, inject CSS to hide WM toolbar
-  if(isWayback){
-    const frame = document.getElementById('site-frame');
-    if(frame){
-      const injectStyle = ()=>{
-        try{
-          const doc = frame.contentDocument;
-          if(!doc||!doc.head) return;
-          // Check if we already injected
-          if(doc.getElementById('www-wm-hide')) return;
-          const style = doc.createElement('style');
-          style.id = 'www-wm-hide';
-          style.textContent = [
-            '#wm-ipp-base','#wm-ipp','#donato','#wm-toolbar',
-            '#wm-ipp-inside','#wm-print-dialog','#wm-share-dialog',
-            '.wb-autocomplete-suggestions','#wm-expand-toolbar',
-            '#playback-tools','#wm-notification',
-            'iframe[src*="archive.org"]'
-          ].join(',') + '{display:none!important;visibility:hidden!important;height:0!important;max-height:0!important;overflow:hidden!important;pointer-events:none!important;}' +
-          'body,html{margin-top:0!important;padding-top:0!important;}';
-          doc.head.appendChild(style);
-          // Also hide any WM elements already in body
-          ['wm-ipp-base','wm-ipp','donato','wm-toolbar','wm-ipp-inside'].forEach(id=>{
-            const el=doc.getElementById(id);
-            if(el) el.style.cssText='display:none!important;';
-          });
-        }catch(e){/* cross-origin — expected for some pages */}
-      };
-      // Try immediately and on load
-      frame.addEventListener('load', ()=>{
-        setTimeout(injectStyle, 100);
-        setTimeout(injectStyle, 500);
-        setTimeout(injectStyle, 1500);
-      }, {once:true});
-      // Also poll for dynamically injected WM toolbar
-      let _wmPoll = setInterval(()=>{
-        try{
-          const doc=frame.contentDocument;
-          if(!doc) return;
-          const wm=doc.getElementById('wm-ipp-base')||doc.getElementById('wm-ipp');
-          if(wm&&wm.style.display!=='none'){
-            wm.style.cssText='display:none!important;';
-            doc.body&&(doc.body.style.marginTop='0');
-          }
-        }catch(e){}
-      }, 500);
-      setTimeout(()=>clearInterval(_wmPoll), 15000);
-    }
-  }
-};
- 
-// Also patch navigateTo to clean up address bar for wayback URLs
-const _origNavigateTo = navigateTo;
-navigateTo = function(url){
-  _origNavigateTo.call(this, url);
-  // After navigation, if it's a wayback URL that got set in addr-bar, clean it
-  setTimeout(()=>{
-    const addr = document.getElementById('addr-bar');
-    if(addr && addr.value.includes('web.archive.org')){
-      const m = addr.value.match(/web\.archive\.org\/web\/\d+\/(.+)/);
-      if(m) addr.value = m[1];
-    }
-  }, 200);
-};
- 
-// ─── FIX 2: Weather widget — floating Y2K liquid chrome window ────────
-// Override openWeather to show a proper floating window
- 
-// Create the weather window HTML if it doesn't exist
-function ensureWeatherWin(){
-  if(document.getElementById('weather-win')) return;
-  const win = document.createElement('div');
-  win.id = 'weather-win';
-  win.className = 'wnd';
-  win.style.cssText = 'width:420px;top:70px;left:120px;display:none;flex-direction:column;z-index:500;';
-  win.innerHTML = \`
-    <div class="wnd-title">
-      <span>🌤️ WWW Weather Station</span>
-      <div class="wnd-btns">
-        <div class="wb wb-min" onclick="minimizeWin('weather-win')">─</div>
-        <div class="wb wb-cls" onclick="closeWin('weather-win')">✕</div>
-      </div>
-    </div>
-    <div id="weather-body" style="background:linear-gradient(180deg,#00082a,#001060);flex:1;display:flex;flex-direction:column;overflow:hidden;">
-      <!-- Tab bar -->
-      <div style="display:flex;background:linear-gradient(180deg,#001060,#000840);border-bottom:2px solid #4878c8;">
-        <div id="wtab-current" onclick="weatherTab('current')" style="flex:1;padding:7px;text-align:center;font-size:11px;font-family:Tahoma;font-weight:bold;cursor:pointer;color:#92d9ff;background:rgba(72,136,255,0.2);border-bottom:3px solid #81ff28;border-right:1px solid #4878c8;">🌤️ Current</div>
-        <div id="wtab-machine" onclick="weatherTab('machine')" style="flex:1;padding:7px;text-align:center;font-size:11px;font-family:Tahoma;font-weight:bold;cursor:pointer;color:#6090b0;border-right:1px solid #4878c8;">🕰️ Time Machine</div>
-        <div id="wtab-settings" onclick="weatherTab('settings')" style="flex:1;padding:7px;text-align:center;font-size:11px;font-family:Tahoma;font-weight:bold;cursor:pointer;color:#6090b0;">⚙️ Settings</div>
-      </div>
-      <!-- Current panel -->
-      <div id="wpanel-current" style="flex:1;display:flex;flex-direction:column;padding:14px;gap:10px;">
-        <div style="text-align:center;">
-          <div id="w-icon" style="font-size:56px;line-height:1;">🌤️</div>
-          <div id="w-temp" style="font-size:42px;font-weight:bold;color:#81ff28;font-family:'Courier New';text-shadow:0 0 15px rgba(129,255,40,0.6);margin:4px 0;">--°</div>
-          <div id="w-desc" style="font-size:14px;color:#92d9ff;font-family:Tahoma;">Loading...</div>
-          <div id="w-location" style="font-size:11px;color:#4a7aaa;font-family:Tahoma;margin-top:3px;">📍 Setting location...</div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <div style="background:rgba(0,20,80,0.5);border:1px solid rgba(72,120,200,0.3);border-radius:6px;padding:8px;text-align:center;">
-            <div style="color:#6090b0;font-size:9px;font-family:Tahoma;margin-bottom:3px;">HUMIDITY</div>
-            <div id="w-humidity" style="color:#92d9ff;font-size:16px;font-family:'Courier New';font-weight:bold;">--%</div>
-          </div>
-          <div style="background:rgba(0,20,80,0.5);border:1px solid rgba(72,120,200,0.3);border-radius:6px;padding:8px;text-align:center;">
-            <div style="color:#6090b0;font-size:9px;font-family:Tahoma;margin-bottom:3px;">WIND</div>
-            <div id="w-wind" style="color:#92d9ff;font-size:16px;font-family:'Courier New';font-weight:bold;">-- mph</div>
-          </div>
-          <div style="background:rgba(0,20,80,0.5);border:1px solid rgba(72,120,200,0.3);border-radius:6px;padding:8px;text-align:center;">
-            <div style="color:#6090b0;font-size:9px;font-family:Tahoma;margin-bottom:3px;">FEELS LIKE</div>
-            <div id="w-feels" style="color:#92d9ff;font-size:16px;font-family:'Courier New';font-weight:bold;">--°</div>
-          </div>
-          <div style="background:rgba(0,20,80,0.5);border:1px solid rgba(72,120,200,0.3);border-radius:6px;padding:8px;text-align:center;">
-            <div style="color:#6090b0;font-size:9px;font-family:Tahoma;margin-bottom:3px;">VISIBILITY</div>
-            <div id="w-vis" style="color:#92d9ff;font-size:16px;font-family:'Courier New';font-weight:bold;">-- mi</div>
-          </div>
-        </div>
-        <div style="text-align:center;">
-          <button onclick="fetchCurrentWeather()" style="background:linear-gradient(180deg,#4888e8,#1848c8);border:1px solid #4878c8;border-radius:6px;padding:6px 18px;color:white;font-size:11px;font-weight:bold;font-family:Tahoma;cursor:pointer;">🔄 Refresh</button>
-        </div>
-      </div>
-      <!-- Time Machine panel -->
-      <div id="wpanel-machine" style="flex:1;display:none;flex-direction:column;padding:14px;gap:10px;">
-        <div style="font-size:11px;color:#92d9ff;font-family:Tahoma;text-align:center;">What was the weather like in the past?</div>
-        <div style="display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;">
-          <input type="date" id="w-history-date" value="2004-07-16" style="background:rgba(0,20,80,0.6);border:1px solid #4878c8;border-radius:4px;color:#92d9ff;font-family:Tahoma;font-size:11px;padding:4px 8px;"/>
-          <button onclick="loadHistoricalWeather()" style="background:linear-gradient(180deg,#4888e8,#1848c8);border:1px solid #4878c8;border-radius:6px;padding:6px 14px;color:white;font-size:11px;font-weight:bold;font-family:Tahoma;cursor:pointer;">🕰️ Time Travel</button>
-        </div>
-        <div id="w-historical-result" style="background:rgba(0,20,80,0.4);border:1px solid rgba(72,120,200,0.3);border-radius:8px;padding:14px;text-align:center;min-height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
-          <div style="font-size:40px;">🕰️</div>
-          <div style="color:#6090b0;font-size:11px;font-family:Tahoma;">Pick a date to travel back in time</div>
-        </div>
-      </div>
-      <!-- Settings panel -->
-      <div id="wpanel-settings" style="flex:1;display:none;flex-direction:column;padding:14px;gap:10px;">
-        <div style="font-size:11px;color:#92d9ff;font-family:Tahoma;font-weight:bold;">📍 Location</div>
-        <div style="display:flex;gap:6px;">
-          <input id="w-city-input" placeholder="Enter city (e.g. New York)" style="flex:1;background:rgba(0,20,80,0.6);border:1px solid #4878c8;border-radius:4px;color:#92d9ff;font-family:Tahoma;font-size:11px;padding:5px 8px;"/>
-          <button onclick="saveWeatherCity()" style="background:linear-gradient(180deg,#4888e8,#1848c8);border:1px solid #4878c8;border-radius:6px;padding:5px 12px;color:white;font-size:11px;font-weight:bold;font-family:Tahoma;cursor:pointer;">Save</button>
-        </div>
-        <div style="font-size:11px;color:#92d9ff;font-family:Tahoma;font-weight:bold;margin-top:4px;">🌡️ Units</div>
-        <div style="display:flex;gap:8px;">
-          <label style="color:#92d9ff;font-size:11px;font-family:Tahoma;cursor:pointer;"><input type="radio" name="wunit" value="imperial" checked onchange="weatherUnits=this.value;fetchCurrentWeather()"> °F (imperial)</label>
-          <label style="color:#92d9ff;font-size:11px;font-family:Tahoma;cursor:pointer;"><input type="radio" name="wunit" value="metric" onchange="weatherUnits=this.value;fetchCurrentWeather()"> °C (metric)</label>
-        </div>
-        <div style="font-size:10px;color:#4a7aaa;font-family:Tahoma;line-height:1.5;margin-top:6px;border-top:1px solid rgba(72,120,200,0.2);padding-top:8px;">Weather data from Open-Meteo (free, no API key needed).<br>Historical data uses era-based approximations.</div>
-        <button onclick="fetchCurrentWeather();weatherTab('current')" style="background:linear-gradient(180deg,#70e030,#40b000);border:1px solid #208000;border-radius:6px;padding:7px 18px;color:white;font-size:12px;font-weight:bold;font-family:Tahoma;cursor:pointer;margin-top:4px;">✅ Apply & Fetch</button>
-      </div>
-    </div>
-  \`;
-  document.getElementById('screen').appendChild(win);
-  makeDraggable(win);
-  makeResizable(win);
-}
- 
-let weatherCity = localStorage.getItem('www_weather_city') || 'New York';
-let weatherUnits = 'imperial';
-let weatherLat = null, weatherLon = null;
- 
-function weatherTab(tab){
-  ['current','machine','settings'].forEach(t=>{
-    const panel = document.getElementById('wpanel-'+t);
-    const tabEl = document.getElementById('wtab-'+t);
-    if(panel) panel.style.display = t===tab?'flex':'none';
-    if(tabEl){
-      tabEl.style.color = t===tab?'#92d9ff':'#6090b0';
-      tabEl.style.background = t===tab?'rgba(72,136,255,0.2)':'';
-      tabEl.style.borderBottom = t===tab?'3px solid #81ff28':'';
-    }
-  });
-}
- 
-async function fetchCurrentWeather(){
-  const cityInput = document.getElementById('w-city-input');
-  if(cityInput && cityInput.value.trim()) weatherCity = cityInput.value.trim();
-  document.getElementById('w-location').textContent = '📍 ' + weatherCity;
-  document.getElementById('w-desc').textContent = 'Connecting...';
-  try{
-    // Geocode the city using Open-Meteo geocoding
-    const geoRes = await fetch('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(weatherCity)+'&count=1&language=en&format=json');
-    const geoData = await geoRes.json();
-    if(!geoData.results||!geoData.results.length){
-      document.getElementById('w-desc').textContent = 'City not found';
-      return;
-    }
-    weatherLat = geoData.results[0].latitude;
-    weatherLon = geoData.results[0].longitude;
-    const cityName = geoData.results[0].name + (geoData.results[0].country_code?', '+geoData.results[0].country_code:'');
-    document.getElementById('w-location').textContent = '📍 ' + cityName;
-    // Fetch current weather
-    const unit = weatherUnits==='metric'?'celsius':'fahrenheit';
-    const windUnit = weatherUnits==='metric'?'kmh':'mph';
-    const wRes = await fetch('https://api.open-meteo.com/v1/forecast?latitude='+weatherLat+'&longitude='+weatherLon+
-      '&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,visibility'+
-      '&temperature_unit='+unit+'&wind_speed_unit='+windUnit+'&timezone=auto');
-    const wData = await wRes.json();
-    const c = wData.current;
-    const tempUnit = weatherUnits==='metric'?'°C':'°F';
-    const info = _weatherCodeInfo(c.weather_code);
-    document.getElementById('w-icon').textContent = info.icon;
-    document.getElementById('w-temp').textContent = Math.round(c.temperature_2m)+tempUnit;
-    document.getElementById('w-desc').textContent = info.desc;
-    document.getElementById('w-humidity').textContent = (c.relative_humidity_2m||'--')+'%';
-    document.getElementById('w-wind').textContent = Math.round(c.wind_speed_10m||0)+(weatherUnits==='metric'?' km/h':' mph');
-    document.getElementById('w-feels').textContent = Math.round(c.apparent_temperature)+tempUnit;
-    const visKm = (c.visibility||0)/1000;
-    const visMi = Math.round(visKm*0.621);
-    document.getElementById('w-vis').textContent = weatherUnits==='metric'?Math.round(visKm)+' km':visMi+' mi';
-    // Save city
-    localStorage.setItem('www_weather_city', weatherCity);
-  }catch(err){
-    console.error('Weather fetch error:', err);
-    document.getElementById('w-desc').textContent = 'Network error';
-    document.getElementById('w-icon').textContent = '⚠️';
-  }
-}
- 
-function _weatherCodeInfo(code){
-  const map = {
-    0:{icon:'☀️',desc:'Clear sky'},
-    1:{icon:'🌤️',desc:'Mainly clear'},2:{icon:'⛅',desc:'Partly cloudy'},3:{icon:'☁️',desc:'Overcast'},
-    45:{icon:'🌫️',desc:'Foggy'},48:{icon:'🌫️',desc:'Freezing fog'},
-    51:{icon:'🌦️',desc:'Light drizzle'},53:{icon:'🌦️',desc:'Drizzle'},55:{icon:'🌧️',desc:'Heavy drizzle'},
-    61:{icon:'🌧️',desc:'Light rain'},63:{icon:'🌧️',desc:'Moderate rain'},65:{icon:'🌧️',desc:'Heavy rain'},
-    71:{icon:'🌨️',desc:'Light snow'},73:{icon:'❄️',desc:'Moderate snow'},75:{icon:'❄️',desc:'Heavy snow'},
-    80:{icon:'🌦️',desc:'Light showers'},81:{icon:'🌧️',desc:'Showers'},82:{icon:'⛈️',desc:'Heavy showers'},
-    95:{icon:'⛈️',desc:'Thunderstorm'},96:{icon:'⛈️',desc:'Thunderstorm + hail'},99:{icon:'⛈️',desc:'Severe thunderstorm'},
-  };
-  return map[code] || {icon:'🌡️',desc:'Unknown conditions'};
-}
- 
-function loadHistoricalWeather(){
-  const dateInput = document.getElementById('w-history-date');
-  if(!dateInput) return;
-  const dateVal = dateInput.value; // YYYY-MM-DD
-  const yr = dateVal.substr(0,4);
-  const result = document.getElementById('w-historical-result');
-  // Era-based historical data
-  const eraData = {
-    '1991':{icon:'❄️',temp:'34°F / 1°C',desc:'Cold snap across the Midwest',extra:'One of the coldest winters in years.'},
-    '1992':{icon:'🌧️',temp:'58°F / 14°C',desc:'El Niño year — unusually wet',extra:'Record rainfall on the West Coast.'},
-    '1993':{icon:'❄️',temp:'32°F / 0°C',desc:'Storm of the Century aftermath',extra:'The blizzard of '93 is still in memory.'},
-    '1994':{icon:'🌤️',temp:'62°F / 17°C',desc:'Mild and clear, early spring',extra:'Pleasant conditions across the country.'},
-    '1995':{icon:'☀️',temp:'88°F / 31°C',desc:'Record heat wave in Midwest',extra:'Chicago heat emergency — deadly summer.'},
-    '1996':{icon:'🌨️',temp:'28°F / -2°C',desc:'Major blizzard season',extra:'Northeast buried under historic snowfall.'},
-    '1997':{icon:'⛈️',temp:'66°F / 19°C',desc:'Severe storm season',extra:'Active tornado season across Tornado Alley.'},
-    '1998':{icon:'🌡️',temp:'92°F / 33°C',desc:'Hottest year on record (at the time)',extra:'El Niño caused chaos worldwide.'},
-    '1999':{icon:'🌤️',temp:'65°F / 18°C',desc:'Mild year, Y2K anxiety in the air',extra:'People too busy worrying about computers to notice the weather.'},
-    '2000':{icon:'⛅',temp:'58°F / 14°C',desc:'Partly cloudy, new millennium',extra:'Same weather, different year on the calendar.'},
-    '2001':{icon:'🌧️',temp:'55°F / 13°C',desc:'Overcast — heavy feelings',extra:'A gray year in many ways.'},
-    '2002':{icon:'☀️',temp:'78°F / 26°C',desc:'Dry and warm, drought conditions',extra:'Western states facing severe drought.'},
-    '2003':{icon:'🌡️',temp:'95°F / 35°C',desc:'European heat wave',extra:'70,000+ deaths across Europe. Hottest summer in 500 years.'},
-    '2004':{icon:'🌀',temp:'82°F / 28°C',desc:'Active hurricane season',extra:'4 major storms hit Florida alone.'},
-    '2005':{icon:'🌊',temp:'88°F / 31°C',desc:'Katrina year — devastating season',extra:'Hurricane Katrina devastates New Orleans.'},
-    '2006':{icon:'☀️',temp:'70°F / 21°C',desc:'Warmest winter on record in Europe',extra:'Ski resorts struggled with no snow.'},
-    '2007':{icon:'🔥',temp:'85°F / 29°C',desc:'California wildfires, drought West',extra:'Over 500,000 acres burned in California.'},
-    '2008':{icon:'🌧️',temp:'72°F / 22°C',desc:'Midwest flooding, Hurricane Ike',extra:'Ike caused $30B in damage to Texas.'},
-  };
-  const era = eraData[yr] || {icon:'🌡️',temp:'Unknown',desc:'Historical data unavailable for this period',extra:''};
-  const month = parseInt(dateVal.substr(5,2));
-  const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  result.innerHTML = \`
-    <div style="font-size:48px;">\${era.icon}</div>
-    <div style="color:#81ff28;font-size:20px;font-family:'Courier New';font-weight:bold;">\${era.temp}</div>
-    <div style="color:#92d9ff;font-size:13px;font-family:Tahoma;">\${era.desc}</div>
-    <div style="color:#6090b0;font-size:11px;font-family:Tahoma;">\${monthNames[month-1]} \${parseInt(dateVal.substr(8,2))}, \${yr}</div>
-    <div style="color:#4a7aaa;font-size:10px;font-family:Tahoma;margin-top:4px;max-width:280px;text-align:center;line-height:1.4;">\${era.extra}</div>
-  \`;
-  showToast('🕰️ Traveled back to '+monthNames[month-1]+' '+yr,'');
-}
- 
-function saveWeatherCity(){
-  const input = document.getElementById('w-city-input');
-  if(input && input.value.trim()){
-    weatherCity = input.value.trim();
-    localStorage.setItem('www_weather_city', weatherCity);
-    fetchCurrentWeather();
-    weatherTab('current');
-    showToast('📍 Location set to '+weatherCity,'');
-  }
-}
- 
-// Override openWeather
-openWeather = function(){
-  ensureWeatherWin();
-  const cityInput = document.getElementById('w-city-input');
-  if(cityInput) cityInput.value = weatherCity;
-  openWin('weather-win');
-  // Auto-fetch current weather
-  setTimeout(fetchCurrentWeather, 300);
-};
- 
-// ─── FIX 3: Dialup audio sync ─────────────────────────────────────────
-// Wrap playDialup to return the audio element so callers can track end
-const _origPlayDialup = playDialup;
-playDialup = function(){
-  if(A['dialup']){
-    try{
-      const a = new Audio(A['dialup']);
-      a.volume = 0.8;
-      a.play().catch(()=>{});
-      window._currentDialupAudio = a;
-      return a;
-    }catch(e){}
-  }
-  try{
-    const a = new Audio('assets/dialup.mp3');
-    a.volume=0.8;
-    a.play().catch(()=>{});
-    window._currentDialupAudio = a;
-    return a;
-  }catch(e){}
-  _origPlayDialup();
-  return null;
-};
- 
-console.log('WWW Patch v2 loaded — all fixes applied');
- 
-</script>
+
 body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font-size:11px;}
 
 /* ══ SETUP / SIGNON ══ */
@@ -1825,13 +1221,22 @@ function playSound(k,vol){
   }catch(e){}
 }
 function playDialup(){
-  // Use the real dialup MP3 asset
-  if(A['dialup']){playSound('dialup',0.8);return;}
+  // Use the real dialup MP3 asset — return audio element for boot sync (FIX 3)
+  if(A['dialup']){
+    try{
+      const a = new Audio(A['dialup']);
+      a.volume = 0.8;
+      a.play().catch(()=>{});
+      window._currentDialupAudio = a;
+      return a;
+    }catch(e){}
+  }
   try{
     const audio = new Audio('assets/dialup.mp3');
     audio.volume = 0.8;
     audio.play().catch(()=>{});
-    return;
+    window._currentDialupAudio = audio;
+    return audio;
   }catch(e){}
   // Generate dialup sound with WebAudio if no asset
   try{
@@ -4507,5 +3912,652 @@ setInterval(()=>{if(gmailToken)fetchGmailMessages(true);},60000);
   #addr-bar { font-size:11px !important; }
 }
 </style>
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- WWW MAY 11 PATCH — Fixes 2 (weather), 3 (dialup sync), 4 (mobile -->
+<!-- video gate), 5 (wayback scrub), 6 (video black screen)            -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+'use strict';
+console.log('WWW May 11 Patch loading...');
+
+// ─── FIX 3 (sync half): Boot fires when dialup audio ends ───────────
+let _bootFired = false;
+function _wrapBoot(){
+  if(typeof window.bootDesktop !== 'function' || window.bootDesktop._wwwWrapped) return;
+  const _origBoot = window.bootDesktop;
+  window.bootDesktop = function(){
+    if(_bootFired) return;
+    _bootFired = true;
+    _origBoot.apply(this, arguments);
+  };
+  window.bootDesktop._wwwWrapped = true;
+}
+_wrapBoot();
+// In case bootDesktop is defined after this script runs, retry once DOM ready
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', _wrapBoot);
+}
+
+// Watch for the connecting screen showing, then bind audio.ended → boot.
+const _bootObserver = new MutationObserver(()=>{
+  const cs = document.getElementById('conn-screen');
+  if(cs && cs.style.display === 'flex' && window._currentDialupAudio && !window._currentDialupAudio._wwwBound){
+    window._currentDialupAudio._wwwBound = true;
+    _wrapBoot(); // make sure boot is wrapped before we trigger it
+    window._currentDialupAudio.addEventListener('ended', ()=>{
+      console.log('WWW: dialup audio ended → booting desktop');
+      if(typeof window.bootDesktop === 'function') window.bootDesktop();
+    });
+    // Safety: if audio errors out or never fires 'ended', boot at 9.5s
+    setTimeout(()=>{
+      if(!_bootFired){
+        console.log('WWW: dialup safety timeout (9.5s) → booting');
+        if(typeof window.bootDesktop === 'function') window.bootDesktop();
+      }
+    }, 9500);
+  }
+});
+if(document.body){
+  _bootObserver.observe(document.body, {attributes:true, subtree:true, attributeFilter:['style']});
+} else {
+  document.addEventListener('DOMContentLoaded', ()=>{
+    _bootObserver.observe(document.body, {attributes:true, subtree:true, attributeFilter:['style']});
+  });
+}
+
+// ─── FIX 4: Desktop-only video ──────────────────────────────────────
+function isMobileDevice(){
+  return (('ontouchstart' in window) || (navigator.maxTouchPoints > 1));
+}
+
+function _wrapVideoGuards(){
+  if(typeof window.quickVideoTest === 'function' && !window.quickVideoTest._wwwWrapped){
+    const _orig = window.quickVideoTest;
+    window.quickVideoTest = function(){
+      if(isMobileDevice()){
+        if(typeof showToast === 'function') showToast('📹 Video chat is desktop-only — too retro for phones! 💻','');
+        return;
+      }
+      return _orig.apply(this, arguments);
+    };
+    window.quickVideoTest._wwwWrapped = true;
+  }
+  if(typeof window.startVideoCall === 'function' && !window.startVideoCall._wwwWrapped){
+    const _orig = window.startVideoCall;
+    window.startVideoCall = async function(buddy){
+      if(isMobileDevice()){
+        if(typeof showToast === 'function') showToast('📹 Video chat is desktop-only — too retro for phones! 💻','');
+        return;
+      }
+      return _orig.apply(this, arguments);
+    };
+    window.startVideoCall._wwwWrapped = true;
+  }
+}
+_wrapVideoGuards();
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', _wrapVideoGuards);
+}
+
+// ─── FIX 6a: ICE candidate buffering ────────────────────────────────
+const _iceBuf = {};
+function _bufIce(buddy, candidate){
+  if(!_iceBuf[buddy]) _iceBuf[buddy] = [];
+  _iceBuf[buddy].push(candidate);
+}
+async function _flushIce(buddy){
+  const buf = _iceBuf[buddy] || [];
+  _iceBuf[buddy] = [];
+  for(const c of buf){
+    try{
+      if(window.peerConn && window.peerConn.remoteDescription){
+        await window.peerConn.addIceCandidate(c);
+      }
+    }catch(e){ console.warn('WWW ICE flush:', e); }
+  }
+}
+
+// ─── FIX 6b: Override setupPeerEvents — keep video rendered for canvas ───
+window.setupPeerEvents = function(buddy){
+  const remoteStream = new MediaStream();
+  window.peerConn.onicecandidate = e => {
+    if(e.candidate && typeof sendSig === 'function') sendSig(buddy, {type:'ice', candidate:e.candidate});
+  };
+  window.peerConn.oniceconnectionstatechange = () => {
+    const s = window.peerConn ? window.peerConn.iceConnectionState : null;
+    console.log('WWW ICE state:', s);
+    const el = document.getElementById('vid-status');
+    if(el){
+      if(s === 'connected' || s === 'completed') el.textContent = '● LIVE';
+      else if(s === 'checking') el.textContent = '● Connecting...';
+      else if(s === 'failed') el.textContent = '⚠ ICE Failed';
+      else if(s === 'disconnected') el.textContent = '⚠ Disconnected';
+    }
+  };
+  window.peerConn.ontrack = e => {
+    console.log('WWW remote track received:', e.track.kind);
+    if(e.streams && e.streams[0]){
+      e.streams[0].getTracks().forEach(t => {
+        if(!remoteStream.getTrackById(t.id)) remoteStream.addTrack(t);
+      });
+    } else {
+      remoteStream.addTrack(e.track);
+    }
+    const remote = document.getElementById('vid-remote');
+    if(!remote) return;
+    remote.srcObject = remoteStream;
+    // Keep video visible so canvas can copy frames from it
+    remote.style.opacity = '1';
+    remote.style.display = 'block';
+    remote.setAttribute('autoplay', '');
+    remote.setAttribute('playsinline', '');
+    const ns = document.getElementById('vid-nosignal');
+    if(ns) ns.style.display = 'none';
+    const peerName = document.getElementById('vid-peer-name');
+    if(peerName) peerName.textContent = buddy + ' ● Live';
+    if(!window.vidTimeStart){
+      window.vidTimeStart = Date.now();
+      clearInterval(window.vidTimer);
+      window.vidTimer = setInterval(window.updateVidTimer, 1000);
+    }
+    remote.play().then(() => {
+      console.log('WWW remote video playing, waiting for frames...');
+      _waitForFrames(remote, () => {
+        console.log('WWW frames ready, starting low-fps filter');
+        window.startLowFps(remote);
+      });
+    }).catch(err => {
+      console.error('WWW remote play err:', err);
+      remote.muted = true;
+      remote.play().then(() => _waitForFrames(remote, () => window.startLowFps(remote))).catch(()=>{});
+    });
+  };
+  window.peerConn.onconnectionstatechange = () => {
+    const s = window.peerConn ? window.peerConn.connectionState : null;
+    console.log('WWW conn state:', s);
+    if(['disconnected','failed','closed'].includes(s)){
+      const el = document.getElementById('vid-status');
+      if(el) el.textContent = '⚠ DISCONNECTED';
+    }
+  };
+};
+
+function _waitForFrames(videoEl, cb, attempts){
+  attempts = attempts || 0;
+  if(attempts > 40){ console.warn('WWW frame wait timeout, starting anyway'); cb(); return; }
+  if(videoEl.readyState >= 3 && videoEl.videoWidth > 0 && !videoEl.paused){
+    try{
+      const tmp = document.createElement('canvas');
+      tmp.width = 4; tmp.height = 4;
+      const ctx = tmp.getContext('2d');
+      ctx.drawImage(videoEl, 0, 0, 4, 4);
+      const px = ctx.getImageData(0, 0, 4, 4).data;
+      let hasContent = false;
+      for(let i = 0; i < px.length; i++){
+        if(i % 4 !== 3 && px[i] > 5){ hasContent = true; break; }
+      }
+      if(hasContent){ cb(); return; }
+    }catch(e){}
+  }
+  setTimeout(() => _waitForFrames(videoEl, cb, attempts + 1), 100);
+}
+
+// ─── FIX 6c: Override startLowFps — keep source video rendered ──────
+window.startLowFps = function(videoEl){
+  clearInterval(window.lowFpsInterval);
+  const container = document.getElementById('vid-body');
+  if(!container) return;
+  let canvas = document.getElementById('vid-fps-canvas');
+  if(!canvas){
+    canvas = document.createElement('canvas');
+    canvas.id = 'vid-fps-canvas';
+    canvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:calc(100% - 48px);object-fit:cover;pointer-events:none;z-index:5;image-rendering:pixelated;image-rendering:crisp-edges;';
+    container.appendChild(canvas);
+  }
+  // Almost invisible but still rendered — drawImage needs real pixels
+  videoEl.style.opacity = '0.01';
+  videoEl.style.position = 'absolute';
+  videoEl.style.top = '0';
+  videoEl.style.left = '0';
+  videoEl.style.width = '100%';
+  videoEl.style.height = 'calc(100% - 48px)';
+  const CW = 160, CH = 120;
+  const tiny = document.createElement('canvas');
+  tiny.width = CW; tiny.height = CH;
+  const tctx = tiny.getContext('2d');
+  canvas.width = CW; canvas.height = CH;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  let lastGlitch = 0;
+  let blackFrames = 0;
+  window.lowFpsInterval = setInterval(() => {
+    if(videoEl.readyState < 2 || videoEl.paused) return;
+    try{ tctx.drawImage(videoEl, 0, 0, CW, CH); }catch(e){ return; }
+    const id = tctx.getImageData(0, 0, CW, CH);
+    const d = id.data;
+    let total = 0;
+    for(let i = 0; i < d.length; i += 16) total += d[i] + d[i+1] + d[i+2];
+    if(total < 100){
+      blackFrames++;
+      if(blackFrames > 15) console.log('WWW still black frames, waiting...');
+      return;
+    }
+    blackFrames = 0;
+    for(let i = 0; i < d.length; i += 4){
+      const avg = d[i] * 0.3 + d[i+1] * 0.59 + d[i+2] * 0.11;
+      d[i]   = avg * 0.45 + d[i] * 0.55;
+      d[i+1] = avg * 0.45 + d[i+1] * 0.55;
+      d[i+2] = avg * 0.35 + d[i+2] * 0.65 + 6;
+      if(d[i] > 170){
+        d[i]   = Math.min(255, d[i] * 1.12);
+        d[i+1] = Math.min(255, d[i+1] * 1.1);
+        d[i+2] = Math.min(255, d[i+2] * 1.08);
+      }
+      d[i]   = Math.round(d[i] / 28) * 28;
+      d[i+1] = Math.round(d[i+1] / 28) * 28;
+      d[i+2] = Math.round(d[i+2] / 28) * 28;
+    }
+    tctx.putImageData(id, 0, 0);
+    if(Math.random() < 0.04) return;
+    const now = Date.now();
+    if(now - lastGlitch > 2000 && Math.random() < 0.08){
+      lastGlitch = now;
+      const ty = Math.floor(Math.random() * CH);
+      const th = 2 + Math.floor(Math.random() * 5);
+      try{
+        const tear = tctx.getImageData(0, ty, CW, th);
+        tctx.putImageData(tear, Math.random() > 0.5 ? 2 : -2, ty);
+      }catch(e){}
+    }
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(tiny, 0, 0, CW, CH);
+  }, 100);
+};
+
+// ─── FIX 6d: Override handleRTCOffer — flush buffered ICE after setRemote ───
+window.handleRTCOffer = async function(from, sdp){
+  if(!confirm(from + ' wants to video chat! Answer?')){
+    if(typeof sendSig === 'function') sendSig(from, {type:'reject'});
+    return;
+  }
+  window.vidCallPartner = from;
+  if(typeof openWin === 'function') openWin('video-win');
+  const peerName = document.getElementById('vid-peer-name');
+  if(peerName) peerName.textContent = from + ' (connecting...)';
+  const status = document.getElementById('vid-status');
+  if(status) status.textContent = '● Answering...';
+  if(typeof startLocalVideo === 'function') await startLocalVideo();
+  if(window.peerConn) try{ window.peerConn.close(); }catch(e){}
+  window.peerConn = new RTCPeerConnection(window.ICE);
+  window.setupPeerEvents(from);
+  if(window.vidStream) window.vidStream.getTracks().forEach(t => window.peerConn.addTrack(t, window.vidStream));
+  await window.peerConn.setRemoteDescription({type:'offer', sdp});
+  await _flushIce(from);
+  const answer = await window.peerConn.createAnswer();
+  await window.peerConn.setLocalDescription(answer);
+  if(typeof sendSig === 'function') sendSig(from, {type:'answer', sdp:answer.sdp});
+};
+
+// ─── FIX 6e: Override signal channel — buffer ICE before remote desc ─
+function _wrapGetSigCh(){
+  if(typeof window.getSigCh !== 'function' || window.getSigCh._wwwWrapped) return;
+  window.getSigCh = function(buddy){
+    const name = 'www-sig-' + [CFG.screenName, buddy].sort().join('-');
+    if(!window.sigChannels[name] && window.ablyClient){
+      window.sigChannels[name] = window.ablyClient.channels.get(name);
+      window.sigChannels[name].subscribe('sig', async msg => {
+        const d = msg.data;
+        if(d.from === CFG.screenName) return;
+        console.log('WWW sig:', d.type, 'from:', d.from);
+        if(d.type === 'offer') await window.handleRTCOffer(d.from, d.sdp);
+        if(d.type === 'answer' && window.peerConn){
+          await window.peerConn.setRemoteDescription({type:'answer', sdp:d.sdp});
+          await _flushIce(d.from);
+        }
+        if(d.type === 'ice'){
+          if(window.peerConn && window.peerConn.remoteDescription){
+            try{ await window.peerConn.addIceCandidate(d.candidate); }
+            catch(e){ console.warn('WWW ICE add:', e); }
+          } else {
+            _bufIce(d.from, d.candidate);
+          }
+        }
+        if(d.type === 'reject'){
+          if(typeof showToast === 'function') showToast(d.from + ' declined the call', '');
+          if(typeof endVideoCall === 'function') endVideoCall();
+        }
+      });
+    }
+    return window.sigChannels[name];
+  };
+  window.getSigCh._wwwWrapped = true;
+}
+_wrapGetSigCh();
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', _wrapGetSigCh);
+}
+
+// ─── FIX 5: Wayback Machine — scrub branding from address bar + iframe ───
+function _wrapWayback(){
+  if(typeof window.loadInFrame !== 'function' || window.loadInFrame._wwwWrapped) return;
+  const _orig = window.loadInFrame;
+  window.loadInFrame = function(src){
+    const isWayback = src.indexOf('web.archive.org') !== -1;
+    if(isWayback){
+      const m = src.match(/web\.archive\.org\/web\/\d+(?:id_)?\/(.+)/);
+      if(m){
+        const addr = document.getElementById('addr-bar');
+        if(addr) addr.value = m[1];
+      }
+    }
+    _orig.call(this, src);
+    if(isWayback){
+      const frame = document.getElementById('site-frame');
+      if(frame){
+        const injectStyle = ()=>{
+          try{
+            const doc = frame.contentDocument;
+            if(!doc || !doc.head) return;
+            if(doc.getElementById('www-wm-hide')) return;
+            const style = doc.createElement('style');
+            style.id = 'www-wm-hide';
+            style.textContent = [
+              '#wm-ipp-base','#wm-ipp','#donato','#wm-toolbar',
+              '#wm-ipp-inside','#wm-print-dialog','#wm-share-dialog',
+              '.wb-autocomplete-suggestions','#wm-expand-toolbar',
+              '#playback-tools','#wm-notification',
+              'iframe[src*="archive.org"]'
+            ].join(',') + '{display:none!important;visibility:hidden!important;height:0!important;max-height:0!important;overflow:hidden!important;pointer-events:none!important;opacity:0!important;}' +
+            'body,html{margin-top:0!important;padding-top:0!important;}';
+            doc.head.appendChild(style);
+            ['wm-ipp-base','wm-ipp','donato','wm-toolbar','wm-ipp-inside'].forEach(id=>{
+              const el = doc.getElementById(id);
+              if(el) el.style.cssText = 'display:none!important;';
+            });
+          }catch(e){/* cross-origin, expected */}
+        };
+        frame.addEventListener('load', ()=>{
+          setTimeout(injectStyle, 100);
+          setTimeout(injectStyle, 500);
+          setTimeout(injectStyle, 1500);
+          setTimeout(injectStyle, 3000);
+        }, {once:true});
+        const _wmPoll = setInterval(()=>{
+          try{
+            const doc = frame.contentDocument;
+            if(!doc) return;
+            const wm = doc.getElementById('wm-ipp-base') || doc.getElementById('wm-ipp');
+            if(wm && wm.style.display !== 'none'){
+              wm.style.cssText = 'display:none!important;';
+              if(doc.body) doc.body.style.marginTop = '0';
+            }
+          }catch(e){}
+        }, 500);
+        setTimeout(()=>clearInterval(_wmPoll), 15000);
+      }
+    }
+  };
+  window.loadInFrame._wwwWrapped = true;
+
+  // Also clean address bar after navigateTo runs
+  if(typeof window.navigateTo === 'function' && !window.navigateTo._wwwWrapped){
+    const _origNav = window.navigateTo;
+    window.navigateTo = function(url){
+      _origNav.call(this, url);
+      setTimeout(()=>{
+        const addr = document.getElementById('addr-bar');
+        if(addr && addr.value.indexOf('web.archive.org') !== -1){
+          const m = addr.value.match(/web\.archive\.org\/web\/\d+(?:id_)?\/(.+)/);
+          if(m) addr.value = m[1];
+        }
+      }, 200);
+    };
+    window.navigateTo._wwwWrapped = true;
+  }
+}
+_wrapWayback();
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', _wrapWayback);
+}
+
+// Hide "Wayback" labels in the Time Machine dropdown after page ready
+function _hideWaybackLabels(){
+  const wbMode = document.getElementById('wb-mode');
+  if(wbMode){
+    Array.from(wbMode.options).forEach(opt=>{
+      if(opt.value === 'wayback') opt.textContent = '🕰️ Retro Mode';
+    });
+  }
+  // Status text on the time machine bar
+  const wbStatus = document.getElementById('wb-status');
+  if(wbStatus && wbStatus.textContent.indexOf('Wayback') !== -1){
+    wbStatus.textContent = wbStatus.textContent.replace(/Wayback Machine/gi, 'Time Machine').replace(/Wayback/gi, 'Retro');
+  }
+}
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', ()=>setTimeout(_hideWaybackLabels, 500));
+} else {
+  setTimeout(_hideWaybackLabels, 500);
+}
+// Also re-run on any change (the user may flip the mode)
+setInterval(_hideWaybackLabels, 2000);
+
+// ─── FIX 2: Weather widget — floating Y2K liquid chrome window ──────
+let _weatherCity = localStorage.getItem('www_weather_city') || 'New York';
+let _weatherUnits = 'imperial';
+let _weatherLat = null, _weatherLon = null;
+// Expose for the onchange handlers in HTML
+Object.defineProperty(window, 'weatherUnits', {
+  get(){ return _weatherUnits; },
+  set(v){ _weatherUnits = v; }
+});
+
+function _ensureWeatherWin(){
+  if(document.getElementById('weather-win')) return;
+  const screen = document.getElementById('screen');
+  if(!screen) return;
+  const win = document.createElement('div');
+  win.id = 'weather-win';
+  win.className = 'wnd';
+  win.style.cssText = 'width:420px;top:70px;left:120px;display:none;flex-direction:column;z-index:500;';
+  win.innerHTML =
+    '<div class="wnd-title">' +
+      '<span>🌤️ WWW Weather Station</span>' +
+      '<div class="wnd-btns">' +
+        '<div class="wb wb-min" onclick="minimizeWin(\'weather-win\')">─</div>' +
+        '<div class="wb wb-cls" onclick="closeWin(\'weather-win\')">✕</div>' +
+      '</div>' +
+    '</div>' +
+    '<div id="weather-body" style="background:linear-gradient(180deg,#00082a,#001060);flex:1;display:flex;flex-direction:column;overflow:hidden;">' +
+      '<div style="display:flex;background:linear-gradient(180deg,#001060,#000840);border-bottom:2px solid #4878c8;">' +
+        '<div id="wtab-current" onclick="weatherTab(\'current\')" style="flex:1;padding:7px;text-align:center;font-size:11px;font-family:Tahoma;font-weight:bold;cursor:pointer;color:#92d9ff;background:rgba(72,136,255,0.2);border-bottom:3px solid #81ff28;border-right:1px solid #4878c8;">🌤️ Current</div>' +
+        '<div id="wtab-machine" onclick="weatherTab(\'machine\')" style="flex:1;padding:7px;text-align:center;font-size:11px;font-family:Tahoma;font-weight:bold;cursor:pointer;color:#6090b0;border-right:1px solid #4878c8;">🕰️ Time Machine</div>' +
+        '<div id="wtab-settings" onclick="weatherTab(\'settings\')" style="flex:1;padding:7px;text-align:center;font-size:11px;font-family:Tahoma;font-weight:bold;cursor:pointer;color:#6090b0;">⚙️ Settings</div>' +
+      '</div>' +
+      '<div id="wpanel-current" style="flex:1;display:flex;flex-direction:column;padding:14px;gap:10px;">' +
+        '<div style="text-align:center;">' +
+          '<div id="w-icon" style="font-size:56px;line-height:1;">🌤️</div>' +
+          '<div id="w-temp" style="font-size:42px;font-weight:bold;color:#81ff28;font-family:\'Courier New\';text-shadow:0 0 15px rgba(129,255,40,0.6);margin:4px 0;">--°</div>' +
+          '<div id="w-desc" style="font-size:14px;color:#92d9ff;font-family:Tahoma;">Loading...</div>' +
+          '<div id="w-location" style="font-size:11px;color:#4a7aaa;font-family:Tahoma;margin-top:3px;">📍 Setting location...</div>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+          '<div style="background:rgba(0,20,80,0.5);border:1px solid rgba(72,120,200,0.3);border-radius:6px;padding:8px;text-align:center;"><div style="color:#6090b0;font-size:9px;font-family:Tahoma;margin-bottom:3px;">HUMIDITY</div><div id="w-humidity" style="color:#92d9ff;font-size:16px;font-family:\'Courier New\';font-weight:bold;">--%</div></div>' +
+          '<div style="background:rgba(0,20,80,0.5);border:1px solid rgba(72,120,200,0.3);border-radius:6px;padding:8px;text-align:center;"><div style="color:#6090b0;font-size:9px;font-family:Tahoma;margin-bottom:3px;">WIND</div><div id="w-wind" style="color:#92d9ff;font-size:16px;font-family:\'Courier New\';font-weight:bold;">-- mph</div></div>' +
+          '<div style="background:rgba(0,20,80,0.5);border:1px solid rgba(72,120,200,0.3);border-radius:6px;padding:8px;text-align:center;"><div style="color:#6090b0;font-size:9px;font-family:Tahoma;margin-bottom:3px;">FEELS LIKE</div><div id="w-feels" style="color:#92d9ff;font-size:16px;font-family:\'Courier New\';font-weight:bold;">--°</div></div>' +
+          '<div style="background:rgba(0,20,80,0.5);border:1px solid rgba(72,120,200,0.3);border-radius:6px;padding:8px;text-align:center;"><div style="color:#6090b0;font-size:9px;font-family:Tahoma;margin-bottom:3px;">VISIBILITY</div><div id="w-vis" style="color:#92d9ff;font-size:16px;font-family:\'Courier New\';font-weight:bold;">-- mi</div></div>' +
+        '</div>' +
+        '<div style="text-align:center;">' +
+          '<button onclick="fetchCurrentWeather()" style="background:linear-gradient(180deg,#4888e8,#1848c8);border:1px solid #4878c8;border-radius:6px;padding:6px 18px;color:white;font-size:11px;font-weight:bold;font-family:Tahoma;cursor:pointer;">🔄 Refresh</button>' +
+        '</div>' +
+      '</div>' +
+      '<div id="wpanel-machine" style="flex:1;display:none;flex-direction:column;padding:14px;gap:10px;">' +
+        '<div style="font-size:11px;color:#92d9ff;font-family:Tahoma;text-align:center;">What was the weather like in the past?</div>' +
+        '<div style="display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;">' +
+          '<input type="date" id="w-history-date" value="2004-07-16" style="background:rgba(0,20,80,0.6);border:1px solid #4878c8;border-radius:4px;color:#92d9ff;font-family:Tahoma;font-size:11px;padding:4px 8px;"/>' +
+          '<button onclick="loadHistoricalWeather()" style="background:linear-gradient(180deg,#4888e8,#1848c8);border:1px solid #4878c8;border-radius:6px;padding:6px 14px;color:white;font-size:11px;font-weight:bold;font-family:Tahoma;cursor:pointer;">🕰️ Time Travel</button>' +
+        '</div>' +
+        '<div id="w-historical-result" style="background:rgba(0,20,80,0.4);border:1px solid rgba(72,120,200,0.3);border-radius:8px;padding:14px;text-align:center;min-height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">' +
+          '<div style="font-size:40px;">🕰️</div>' +
+          '<div style="color:#6090b0;font-size:11px;font-family:Tahoma;">Pick a date to travel back in time</div>' +
+        '</div>' +
+      '</div>' +
+      '<div id="wpanel-settings" style="flex:1;display:none;flex-direction:column;padding:14px;gap:10px;">' +
+        '<div style="font-size:11px;color:#92d9ff;font-family:Tahoma;font-weight:bold;">📍 Location</div>' +
+        '<div style="display:flex;gap:6px;">' +
+          '<input id="w-city-input" placeholder="Enter city (e.g. New York)" style="flex:1;background:rgba(0,20,80,0.6);border:1px solid #4878c8;border-radius:4px;color:#92d9ff;font-family:Tahoma;font-size:11px;padding:5px 8px;"/>' +
+          '<button onclick="saveWeatherCity()" style="background:linear-gradient(180deg,#4888e8,#1848c8);border:1px solid #4878c8;border-radius:6px;padding:5px 12px;color:white;font-size:11px;font-weight:bold;font-family:Tahoma;cursor:pointer;">Save</button>' +
+        '</div>' +
+        '<div style="font-size:11px;color:#92d9ff;font-family:Tahoma;font-weight:bold;margin-top:4px;">🌡️ Units</div>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<label style="color:#92d9ff;font-size:11px;font-family:Tahoma;cursor:pointer;"><input type="radio" name="wunit" value="imperial" checked onchange="weatherUnits=this.value;fetchCurrentWeather()"> °F (imperial)</label>' +
+          '<label style="color:#92d9ff;font-size:11px;font-family:Tahoma;cursor:pointer;"><input type="radio" name="wunit" value="metric" onchange="weatherUnits=this.value;fetchCurrentWeather()"> °C (metric)</label>' +
+        '</div>' +
+        '<div style="font-size:10px;color:#4a7aaa;font-family:Tahoma;line-height:1.5;margin-top:6px;border-top:1px solid rgba(72,120,200,0.2);padding-top:8px;">Weather from Open-Meteo (free, no API key needed).<br>Historical data uses era approximations.</div>' +
+        '<button onclick="fetchCurrentWeather();weatherTab(\'current\')" style="background:linear-gradient(180deg,#70e030,#40b000);border:1px solid #208000;border-radius:6px;padding:7px 18px;color:white;font-size:12px;font-weight:bold;font-family:Tahoma;cursor:pointer;margin-top:4px;">✅ Apply &amp; Fetch</button>' +
+      '</div>' +
+    '</div>';
+  screen.appendChild(win);
+  if(typeof makeDraggable === 'function') makeDraggable(win);
+  if(typeof makeResizable === 'function') makeResizable(win);
+}
+
+window.weatherTab = function(tab){
+  ['current','machine','settings'].forEach(t=>{
+    const panel = document.getElementById('wpanel-' + t);
+    const tabEl = document.getElementById('wtab-' + t);
+    if(panel) panel.style.display = (t === tab) ? 'flex' : 'none';
+    if(tabEl){
+      tabEl.style.color = (t === tab) ? '#92d9ff' : '#6090b0';
+      tabEl.style.background = (t === tab) ? 'rgba(72,136,255,0.2)' : '';
+      tabEl.style.borderBottom = (t === tab) ? '3px solid #81ff28' : '';
+    }
+  });
+};
+
+window.fetchCurrentWeather = async function(){
+  const cityInput = document.getElementById('w-city-input');
+  if(cityInput && cityInput.value.trim()) _weatherCity = cityInput.value.trim();
+  const locEl = document.getElementById('w-location');
+  if(locEl) locEl.textContent = '📍 ' + _weatherCity;
+  const descEl = document.getElementById('w-desc');
+  if(descEl) descEl.textContent = 'Connecting...';
+  try{
+    const geoRes = await fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(_weatherCity) + '&count=1&language=en&format=json');
+    const geoData = await geoRes.json();
+    if(!geoData.results || !geoData.results.length){
+      if(descEl) descEl.textContent = 'City not found';
+      return;
+    }
+    _weatherLat = geoData.results[0].latitude;
+    _weatherLon = geoData.results[0].longitude;
+    const cityName = geoData.results[0].name + (geoData.results[0].country_code ? ', ' + geoData.results[0].country_code : '');
+    if(locEl) locEl.textContent = '📍 ' + cityName;
+    const unit = _weatherUnits === 'metric' ? 'celsius' : 'fahrenheit';
+    const windUnit = _weatherUnits === 'metric' ? 'kmh' : 'mph';
+    const wRes = await fetch('https://api.open-meteo.com/v1/forecast?latitude=' + _weatherLat + '&longitude=' + _weatherLon +
+      '&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,visibility' +
+      '&temperature_unit=' + unit + '&wind_speed_unit=' + windUnit + '&timezone=auto');
+    const wData = await wRes.json();
+    const c = wData.current;
+    const tempUnit = _weatherUnits === 'metric' ? '°C' : '°F';
+    const info = _weatherCodeInfo(c.weather_code);
+    document.getElementById('w-icon').textContent = info.icon;
+    document.getElementById('w-temp').textContent = Math.round(c.temperature_2m) + tempUnit;
+    document.getElementById('w-desc').textContent = info.desc;
+    document.getElementById('w-humidity').textContent = (c.relative_humidity_2m == null ? '--' : c.relative_humidity_2m) + '%';
+    document.getElementById('w-wind').textContent = Math.round(c.wind_speed_10m || 0) + (_weatherUnits === 'metric' ? ' km/h' : ' mph');
+    document.getElementById('w-feels').textContent = Math.round(c.apparent_temperature) + tempUnit;
+    const visKm = (c.visibility || 0) / 1000;
+    const visMi = Math.round(visKm * 0.621);
+    document.getElementById('w-vis').textContent = _weatherUnits === 'metric' ? Math.round(visKm) + ' km' : visMi + ' mi';
+    localStorage.setItem('www_weather_city', _weatherCity);
+  }catch(err){
+    console.error('Weather error:', err);
+    if(descEl) descEl.textContent = 'Network error';
+    const iconEl = document.getElementById('w-icon');
+    if(iconEl) iconEl.textContent = '⚠️';
+  }
+};
+
+function _weatherCodeInfo(code){
+  const map = {
+    0:{icon:'☀️',desc:'Clear sky'},
+    1:{icon:'🌤️',desc:'Mainly clear'}, 2:{icon:'⛅',desc:'Partly cloudy'}, 3:{icon:'☁️',desc:'Overcast'},
+    45:{icon:'🌫️',desc:'Foggy'}, 48:{icon:'🌫️',desc:'Freezing fog'},
+    51:{icon:'🌦️',desc:'Light drizzle'}, 53:{icon:'🌦️',desc:'Drizzle'}, 55:{icon:'🌧️',desc:'Heavy drizzle'},
+    61:{icon:'🌧️',desc:'Light rain'}, 63:{icon:'🌧️',desc:'Moderate rain'}, 65:{icon:'🌧️',desc:'Heavy rain'},
+    71:{icon:'🌨️',desc:'Light snow'}, 73:{icon:'❄️',desc:'Moderate snow'}, 75:{icon:'❄️',desc:'Heavy snow'},
+    80:{icon:'🌦️',desc:'Light showers'}, 81:{icon:'🌧️',desc:'Showers'}, 82:{icon:'⛈️',desc:'Heavy showers'},
+    95:{icon:'⛈️',desc:'Thunderstorm'}, 96:{icon:'⛈️',desc:'Thunderstorm + hail'}, 99:{icon:'⛈️',desc:'Severe thunderstorm'}
+  };
+  return map[code] || {icon:'🌡️',desc:'Unknown conditions'};
+}
+
+window.loadHistoricalWeather = function(){
+  const dateInput = document.getElementById('w-history-date');
+  if(!dateInput) return;
+  const dateVal = dateInput.value;
+  const yr = dateVal.substr(0, 4);
+  const result = document.getElementById('w-historical-result');
+  const eraData = {
+    '1991':{icon:'❄️',temp:'34°F / 1°C',desc:'Cold snap across the Midwest',extra:'One of the coldest winters in years.'},
+    '1992':{icon:'🌧️',temp:'58°F / 14°C',desc:'El Niño year — unusually wet',extra:'Record rainfall on the West Coast.'},
+    '1993':{icon:'❄️',temp:'32°F / 0°C',desc:'Storm of the Century aftermath',extra:'The blizzard of 1993 is still in memory.'},
+    '1994':{icon:'🌤️',temp:'62°F / 17°C',desc:'Mild and clear, early spring',extra:'Pleasant conditions across the country.'},
+    '1995':{icon:'☀️',temp:'88°F / 31°C',desc:'Record heat wave in Midwest',extra:'Chicago heat emergency — deadly summer.'},
+    '1996':{icon:'🌨️',temp:'28°F / -2°C',desc:'Major blizzard season',extra:'Northeast buried under historic snowfall.'},
+    '1997':{icon:'⛈️',temp:'66°F / 19°C',desc:'Severe storm season',extra:'Active tornado season across Tornado Alley.'},
+    '1998':{icon:'🌡️',temp:'92°F / 33°C',desc:'Hottest year on record (at the time)',extra:'El Niño caused chaos worldwide.'},
+    '1999':{icon:'🌤️',temp:'65°F / 18°C',desc:'Mild year, Y2K anxiety in the air',extra:'People too busy worrying about computers.'},
+    '2000':{icon:'⛅',temp:'58°F / 14°C',desc:'Partly cloudy, new millennium',extra:'Same weather, different year.'},
+    '2001':{icon:'🌧️',temp:'55°F / 13°C',desc:'Overcast — heavy feelings',extra:'A gray year in many ways.'},
+    '2002':{icon:'☀️',temp:'78°F / 26°C',desc:'Dry and warm, drought conditions',extra:'Western states facing severe drought.'},
+    '2003':{icon:'🌡️',temp:'95°F / 35°C',desc:'European heat wave',extra:'70,000+ deaths across Europe.'},
+    '2004':{icon:'🌀',temp:'82°F / 28°C',desc:'Active hurricane season',extra:'4 major storms hit Florida.'},
+    '2005':{icon:'🌊',temp:'88°F / 31°C',desc:'Katrina year — devastating season',extra:'Hurricane Katrina devastates New Orleans.'},
+    '2006':{icon:'☀️',temp:'70°F / 21°C',desc:'Warmest winter on record in Europe',extra:'Ski resorts struggled with no snow.'},
+    '2007':{icon:'🔥',temp:'85°F / 29°C',desc:'California wildfires, drought West',extra:'Over 500,000 acres burned in California.'},
+    '2008':{icon:'🌧️',temp:'72°F / 22°C',desc:'Midwest flooding, Hurricane Ike',extra:'Ike caused $30B in damage to Texas.'}
+  };
+  const era = eraData[yr] || {icon:'🌡️',temp:'Unknown',desc:'Historical data unavailable',extra:''};
+  const month = parseInt(dateVal.substr(5, 2));
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  result.innerHTML =
+    '<div style="font-size:48px;">' + era.icon + '</div>' +
+    '<div style="color:#81ff28;font-size:20px;font-family:\'Courier New\';font-weight:bold;">' + era.temp + '</div>' +
+    '<div style="color:#92d9ff;font-size:13px;font-family:Tahoma;">' + era.desc + '</div>' +
+    '<div style="color:#6090b0;font-size:11px;font-family:Tahoma;">' + monthNames[month - 1] + ' ' + parseInt(dateVal.substr(8, 2)) + ', ' + yr + '</div>' +
+    '<div style="color:#4a7aaa;font-size:10px;font-family:Tahoma;margin-top:4px;max-width:280px;text-align:center;line-height:1.4;">' + era.extra + '</div>';
+  if(typeof showToast === 'function') showToast('🕰️ Traveled back to ' + monthNames[month - 1] + ' ' + yr, '');
+};
+
+window.saveWeatherCity = function(){
+  const input = document.getElementById('w-city-input');
+  if(input && input.value.trim()){
+    _weatherCity = input.value.trim();
+    localStorage.setItem('www_weather_city', _weatherCity);
+    window.fetchCurrentWeather();
+    window.weatherTab('current');
+    if(typeof showToast === 'function') showToast('📍 Location set to ' + _weatherCity, '');
+  }
+};
+
+// Override openWeather to use the new floating widget
+window.openWeather = function(){
+  _ensureWeatherWin();
+  const cityInput = document.getElementById('w-city-input');
+  if(cityInput) cityInput.value = _weatherCity;
+  if(typeof openWin === 'function') openWin('weather-win');
+  setTimeout(window.fetchCurrentWeather, 300);
+};
+
+console.log('WWW May 11 Patch loaded — all 6 fixes applied');
+
+})();
+</script>
+
 </body>
 </html>
