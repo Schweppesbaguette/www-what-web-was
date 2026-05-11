@@ -1211,13 +1211,13 @@ function playSound(k,vol){
 }
 function playDialup(){
   // Use the real dialup MP3 asset
+  if(A['dialup']){playSound('dialup',0.8);return;}
   try{
     const audio = new Audio('assets/dialup.mp3');
     audio.volume = 0.8;
     audio.play().catch(()=>{});
     return;
   }catch(e){}
-  if(A['dialup']){playSound('dialup',0.8);return;}
   // Generate dialup sound with WebAudio if no asset
   try{
     const ctx=new(window.AudioContext||window.webkitAudioContext)();
