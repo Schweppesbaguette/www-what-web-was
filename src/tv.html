@@ -125,8 +125,9 @@ function transformYouTubeUrl(url){
   // Extract video ID from various YouTube URL formats
   let m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/);
   if(m){
-    // Use simple embed params — avoid aggressive flags that cause Error 153
-    return 'https://www.youtube.com/embed/' + m[1] + '?autoplay=1&rel=0';
+    // Use youtube-nocookie.com — fewer embed restrictions, often works
+    // when youtube.com embed returns Error 153.
+    return 'https://www.youtube-nocookie.com/embed/' + m[1] + '?autoplay=1&rel=0&playsinline=1';
   }
   return url;
 }

@@ -2304,12 +2304,19 @@ function minimizeIM(buddy){if(imWindows[buddy])imWindows[buddy].style.display='n
 //  WEBRTC VIDEO (cross-platform: mobile + desktop)
 // ═══════════════════════════════════════════════════════
 const ICE={iceServers:[
+  // Multiple STUN servers for NAT discovery
   {urls:'stun:stun.l.google.com:19302'},
   {urls:'stun:stun1.l.google.com:19302'},
-  {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
-  {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
-  {urls:'turn:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}
-]};
+  {urls:'stun:stun2.l.google.com:19302'},
+  {urls:'stun:stun.cloudflare.com:3478'},
+  // Metered.ca free TURN — UDP/TCP/TLS on multiple ports for max NAT traversal
+  {urls:'turn:a.relay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
+  {urls:'turn:a.relay.metered.ca:80?transport=tcp',username:'openrelayproject',credential:'openrelayproject'},
+  {urls:'turn:a.relay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
+  {urls:'turns:a.relay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'},
+  // Backup: Express TURN (also free)
+  {urls:'turn:relay1.expressturn.com:3478',username:'efJBIBF2RU7WK2VLDK',credential:'8FxNkjlGlJL3uVCa'}
+],iceCandidatePoolSize:10};
 
 function closePeer(){if(peerConn){try{peerConn.close();}catch(e){}peerConn=null;}}
 
