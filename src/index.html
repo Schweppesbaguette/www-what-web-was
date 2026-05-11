@@ -1434,13 +1434,13 @@ window.addEventListener('load',()=>{
         const cl=document.getElementById('conn-logo-img');if(cl)cl.src=A.WWWLOGO||'';
         playDialup();
       },300);
-      const steps=[[200,'Dialing...',2,'Picking up the line...'],[1100,'Dialing...',7,'Listening for carrier...'],[2100,'Connecting...',12,'Carrier detected!'],[3100,'Handshaking...',20,'Negotiating 56Kbps...'],[4100,'Handshaking...',28,'Trading secrets with the modem...'],[5100,'Authenticating...',36,'Sending credentials...'],[6100,'Authenticating...',44,'Configuring TCP/IP stack...'],[7100,'Loading...',54,'Cleaning the dust off old bookmarks...'],[8100,'Loading...',64,'Defragging your past...'],[9100,'Loading...',74,'Synchronizing buddy list...'],[10100,'Loading...',82,'Saying hi to your old friends...'],[11100,'Almost ready...',88,'Loading your mascot personality...'],[12100,'Almost ready...',94,'Final preparations...'],[13500,'Connected!',100,'Welcome to What Web Was!']];
+      const steps=[[200,'Dialing...',2,'Picking up the line...'],[1100,'Dialing...',7,'Listening for carrier...'],[2100,'Connecting...',12,'Carrier detected!'],[3100,'Handshaking...',18,'Negotiating 56Kbps...'],[4100,'Handshaking...',26,'Trading secrets with the modem...'],[5100,'Authenticating...',34,'Sending credentials...'],[6100,'Authenticating...',42,'Configuring TCP/IP stack...'],[7100,'Loading...',50,'Cleaning the dust off old bookmarks...'],[8100,'Loading...',60,'Defragging your past...'],[9100,'Loading...',68,'Synchronizing buddy list...'],[10100,'Loading...',76,'Saying hi to your old friends...'],[11100,'Almost ready...',82,'Loading your mascot personality...'],[12100,'Almost ready...',88,'Polishing the chrome...'],[13100,'Almost ready...',94,'Final preparations...'],[14500,'Connected!',100,'Welcome to What Web Was!']];
       steps.forEach(([d,s,p,det])=>setTimeout(()=>{
         const c=document.getElementById('conn-status-txt');if(c)c.textContent=s;
         const b=document.getElementById('conn-bar');if(b)b.style.width=p+'%';
         const e=document.getElementById('conn-detail');if(e)e.textContent=det;
       },d));
-      setTimeout(bootDesktop,14000);
+      setTimeout(bootDesktop,15000);
     } else {
       setTimeout(bootDesktop,500);
     }
@@ -2178,12 +2178,15 @@ function renderBuddyList(){
     const av=data?.avatar||A[data?.mascot||'PUNK']||'';
     const d=document.createElement('div');d.className='bl-buddy';
     d.innerHTML='<div class="bl-dot bon"></div><img src="'+av+'" alt=""/><span>'+esc(name)+(data?.away?'<span style="font-size:9px;color:#AA6600;margin-left:3px;">('+esc(data.away.slice(0,15))+')</span>':'')+'</span>';
+    d.onclick=()=>openIMTo(name);
     d.ondblclick=()=>openIMTo(name);
+    d.style.cursor='pointer';
     ol.appendChild(d);
   });
   myBuddyList.filter(n=>!onlineUsers[n]).forEach(name=>{
-    const d=document.createElement('div');d.className='bl-buddy';d.style.opacity='0.6';
-    d.innerHTML='<div class="bl-dot boff"></div><span style="text-decoration:line-through;font-size:11px;font-family:Tahoma;">'+esc(name)+'</span><span style="margin-left:auto;font-size:9px;color:#CC0000;cursor:pointer;" onclick="removeBuddy(\''+name+'\')">✕</span>';
+    const d=document.createElement('div');d.className='bl-buddy';d.style.opacity='0.6';d.style.cursor='pointer';
+    d.innerHTML='<div class="bl-dot boff"></div><span style="text-decoration:line-through;font-size:11px;font-family:Tahoma;">'+esc(name)+'</span><span style="margin-left:auto;font-size:9px;color:#CC0000;cursor:pointer;" onclick="event.stopPropagation();removeBuddy(\''+name+'\')">✕</span>';
+    d.onclick=()=>openIMTo(name);
     fl.appendChild(d);
   });
   if(!onNames.length&&!myBuddyList.length) fl.innerHTML='<div style="font-size:10px;color:#888;padding:5px 10px;font-family:Tahoma;">No buddies yet — add some!</div>';
@@ -4789,6 +4792,89 @@ window.loadHistoricalWeather = async function(){
 
 console.log('WWW Patch Round 2 loaded — extended fixes applied');
 
+})();
+</script>
+
+
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- WWW Round 3.3 — Mic feedback fix                                  -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+'use strict';
+
+// Wrap getUserMedia to force echo cancellation / noise suppression / AGC.
+// Browsers and Electron both honor these constraints; they're disabled by
+// default in some setups.
+const _origGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+navigator.mediaDevices.getUserMedia = function(constraints){
+  const c = {...(constraints || {})};
+  if(c.audio){
+    // If audio: true, replace with detailed constraints
+    if(c.audio === true){
+      c.audio = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      };
+    } else if(typeof c.audio === 'object'){
+      // Merge into existing audio constraints object
+      c.audio = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        ...c.audio
+      };
+      // Force these to true even if caller passed false
+      c.audio.echoCancellation = true;
+      c.audio.noiseSuppression = true;
+      c.audio.autoGainControl = true;
+    }
+  }
+  console.log('WWW: getUserMedia with audio constraints:', c.audio);
+  return _origGetUserMedia(c);
+};
+
+// Always mute the local video preview so the user doesn't hear themselves.
+// We watch for vid-local to exist and force muted=true any time srcObject changes.
+function _ensureLocalMuted(){
+  const local = document.getElementById('vid-local');
+  if(!local) return;
+  local.muted = true;
+  local.volume = 0;
+  // Re-mute on srcObject changes (some code may unmute)
+  if(!local._wwwMuteGuard){
+    local._wwwMuteGuard = true;
+    const observer = new MutationObserver(()=>{
+      if(!local.muted){ local.muted = true; local.volume = 0; }
+    });
+    observer.observe(local, {attributes:true, attributeFilter:['muted']});
+    // Also re-check every 2s as a safety net
+    setInterval(()=>{
+      if(local.srcObject && !local.muted){
+        local.muted = true; local.volume = 0;
+        console.log('WWW: re-muted local video');
+      }
+    }, 2000);
+  }
+}
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', _ensureLocalMuted);
+} else {
+  _ensureLocalMuted();
+}
+// Also run after openWin so newly-added video element gets muted
+const _origOpenWin = window.openWin;
+if(typeof _origOpenWin === 'function'){
+  window.openWin = function(id){
+    const r = _origOpenWin.apply(this, arguments);
+    if(id === 'video-win') setTimeout(_ensureLocalMuted, 100);
+    return r;
+  };
+}
+
+console.log('WWW R3.3: mic echo/noise suppression enabled, local video muted');
 })();
 </script>
 
