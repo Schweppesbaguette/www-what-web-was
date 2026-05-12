@@ -267,11 +267,11 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 #conn-logo-img{width:200px;margin-bottom:16px;filter:drop-shadow(0 4px 14px rgba(0,30,80,0.9));}
 #conn-mascot{width:80px;height:100px;object-fit:contain;margin-bottom:10px;animation:bob 1s ease-in-out infinite;filter:drop-shadow(0 4px 10px rgba(0,30,80,0.8));}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}};
-#conn-status-txt{font-size:13px;margin-bottom:8px;color:#ffffff;text-shadow:0 1px 4px rgba(0,0,30,0.95),0 0 8px rgba(0,80,200,0.7);font-weight:bold;}
-#conn-bar-wrap{width:300px;height:18px;background:rgba(0,10,50,0.85);border:1px solid #92d9ff;border-radius:9px;overflow:hidden;box-shadow:0 0 12px rgba(146,217,255,0.6),inset 0 2px 4px rgba(0,0,0,0.5);}
+#conn-status-txt{font-size:13px;margin-bottom:8px;color:#ffffff;text-shadow:0 2px 6px rgba(0,0,30,1),0 0 12px rgba(0,40,120,0.9),0 0 4px rgba(0,0,0,0.95);font-weight:bold;}
+#conn-bar-wrap{width:300px;height:18px;background:rgba(0,10,50,0.85);border:1px solid #ffffff;border-radius:9px;overflow:hidden;box-shadow:0 0 12px rgba(146,217,255,0.9),inset 0 2px 4px rgba(0,0,0,0.5);}
 #conn-bar{height:100%;width:0%;background:linear-gradient(90deg,#0048c8 0%,#1080e0 35%,#40d8c0 65%,#81ff28 100%);transition:width 0.5s ease-out;border-radius:9px;box-shadow:0 0 14px rgba(129,255,40,0.8);}
 @keyframes cshine{from{background-position:0%}to{background-position:200%}};
-#conn-detail{margin-top:8px;font-size:10px;color:#92d9ff;text-shadow:0 1px 3px rgba(0,0,30,0.9);}
+#conn-detail{margin-top:8px;font-size:10px;color:#ffffff;text-shadow:0 1px 4px rgba(0,0,30,1),0 0 6px rgba(0,40,120,0.8);}
 
 /* ══ MAIN BROWSER ══ */
 #screen{width:100vw;height:100vh;position:relative;overflow:hidden;background:#00082a;}
@@ -2569,11 +2569,30 @@ async function startVideoCall(buddy){
 
   openWin('video-win');
   document.getElementById('vid-peer-name').textContent=buddy+' (calling...)';
-  await startLocalVideo();
+  /* R3.25 — CRITICAL FIX. An older patch (at index.html:5144) wraps
+     startLocalVideo to prefer the built-in camera and assigns the result to
+     window.vidStream. But the main vidStream is a let-scoped variable —
+     window.vidStream and the let vidStream are DIFFERENT objects. The patch
+     was setting window.vidStream and the main code was checking the let,
+     finding it null, and SKIPPING addTrack. Result: SDP offer with no media,
+     no ICE gathering, stuck at ice=new conn=new forever.
+     Fix: capture the return value and assign to our let. */
+  const _localStream = await startLocalVideo();
+  if(_localStream && !vidStream) vidStream = _localStream;
+  // Also pick up window.vidStream if it was set by the patched wrapper
+  if(!vidStream && window.vidStream) vidStream = window.vidStream;
+  console.warn('WWW R3.25 vidStream after startLocalVideo:', !!vidStream, 'tracks:', vidStream?vidStream.getTracks().length:0);
   closePeer();
   peerConn=new RTCPeerConnection(ICE);
   setupPeerEvents(buddy);
-  if(vidStream) vidStream.getTracks().forEach(t=>peerConn.addTrack(t,vidStream));
+  if(vidStream) {
+    vidStream.getTracks().forEach(t=>{
+      console.warn('WWW R3.25 addTrack:', t.kind, t.readyState);
+      peerConn.addTrack(t,vidStream);
+    });
+  } else {
+    console.error('WWW R3.25 ⚠️ vidStream is null — cannot add tracks! Call will fail.');
+  }
   getSigCh(buddy);
   // R3.21 — Tiny delay (200ms) so the receiver's `ring` handler can fire and
   // their getSigCh(d.from) can complete before we publish the offer. This
@@ -2647,14 +2666,25 @@ async function handleRTCOffer(from,sdp){
   getSigCh(from);
   openWin('video-win');
   document.getElementById('vid-peer-name').textContent=from+' (connecting...)';
-  await startLocalVideo();
+  /* R3.25 — same vidStream capture fix as in startVideoCall above. */
+  const _localStream = await startLocalVideo();
+  if(_localStream && !vidStream) vidStream = _localStream;
+  if(!vidStream && window.vidStream) vidStream = window.vidStream;
+  console.warn('WWW R3.25 handleRTCOffer vidStream:', !!vidStream, 'tracks:', vidStream?vidStream.getTracks().length:0);
 
   // If we don't have a peer yet, create one. If we DO have one (glare on polite peer),
   // rollback our local offer so we can accept the incoming offer.
   if(!peerConn){
     peerConn=new RTCPeerConnection(ICE);
     setupPeerEvents(from);
-    if(vidStream) vidStream.getTracks().forEach(t=>peerConn.addTrack(t,vidStream));
+    if(vidStream) {
+      vidStream.getTracks().forEach(t=>{
+        console.warn('WWW R3.25 receiver addTrack:', t.kind, t.readyState);
+        peerConn.addTrack(t,vidStream);
+      });
+    } else {
+      console.error('WWW R3.25 ⚠️ receiver vidStream is null — cannot add tracks!');
+    }
   } else if(offerCollision){
     console.warn('WWW R3.24 polite peer rolling back own offer to accept incoming');
     try { await peerConn.setLocalDescription({type:'rollback'}); }
