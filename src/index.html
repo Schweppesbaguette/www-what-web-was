@@ -261,15 +261,17 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 .signon-create-arrow{color:#81ff28;font-size:16px;font-weight:bold;}
 
 /* ══ CONNECTING ══ */
-#conn-screen{position:fixed;inset:0;z-index:99997;display:none;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#001060,#000820 60%,#000410);color:white;font-family:Tahoma;}
-#conn-logo-img{width:200px;margin-bottom:16px;}
-#conn-mascot{width:80px;height:100px;object-fit:contain;margin-bottom:10px;animation:bob 1s ease-in-out infinite;}
+/* R3.24 — login/connect screen styling. Background image replaces solid
+   radial gradient; progress bar uses blue→neon-green gradient. */
+#conn-screen{position:fixed;inset:0;z-index:99997;display:none;flex-direction:column;align-items:center;justify-content:center;background:#000820 url('assets/login-bg.png') center center / cover no-repeat;color:white;font-family:Tahoma;}
+#conn-logo-img{width:200px;margin-bottom:16px;filter:drop-shadow(0 4px 14px rgba(0,30,80,0.9));}
+#conn-mascot{width:80px;height:100px;object-fit:contain;margin-bottom:10px;animation:bob 1s ease-in-out infinite;filter:drop-shadow(0 4px 10px rgba(0,30,80,0.8));}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}};
-#conn-status-txt{font-size:13px;margin-bottom:8px;color:#92d9ff;}
-#conn-bar-wrap{width:280px;height:16px;background:rgba(0,10,50,0.7);border:1px solid #4878c8;border-radius:8px;overflow:hidden;}
-#conn-bar{height:100%;width:0%;background:linear-gradient(90deg,#0048c8,#81ff28,#0048c8);background-size:200%;animation:cshine 1.5s linear infinite;transition:width 0.5s;border-radius:8px;}
+#conn-status-txt{font-size:13px;margin-bottom:8px;color:#ffffff;text-shadow:0 1px 4px rgba(0,0,30,0.95),0 0 8px rgba(0,80,200,0.7);font-weight:bold;}
+#conn-bar-wrap{width:300px;height:18px;background:rgba(0,10,50,0.85);border:1px solid #92d9ff;border-radius:9px;overflow:hidden;box-shadow:0 0 12px rgba(146,217,255,0.6),inset 0 2px 4px rgba(0,0,0,0.5);}
+#conn-bar{height:100%;width:0%;background:linear-gradient(90deg,#0048c8 0%,#1080e0 35%,#40d8c0 65%,#81ff28 100%);transition:width 0.5s ease-out;border-radius:9px;box-shadow:0 0 14px rgba(129,255,40,0.8);}
 @keyframes cshine{from{background-position:0%}to{background-position:200%}};
-#conn-detail{margin-top:8px;font-size:10px;color:#3a68a8;}
+#conn-detail{margin-top:8px;font-size:10px;color:#92d9ff;text-shadow:0 1px 3px rgba(0,0,30,0.9);}
 
 /* ══ MAIN BROWSER ══ */
 #screen{width:100vw;height:100vh;position:relative;overflow:hidden;background:#00082a;}
@@ -1636,6 +1638,10 @@ function bootDesktop(){
   // Apply mascot theme
   applyTheme(myMascot);
   updateMascotUI();
+  /* R3.24 — auto-open buddy list on first login so the user sees who's online
+     without having to hunt for the People button. Wrapped in a 600ms timeout
+     so the dialup boot animation has time to clear. */
+  setTimeout(()=>{ try{ openWin('buddy-win'); }catch(e){} }, 600);
   // Load saved avatar
   const savedAv=localStorage.getItem('www_avatar');
   if(savedAv){myAvatarSrc=savedAv;const e=document.getElementById('bl-avatar');if(e)e.src=savedAv;}
@@ -2061,7 +2067,7 @@ function onBuddyOff(name){
 function getSigCh(buddy){
   const name='www-sig-'+[CFG.screenName,buddy].sort().join('-');
   if(!sigChannels[name]&&ablyClient){
-    console.log('WWW R3.21 sig subscribe:', name);
+    console.warn('WWW R3.24 sig subscribe:', name);
     // R3.21 — use Ably channel `rewind` so if we subscribe slightly after the
     // other peer publishes their offer, we still receive it. Without this,
     // a buddy who initiates a call right as we sign on may miss us entirely.
@@ -2071,24 +2077,24 @@ function getSigCh(buddy){
     sigChannels[name].subscribe('sig',async msg=>{
       const d=msg.data;
       if(!d || d.from===CFG.screenName)return;
-      console.log('WWW R3.23 SIG-RECV', d.type, 'from', d.from, 'sig-state:', peerConn?.signalingState);
+      console.warn('WWW R3.24 SIG-RECV', d.type, 'from', d.from, 'sig-state:', peerConn?.signalingState);
       try {
         if(d.type==='offer')  await handleRTCOffer(d.from,d.sdp);
         if(d.type==='answer'&&peerConn) {
           if(peerConn.signalingState === 'have-local-offer'){
             await peerConn.setRemoteDescription({type:'answer',sdp:d.sdp});
-            console.log('WWW R3.23 answer applied');
+            console.warn('WWW R3.24 answer applied');
             /* R3.23 — flush any ICE candidates that arrived during the
                brief window before setRemoteDescription completed. */
             if(window._wwwPendingIce && window._wwwPendingIce.length){
-              console.log('WWW R3.23 flushing', window._wwwPendingIce.length, 'buffered ICE candidates');
+              console.warn('WWW R3.24 flushing', window._wwwPendingIce.length, 'buffered ICE candidates');
               for(const c of window._wwwPendingIce){
                 try{ await peerConn.addIceCandidate(c); }catch(e){console.warn('flush ice err:',e);}
               }
               window._wwwPendingIce = [];
             }
           } else {
-            console.log('WWW R3.23 answer ignored, state:', peerConn.signalingState);
+            console.warn('WWW R3.24 answer ignored, state:', peerConn.signalingState);
           }
         }
         if(d.type==='ice')    {
@@ -2100,9 +2106,9 @@ function getSigCh(buddy){
                caller's host/srflx candidates were dropped. */
             window._wwwPendingIce = window._wwwPendingIce || [];
             window._wwwPendingIce.push(d.candidate);
-            console.log('WWW R3.23 ICE-IN buffered (', window._wwwPendingIce.length, 'pending), peer:', !!peerConn);
+            console.warn('WWW R3.24 ICE-IN buffered (', window._wwwPendingIce.length, 'pending), peer:', !!peerConn);
           } else {
-            console.log('WWW R3.23 ICE-IN', d.candidate?.type||'?', d.candidate?.protocol||'?', 'from', d.from);
+            console.warn('WWW R3.24 ICE-IN', d.candidate?.type||'?', d.candidate?.protocol||'?', 'from', d.from);
             if(peerConn._iceRecvCounter) peerConn._iceRecvCounter.recv++;
             await peerConn.addIceCandidate(d.candidate);
           }
@@ -2110,7 +2116,7 @@ function getSigCh(buddy){
         if(d.type==='reject') {showToast(d.from+' declined','');endVideoCall();}
       } catch(e){
         if(d.type==='ice' && e.name==='InvalidStateError') return;
-        console.error('WWW R3.23 sig handler error:', d.type, e);
+        console.error('WWW R3.24 sig handler error:', d.type, e);
       }
     });
   }
@@ -2163,7 +2169,7 @@ function subscribeIM(name){
   // via the sig channel; the ring is just a courtesy notification.
   ch.subscribe('ring', msg => {
     if(!msg.data || msg.data.from === CFG.screenName) return;
-    console.log('WWW R3.23 DM-RING from', msg.data.from);
+    console.warn('WWW R3.24 DM-RING from', msg.data.from);
     /* R3.23 — Don't show toast here; the proper incoming-call modal will
        appear when the offer arrives via the sig channel. The ring's purpose
        now is purely to wake up our sig channel subscription so we catch
@@ -2485,27 +2491,27 @@ function setupPeerEvents(buddy){
   peerConn.onicecandidate=e=>{
     if(e.candidate){
       candidateCount.sent++;
-      console.log('WWW R3.23 ICE-OUT #'+candidateCount.sent, e.candidate.type||'?', e.candidate.protocol||'?', 'to', buddy);
+      console.warn('WWW R3.24 ICE-OUT #'+candidateCount.sent, e.candidate.type||'?', e.candidate.protocol||'?', 'to', buddy);
       sendSig(buddy,{type:'ice',candidate:e.candidate});
     } else {
-      console.log('WWW R3.23 ICE-OUT complete, total sent:', candidateCount.sent);
+      console.warn('WWW R3.24 ICE-OUT complete, total sent:', candidateCount.sent);
     }
   };
   peerConn.oniceconnectionstatechange=()=>{
     const s=peerConn?.iceConnectionState;
-    console.log('WWW R3.23 ICE-STATE:', s, '(sent:'+candidateCount.sent+' recv:'+candidateCount.recv+')');
+    console.warn('WWW R3.24 ICE-STATE:', s, '(sent:'+candidateCount.sent+' recv:'+candidateCount.recv+')');
     const lbl=document.getElementById('vid-peer-name');
     if(lbl && s==='checking') lbl.textContent=buddy+' (checking ICE...)';
     if(lbl && s==='failed')   lbl.textContent=buddy+' ⚠ ICE failed';
     if(lbl && s==='disconnected') lbl.textContent=buddy+' ⚠ disconnected';
   };
   peerConn.onicegatheringstatechange=()=>{
-    console.log('WWW R3.23 ICE-GATHER:', peerConn?.iceGatheringState);
+    console.warn('WWW R3.24 ICE-GATHER:', peerConn?.iceGatheringState);
   };
   // Expose recv counter for the sig 'ice' handler to bump (see getSigCh)
   peerConn._iceRecvCounter = candidateCount;
   peerConn.ontrack=e=>{
-    console.log('WWW R3.23 ONTRACK fired, kind:', e.track?.kind);
+    console.warn('WWW R3.24 ONTRACK fired, kind:', e.track?.kind);
     e.streams&&e.streams[0]?e.streams[0].getTracks().forEach(t=>{if(!remoteStream.getTrackById(t.id))remoteStream.addTrack(t);}):remoteStream.addTrack(e.track);
     const remote=document.getElementById('vid-remote');
     if(remote&&remote.srcObject!==remoteStream){
@@ -2521,7 +2527,7 @@ function setupPeerEvents(buddy){
   };
   peerConn.onconnectionstatechange=()=>{
     const s=peerConn?.connectionState;
-    console.log('WWW R3.23 CONN-STATE:', s);
+    console.warn('WWW R3.24 CONN-STATE:', s);
     if(['disconnected','failed','closed'].includes(s))document.getElementById('vid-status').textContent='⚠ DISCONNECTED';
   };
 }
@@ -2544,7 +2550,7 @@ function _isPolite(buddy){
 
 async function startVideoCall(buddy){
   if(!buddy||buddy==='null'||buddy===''){quickVideoTest();return;}
-  console.log('WWW R3.21 startVideoCall:', buddy, 'polite:', _isPolite(buddy));
+  console.warn('WWW R3.24 startVideoCall:', buddy, 'polite:', _isPolite(buddy));
   vidCallPartner=buddy;
   isPolite = _isPolite(buddy);
 
@@ -2557,9 +2563,9 @@ async function startVideoCall(buddy){
     const chName = getDMCh(CFG.screenName, buddy);
     if(dmChannels[chName]){
       dmChannels[chName].publish('ring', {from: CFG.screenName, to: buddy});
-      console.log('WWW R3.21 ring sent on DM channel to', buddy);
+      console.warn('WWW R3.24 ring sent on DM channel to', buddy);
     }
-  } catch(e) { console.error('WWW R3.21 ring publish error:', e); }
+  } catch(e) { console.error('WWW R3.24 ring publish error:', e); }
 
   openWin('video-win');
   document.getElementById('vid-peer-name').textContent=buddy+' (calling...)';
@@ -2578,9 +2584,26 @@ async function startVideoCall(buddy){
     makingOffer = true;
     await peerConn.setLocalDescription();
     sendSig(buddy,{type:'offer',sdp:peerConn.localDescription.sdp});
-    console.log('WWW R3.21 offer sent to', buddy);
+    console.warn('WWW R3.24 offer sent to', buddy, '— now waiting for ICE candidates to fire');
+    /* R3.24 — Diagnostic timer: warn loudly if ICE doesn't reach connected
+       within 10s. This makes it impossible to miss in console even when
+       scrolling. */
+    setTimeout(()=>{
+      if(peerConn){
+        const ice=peerConn.iceConnectionState, conn=peerConn.connectionState;
+        if(ice!=='connected' && ice!=='completed'){
+          console.error('WWW R3.24 ⚠️ ICE STILL NOT CONNECTED after 10s: ice='+ice+' conn='+conn);
+          const lbl=document.getElementById('vid-peer-name');
+          if(lbl && lbl.textContent.indexOf('Live')<0){
+            lbl.textContent=buddy+' ⚠ ICE='+ice;
+          }
+        } else {
+          console.warn('WWW R3.24 ✅ ICE connected:', ice);
+        }
+      }
+    }, 10000);
   } catch(e) {
-    console.error('WWW R3.21 startVideoCall error:', e);
+    console.error('WWW R3.24 startVideoCall error:', e);
   } finally {
     makingOffer = false;
   }
@@ -2588,13 +2611,13 @@ async function startVideoCall(buddy){
 }
 
 async function handleRTCOffer(from,sdp){
-  console.log('WWW R3.23 HANDLE-OFFER from:', from, 'making:', makingOffer, 'sig:', peerConn?.signalingState);
+  console.warn('WWW R3.24 HANDLE-OFFER from:', from, 'making:', makingOffer, 'sig:', peerConn?.signalingState);
   // Glare detection — if we're currently making an offer too, we have a collision
   const offerCollision = makingOffer ||
                          (peerConn && peerConn.signalingState !== 'stable');
   // Impolite peer wins the race; polite peer rolls back
   if(!isPolite && offerCollision){
-    console.log('WWW R3.23 impolite peer ignoring offer (collision)');
+    console.warn('WWW R3.24 impolite peer ignoring offer (collision)');
     ignoreOffer = true;
     setTimeout(()=>{ ignoreOffer = false; }, 1000);
     return;
@@ -2609,7 +2632,7 @@ async function handleRTCOffer(from,sdp){
   if(!offerCollision && !window._wwwActiveCallOffer){
     const accepted = await showIncomingCallModal(from);
     if(!accepted){
-      console.log('WWW R3.23 user declined incoming call from', from);
+      console.warn('WWW R3.24 user declined incoming call from', from);
       try { sendSig(from, {type:'reject'}); } catch(e){}
       return;
     }
@@ -2633,7 +2656,7 @@ async function handleRTCOffer(from,sdp){
     setupPeerEvents(from);
     if(vidStream) vidStream.getTracks().forEach(t=>peerConn.addTrack(t,vidStream));
   } else if(offerCollision){
-    console.log('WWW R3.23 polite peer rolling back own offer to accept incoming');
+    console.warn('WWW R3.24 polite peer rolling back own offer to accept incoming');
     try { await peerConn.setLocalDescription({type:'rollback'}); }
     catch(e){ console.error('rollback error:', e); }
   }
@@ -2642,7 +2665,7 @@ async function handleRTCOffer(from,sdp){
     await peerConn.setRemoteDescription({type:'offer',sdp});
     /* R3.23 — flush any ICE that buffered while the modal was up. */
     if(window._wwwPendingIce && window._wwwPendingIce.length){
-      console.log('WWW R3.23 flushing', window._wwwPendingIce.length, 'buffered ICE candidates (receiver side)');
+      console.warn('WWW R3.24 flushing', window._wwwPendingIce.length, 'buffered ICE candidates (receiver side)');
       for(const c of window._wwwPendingIce){
         try{ await peerConn.addIceCandidate(c); }catch(e){console.warn('flush ice err:',e);}
       }
@@ -2650,9 +2673,9 @@ async function handleRTCOffer(from,sdp){
     }
     await peerConn.setLocalDescription();  // implicit answer
     sendSig(from,{type:'answer',sdp:peerConn.localDescription.sdp});
-    console.log('WWW R3.23 answer sent to', from);
+    console.warn('WWW R3.24 answer sent to', from);
   } catch(e){
-    console.error('WWW R3.23 handleRTCOffer error:', e);
+    console.error('WWW R3.24 handleRTCOffer error:', e);
   }
 }
 
@@ -2715,7 +2738,7 @@ async function startLocalVideo(){
     if(vidStream){
       const live = vidStream.getTracks().filter(t=>t.readyState==='live');
       if(live.length > 0){
-        console.log('WWW R3.23 startLocalVideo: reusing existing live stream');
+        console.warn('WWW R3.24 startLocalVideo: reusing existing live stream');
         // Make sure local <video> shows it
         const local=document.getElementById('vid-local');
         if(local && local.srcObject!==vidStream){
@@ -3691,14 +3714,55 @@ function showTVStatic(){
 function tvToggleFullscreen(){
   const win=document.getElementById('tv-win');
   if(!win) return;
-  if(win.dataset.fullscreen==='1'){
+  /* R3.24 — Real OS-level fullscreen using the Fullscreen API. If supported
+     and we're entering fullscreen, request it on the tv-win element so it
+     occupies the whole display. Falls back to in-window fullscreen if the API
+     isn't available or rejects (e.g., user permission). When exiting, leave
+     fullscreen via document.exitFullscreen. */
+  const isCurrentlyFull = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  if(isCurrentlyFull){
+    try{
+      if(document.exitFullscreen) document.exitFullscreen();
+      else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }catch(e){console.warn('exitFullscreen err:', e);}
     win.style.cssText='width:500px;height:400px;top:60px;left:80px;display:flex;flex-direction:column;';
     win.dataset.fullscreen='0';
+    return;
+  }
+  const req = win.requestFullscreen || win.webkitRequestFullscreen;
+  if(req){
+    // Real OS fullscreen
+    try{
+      const p = req.call(win);
+      if(p && p.catch) p.catch(()=>{
+        // Fallback to in-window fullscreen if browser refused
+        win.style.cssText='width:calc(100% - 40px);height:calc(100% - 40px);top:20px;left:20px;display:flex;flex-direction:column;z-index:9000;';
+        win.dataset.fullscreen='1';
+      });
+      win.dataset.fullscreen='1';
+      // Also stretch element styles so inner layout fills the screen
+      win.style.cssText='width:100%;height:100%;top:0;left:0;display:flex;flex-direction:column;z-index:99999;';
+    }catch(e){
+      console.warn('requestFullscreen err:', e);
+      win.style.cssText='width:calc(100% - 40px);height:calc(100% - 40px);top:20px;left:20px;display:flex;flex-direction:column;z-index:9000;';
+      win.dataset.fullscreen='1';
+    }
   } else {
+    // No fullscreen API — in-window only
     win.style.cssText='width:calc(100% - 40px);height:calc(100% - 40px);top:20px;left:20px;display:flex;flex-direction:column;z-index:9000;';
     win.dataset.fullscreen='1';
   }
 }
+/* R3.24 — restore window dimensions automatically when user presses ESC
+   to leave fullscreen, so the TV doesn't stay stuck at 100% size. */
+document.addEventListener('fullscreenchange', ()=>{
+  const win=document.getElementById('tv-win');
+  if(!win) return;
+  if(!document.fullscreenElement && win.dataset.fullscreen==='1'){
+    win.style.cssText='width:500px;height:400px;top:60px;left:80px;display:flex;flex-direction:column;';
+    win.dataset.fullscreen='0';
+  }
+});
 
 // ═══════════════════════════════════════════════════════
 //  TIME TRAVEL HISTORIAN
