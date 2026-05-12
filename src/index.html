@@ -39,6 +39,12 @@
 body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font-size:11px;}
 
 /* ══ SETUP / SIGNON ══ */
+/* WWW R3.12 — hide imgs with empty src so the broken-image glyph never flashes
+   before loadAssets() populates the WWWLOGO sources. */
+#setup-logo:not([src]),#setup-logo[src=""],#setup-logo[src="#"],
+#conn-logo-img:not([src]),#conn-logo-img[src=""],#conn-logo-img[src="#"]{
+  visibility:hidden!important;
+}
 #setup-screen{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#000820;}
 #setup-box{position:relative;z-index:1;background:rgba(0,12,50,0.96);border:2px solid #4878c8;border-radius:10px;width:420px;box-shadow:0 0 40px rgba(72,136,255,0.5),0 0 80px rgba(0,30,100,0.4);overflow:hidden;}
 .setup-logo{width:100%;display:block;}
@@ -4815,8 +4821,15 @@ function _wrapHandleOffer(){
 function _wrapStartCall(){
   if(typeof window.startVideoCall !== 'function' || window.startVideoCall._wwwR310Wrapped) return;
   const _orig = window.startVideoCall;
+  let _callInFlight = false;
   window.startVideoCall = async function(buddy){
-    console.log('WWW CALL: startVideoCall(' + buddy + ') — caller =', (window.CFG ? window.CFG.screenName : '?'));
+    if(_callInFlight){
+      console.warn('WWW CALL: startVideoCall already in flight, ignoring duplicate call for', buddy);
+      return;
+    }
+    _callInFlight = true;
+    setTimeout(()=>{ _callInFlight = false; }, 3000); // release lock after 3s
+    console.log('WWW CALL: startVideoCall(' + buddy + ')');
     try {
       const result = await _orig.apply(this, arguments);
       // After offer is sent, check peer connection state
@@ -4861,16 +4874,25 @@ setTimeout(_wrapAll, 5000);
 // Expose key state so user can inspect in console
 window.WWW_DEBUG = {
   getPeerState: ()=>{
-    if(!window.peerConn) return 'no peerConn';
+    // peerConn is a local let in another script scope. Try multiple ways.
+    let pc = null;
+    try { if(typeof peerConn !== 'undefined' && peerConn) pc = peerConn; } catch(e){}
+    if(!pc) { try { pc = window.peerConn; } catch(e){} }
+    if(!pc) return 'no peerConn (or not in this scope)';
     return {
-      ice: window.peerConn.iceConnectionState,
-      conn: window.peerConn.connectionState,
-      sig: window.peerConn.signalingState,
-      localDesc: !!window.peerConn.localDescription,
-      remoteDesc: !!window.peerConn.remoteDescription,
+      ice: pc.iceConnectionState,
+      conn: pc.connectionState,
+      sig: pc.signalingState,
+      localDesc: !!pc.localDescription,
+      remoteDesc: !!pc.remoteDescription,
     };
   },
-  getMyName: ()=>(window.CFG ? window.CFG.screenName : 'unknown'),
+  getMyName: ()=>{
+    // CFG is a local let. Try several places.
+    try { if(typeof CFG !== 'undefined' && CFG && CFG.screenName) return CFG.screenName; } catch(e){}
+    try { const s = localStorage.getItem('www_cfg'); if(s){ const c = JSON.parse(s); if(c.screenName) return c.screenName; } } catch(e){}
+    return 'unknown';
+  },
 };
 
 console.log('WWW R3.10: instrumentation loaded. Run WWW_DEBUG.getPeerState() in console for state.');
