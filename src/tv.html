@@ -47,25 +47,35 @@ webview,iframe{width:100%;height:100%;border:none;}
 
 #vol-slider{
   position:absolute;z-index:3;
-  top:520px;left:466px;width:215px;height:14px;
-  accent-color:#81ff28;cursor:pointer;
+  /* R3.14 — match radio.html R3.14 approach. tv2.png patched to erase painted thumb.
+     Track at y≈521-530 (center y=525), x=428-685 (~257px wide). Slider height 8. */
+  top:521px;left:428px;width:257px;height:8px;
+  cursor:pointer;
   -webkit-app-region:no-drag;
   -webkit-appearance:none;
   appearance:none;
   background:transparent;
   outline:none;
   margin:0;padding:0;
+  --fill-pct:80%;
+  background:linear-gradient(to right,
+    rgba(129,255,40,0.85) 0%,
+    rgba(129,255,40,0.85) var(--fill-pct),
+    transparent var(--fill-pct),
+    transparent 100%);
+  border-radius:4px;
+  box-shadow:inset 0 0 4px rgba(129,255,40,0.35);
 }
 #vol-slider::-webkit-slider-runnable-track{
-  height:14px;background:transparent;border-radius:7px;
+  height:8px;background:transparent;border-radius:4px;
 }
 #vol-slider::-webkit-slider-thumb{
   -webkit-appearance:none;appearance:none;
   width:14px;height:14px;border-radius:50%;
-  background:#81ff28;
-  box-shadow:0 0 6px #81ff28,0 0 12px rgba(129,255,40,0.4);
+  background:radial-gradient(circle at 35% 30%, #ffffff 0%, #e0e8f0 25%, #8090a8 70%, #4060a0 100%);
+  box-shadow:0 0 3px rgba(0,0,0,0.6),inset 0 -1px 2px rgba(0,0,0,0.4);
   cursor:pointer;
-  margin-top:0;
+  margin-top:-3px;
 }
 </style>
 </head>
@@ -130,23 +140,24 @@ async function loadAssets() {
 loadAssets();
 
 const CHANNELS=[
-  // R3.13 — Added 90s commercials playlist as first channel for testing.
-  // YouTube playlist embed format: /embed/videoseries?list=PLAYLIST_ID
-  {name:'90s Commercials',channel:'NostalgiaTV',url:'https://www.youtube.com/embed/videoseries?list=PLYumrCRePE56SCfIYojVGLQAHxDt718UO',bitrate:'240 kbps'},
-  {name:'90s TV Compilation',channel:'RetroAds',url:'https://www.youtube.com/embed/KOSmEw6mP6E',bitrate:'192 kbps'},
-  {name:'Late 90s Cable',channel:'Cable90',url:'https://www.youtube.com/embed/AeRTwWCCRaA',bitrate:'192 kbps'},
+  // R3.14 — Curated channels biased toward known-embeddable retro content.
+  // YouTube playlists (videoseries) usually work even when individual
+  // "24/7 stream" channels disable embedding. Single videos chosen are
+  // compilation uploads (less likely to be embed-blocked vs official music videos).
+  {name:'90s Commercials Playlist',channel:'NostalgiaTV',url:'https://www.youtube.com/embed/videoseries?list=PLYumrCRePE56SCfIYojVGLQAHxDt718UO',bitrate:'240 kbps'},
+  {name:'90s TV Compilation #45',channel:'RetroAds',url:'https://www.youtube.com/embed/NuyX_v1wRTQ',bitrate:'192 kbps'},
+  {name:'Late 90s Cable Ads',channel:'Cable90',url:'https://www.youtube.com/embed/AeRTwWCCRaA',bitrate:'192 kbps'},
+  {name:'1992-1997 Comp',channel:'HourTV',url:'https://www.youtube.com/embed/KOSmEw6mP6E',bitrate:'192 kbps'},
+  {name:'1999 Fox Detroit',channel:'Fox99TV',url:'https://www.youtube.com/embed/OatUMBSDQyo',bitrate:'192 kbps'},
+  {name:"Dave's Archives Vol 514",channel:'DavesTV',url:'https://www.youtube.com/embed/zSQqY_zPfbw',bitrate:'192 kbps'},
+  {name:'Levis 90s TV Spots',channel:'LevisTV',url:'https://www.youtube.com/embed/videoseries?list=PLmE28M3bcMNqw-a5J8LfW65RCRKqSSOGl',bitrate:'192 kbps'},
+  {name:'MTV Europe 90s',channel:'MTVTV',url:'https://www.youtube.com/embed/nYOMzNYO21c',bitrate:'192 kbps'},
+  // The live "24/7 stream" channels below frequently have embedding disabled by the
+  // uploader (Error 150/152). Kept in case they come back; user can pick from playlist.
   {name:'Retro TV Live',channel:'RetroTV',url:'https://90s.myretrotvs.com/',bitrate:'128 kbps'},
   {name:'Lo-Fi Hip Hop',channel:'LoFiTV',url:'https://www.youtube.com/embed/jfKfPfyJRdk',bitrate:'192 kbps'},
   {name:'Chillhop Radio',channel:'ChillTV',url:'https://www.youtube.com/embed/7NOSDKb0HlU',bitrate:'128 kbps'},
-  {name:'Y2K Aesthetic',channel:'Y2KTV',url:'https://www.youtube.com/embed/4xDzrJKXOOY',bitrate:'192 kbps'},
-  {name:'Vaporwave',channel:'VaporTV',url:'https://www.youtube.com/embed/Km71Rr9K-Bw',bitrate:'128 kbps'},
-  {name:'90s MTV Hits',channel:'MTVRetro',url:'https://www.youtube.com/embed/n_1apYo6-Ow',bitrate:'256 kbps'},
   {name:'Synthwave',channel:'SynthTV',url:'https://www.youtube.com/embed/MVPTGNGiI-4',bitrate:'192 kbps'},
-  {name:'Space Ambient',channel:'SpaceTV',url:'https://www.youtube.com/embed/p_di4Zn4wz4',bitrate:'128 kbps'},
-  {name:'City Pop Radio',channel:'CityTV',url:'https://www.youtube.com/embed/dRRrhmGTGdU',bitrate:'192 kbps'},
-  {name:'Winamp Vibes',channel:'WinampTV',url:'https://www.youtube.com/embed/bFSMtZgONss',bitrate:'128 kbps'},
-  {name:'Cassette Tape',channel:'CassetteTV',url:'https://www.youtube.com/embed/zLXl5AYKM_E',bitrate:'128 kbps'},
-  {name:'Electric Flow',channel:'ElectricTV',url:'https://www.youtube.com/embed/tDexBj46oNI',bitrate:'256 kbps'},
 ];
 let currentIdx=null;
 
@@ -205,10 +216,18 @@ function pauseTV(){
   const wv=document.getElementById('tv-webview');
   try{if(wv.reload && wv.src && wv.src!=='about:blank') wv.reload();}catch(e){}
 }
-function setVol(v){}
+function setVol(v){
+  // R3.14 — update the green-fill gradient to match thumb position
+  const sl=document.getElementById('vol-slider');
+  if(sl) sl.style.setProperty('--fill-pct', v+'%');
+  // The actual audio volume is controlled by the YouTube player (not directly
+  // settable from outside the webview), so we just track the visual state.
+}
 function winMin(){if(window.electronAPI&&window.electronAPI.minimizeTV)window.electronAPI.minimizeTV();}
 function winMax(){}
 function closeTV(){if(window.electronAPI&&window.electronAPI.closeTV)window.electronAPI.closeTV();else window.close();}
+// R3.14 — initialize volume fill gradient
+setVol(document.getElementById('vol-slider').value);
 // R3.12 — back to <webview> (R3.10 style) with explicit useragent + partition.
 //   The iframe in R3.11 caused YouTube Error 153 because the parent page loads
 //   from file:// and its window.origin is "null", which YouTube's embed player

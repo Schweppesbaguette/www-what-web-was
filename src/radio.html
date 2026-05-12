@@ -67,10 +67,10 @@ input,button,canvas,select,.nodrag{
 
 #vol-slider{
   position:absolute;z-index:3;
-  /* R3.13 — chrome PNG now has the painted thumb erased (see radio2.png patch).
-     The cleaned dark track sits at y≈338-345, x≈449-700 (~252px wide).
-     Our live slider paints the green fill via gradient and a silver thumb. */
-  top:332px;left:449px;width:252px;height:14px;
+  /* R3.14 — slider height reduced from 14 to 8 (user feedback: green bar too thick).
+     Centered vertically in the chrome track (track is at y≈338-345; thumb-center at y≈342).
+     With height=8 and top=338, the slider's vertical center is at y=342. */
+  top:338px;left:449px;width:252px;height:8px;
   cursor:pointer;
   -webkit-app-region:no-drag;
   -webkit-appearance:none;
@@ -85,11 +85,11 @@ input,button,canvas,select,.nodrag{
     rgba(129,255,40,0.85) var(--fill-pct),
     transparent var(--fill-pct),
     transparent 100%);
-  border-radius:7px;
+  border-radius:4px;
   box-shadow:inset 0 0 4px rgba(129,255,40,0.35);
 }
 #vol-slider::-webkit-slider-runnable-track{
-  height:14px;background:transparent;border-radius:7px;
+  height:8px;background:transparent;border-radius:4px;
 }
 #vol-slider::-webkit-slider-thumb{
   -webkit-appearance:none;appearance:none;
@@ -98,7 +98,8 @@ input,button,canvas,select,.nodrag{
   background:radial-gradient(circle at 35% 30%, #ffffff 0%, #e0e8f0 25%, #8090a8 70%, #4060a0 100%);
   box-shadow:0 0 3px rgba(0,0,0,0.6),inset 0 -1px 2px rgba(0,0,0,0.4);
   cursor:pointer;
-  margin-top:0;
+  /* Center the 14px thumb on the 8px track */
+  margin-top:-3px;
 }
 
 #presets-panel{

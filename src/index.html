@@ -4,6 +4,37 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>WWW - What Web Was</title>
+<!-- R3.14 — hide setup/conn screens at first paint if CFG already exists.
+     This prevents the flash of the (broken-image) setup screen between
+     the sign-on window closing and the connect/loading screen appearing.
+     Runs synchronously in <head> before <body> renders. -->
+<style id="boot-hide">
+  #setup-screen,#conn-screen{display:none;}
+</style>
+<script>
+(function(){
+  // If localStorage has no valid CFG, the user is on first-run and needs
+  // to see the setup screen. Remove the hiding rule so setup is visible.
+  try {
+    const s = localStorage.getItem('www_cfg');
+    let hasCfg = false;
+    if (s) {
+      const c = JSON.parse(s);
+      if (c && c.screenName && c.ablyKey) hasCfg = true;
+    }
+    if (!hasCfg) {
+      // First run — let setup-screen show via its normal CSS
+      const el = document.getElementById('boot-hide');
+      if (el) el.remove();
+    }
+    // If hasCfg: keep both hidden until init JS explicitly shows conn-screen
+    // via element.style.display='flex' (inline overrides the stylesheet rule).
+  } catch(e) {
+    const el = document.getElementById('boot-hide');
+    if (el) el.remove();
+  }
+})();
+</script>
 <script src="https://cdn.ably.com/lib/ably.min-1.js" onload="window._ablyReady=true"></script>
 <style>
 /* ═══════════════════════════════════════════
