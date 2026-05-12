@@ -47,9 +47,9 @@ webview,iframe{width:100%;height:100%;border:none;}
 
 #vol-slider{
   position:absolute;z-index:3;
-  /* R3.14 — match radio.html R3.14 approach. tv2.png patched to erase painted thumb.
-     Track at y≈521-530 (center y=525), x=428-685 (~257px wide). Slider height 8. */
-  top:521px;left:428px;width:257px;height:8px;
+  /* R3.15 — corrected via pixel trace: TV chrome lower groove is at y=522-527,
+     x=428-685. tv2.png patched to erase painted silver thumb. */
+  top:521px;left:428px;width:257px;height:6px;
   cursor:pointer;
   -webkit-app-region:no-drag;
   -webkit-appearance:none;
@@ -59,22 +59,23 @@ webview,iframe{width:100%;height:100%;border:none;}
   margin:0;padding:0;
   --fill-pct:80%;
   background:linear-gradient(to right,
-    rgba(129,255,40,0.85) 0%,
-    rgba(129,255,40,0.85) var(--fill-pct),
+    rgba(129,255,40,0.9) 0%,
+    rgba(129,255,40,0.9) var(--fill-pct),
     transparent var(--fill-pct),
     transparent 100%);
-  border-radius:4px;
-  box-shadow:inset 0 0 4px rgba(129,255,40,0.35);
+  border-radius:3px;
+  box-shadow:inset 0 0 3px rgba(129,255,40,0.4);
 }
 #vol-slider::-webkit-slider-runnable-track{
-  height:8px;background:transparent;border-radius:4px;
+  height:6px;background:transparent;border-radius:3px;
 }
 #vol-slider::-webkit-slider-thumb{
   -webkit-appearance:none;appearance:none;
-  width:14px;height:14px;border-radius:50%;
+  width:13px;height:13px;border-radius:50%;
   background:radial-gradient(circle at 35% 30%, #ffffff 0%, #e0e8f0 25%, #8090a8 70%, #4060a0 100%);
   box-shadow:0 0 3px rgba(0,0,0,0.6),inset 0 -1px 2px rgba(0,0,0,0.4);
   cursor:pointer;
+  /* Center 13px thumb on 6px track */
   margin-top:-3px;
 }
 </style>
@@ -140,36 +141,37 @@ async function loadAssets() {
 loadAssets();
 
 const CHANNELS=[
-  // R3.14 — Curated channels biased toward known-embeddable retro content.
-  // YouTube playlists (videoseries) usually work even when individual
-  // "24/7 stream" channels disable embedding. Single videos chosen are
-  // compilation uploads (less likely to be embed-blocked vs official music videos).
-  {name:'90s Commercials Playlist',channel:'NostalgiaTV',url:'https://www.youtube.com/embed/videoseries?list=PLYumrCRePE56SCfIYojVGLQAHxDt718UO',bitrate:'240 kbps'},
-  {name:'90s TV Compilation #45',channel:'RetroAds',url:'https://www.youtube.com/embed/NuyX_v1wRTQ',bitrate:'192 kbps'},
-  {name:'Late 90s Cable Ads',channel:'Cable90',url:'https://www.youtube.com/embed/AeRTwWCCRaA',bitrate:'192 kbps'},
-  {name:'1992-1997 Comp',channel:'HourTV',url:'https://www.youtube.com/embed/KOSmEw6mP6E',bitrate:'192 kbps'},
-  {name:'1999 Fox Detroit',channel:'Fox99TV',url:'https://www.youtube.com/embed/OatUMBSDQyo',bitrate:'192 kbps'},
-  {name:"Dave's Archives Vol 514",channel:'DavesTV',url:'https://www.youtube.com/embed/zSQqY_zPfbw',bitrate:'192 kbps'},
-  {name:'Levis 90s TV Spots',channel:'LevisTV',url:'https://www.youtube.com/embed/videoseries?list=PLmE28M3bcMNqw-a5J8LfW65RCRKqSSOGl',bitrate:'192 kbps'},
-  {name:'MTV Europe 90s',channel:'MTVTV',url:'https://www.youtube.com/embed/nYOMzNYO21c',bitrate:'192 kbps'},
-  // The live "24/7 stream" channels below frequently have embedding disabled by the
-  // uploader (Error 150/152). Kept in case they come back; user can pick from playlist.
+  // R3.15 — Internet Archive embeds at top. archive.org/embed URLs have NO
+  // referer or origin restrictions, so they always play in webview/iframe.
+  {name:'90s TV Commercials',channel:'IA-Comm90',url:'https://archive.org/embed/90s-tv-commercial-compilation-ads-of-the-90s',bitrate:'240 kbps'},
+  {name:'Nostalgic 90s/2000s',channel:'IA-Nostalgia',url:'https://archive.org/embed/30-minutes-of-nostalgic-90s-2000s-commercials-720p',bitrate:'240 kbps'},
+  {name:"90's Commercials Vol.220",channel:'IA-Vol220',url:'https://archive.org/embed/90s-commercials-vol.-220',bitrate:'192 kbps'},
+  {name:'Late 80s/Early 90s',channel:'IA-Late80s',url:'https://archive.org/embed/commercialpack1',bitrate:'192 kbps'},
+  {name:'Nickelodeon 90s',channel:'IA-Nick',url:'https://archive.org/embed/Collectionof90sCommercials',bitrate:'192 kbps'},
+  // YouTube playlists (videoseries) — usually embed even when single videos can't
+  {name:'90s Commercials Playlist',channel:'YT-90sList',url:'https://www.youtube.com/embed/videoseries?list=PLYumrCRePE56SCfIYojVGLQAHxDt718UO',bitrate:'240 kbps'},
+  {name:'Levis 90s TV Spots',channel:'YT-Levis',url:'https://www.youtube.com/embed/videoseries?list=PLmE28M3bcMNqw-a5J8LfW65RCRKqSSOGl',bitrate:'192 kbps'},
+  // YouTube single videos — may throw Error 152 if uploader disabled embed
+  {name:'90s TV Compilation #45',channel:'YT-Comp45',url:'https://www.youtube.com/embed/NuyX_v1wRTQ',bitrate:'192 kbps'},
+  {name:'1992-1997 Comp',channel:'YT-92to97',url:'https://www.youtube.com/embed/KOSmEw6mP6E',bitrate:'192 kbps'},
+  {name:"Dave's Archives Vol 514",channel:'YT-Daves',url:'https://www.youtube.com/embed/zSQqY_zPfbw',bitrate:'192 kbps'},
   {name:'Retro TV Live',channel:'RetroTV',url:'https://90s.myretrotvs.com/',bitrate:'128 kbps'},
-  {name:'Lo-Fi Hip Hop',channel:'LoFiTV',url:'https://www.youtube.com/embed/jfKfPfyJRdk',bitrate:'192 kbps'},
-  {name:'Chillhop Radio',channel:'ChillTV',url:'https://www.youtube.com/embed/7NOSDKb0HlU',bitrate:'128 kbps'},
-  {name:'Synthwave',channel:'SynthTV',url:'https://www.youtube.com/embed/MVPTGNGiI-4',bitrate:'192 kbps'},
 ];
 let currentIdx=null;
 
 function transformYouTubeUrl(url){
-  // R3.13 — handle YouTube playlist URLs (/embed/videoseries?list=...) as-is.
-  // Single-video URLs are converted to /embed/<id> form.
-  // With <webview> + main.js Referer injection (R3.13), YouTube accepts the embed.
+  // R3.15 — Internet Archive URLs pass through unchanged (no autoplay param needed)
+  if (url.includes('archive.org/embed/')) {
+    return url;
+  }
+  // YouTube playlist URLs (/embed/videoseries?list=...) — pass through with params
   if (url.includes('/embed/videoseries')) {
-    // Add autoplay/rel params if not present
     const sep = url.includes('?') ? '&' : '?';
     return url + sep + 'autoplay=1&rel=0&playsinline=1&modestbranding=1';
   }
+  // YouTube single-video URLs — convert to /embed/<id> form.
+  // With <webview> + main.js Referer injection (R3.13), YouTube accepts the embed
+  // unless the video has uploader-disabled embedding (Error 152).
   let m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/);
   if(m){
     return 'https://www.youtube.com/embed/' + m[1] + '?autoplay=1&rel=0&playsinline=1&modestbranding=1';

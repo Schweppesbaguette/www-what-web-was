@@ -67,10 +67,12 @@ input,button,canvas,select,.nodrag{
 
 #vol-slider{
   position:absolute;z-index:3;
-  /* R3.14 — slider height reduced from 14 to 8 (user feedback: green bar too thick).
-     Centered vertically in the chrome track (track is at y≈338-345; thumb-center at y≈342).
-     With height=8 and top=338, the slider's vertical center is at y=342. */
-  top:338px;left:449px;width:252px;height:8px;
+  /* R3.15 — corrected position via precise pixel trace of radio2.png column.
+     The actual painted slider groove is at y=334-340 (7px tall), x=440-703 (~263px).
+     Previous R3.14 y=338 had the slider's bottom edge below the groove.
+     radio2.png was patched in R3.15 to erase BOTH the painted silver thumb AND
+     the baked-in green-fill (50% volume indicator) so our slider paints both. */
+  top:334px;left:440px;width:263px;height:7px;
   cursor:pointer;
   -webkit-app-region:no-drag;
   -webkit-appearance:none;
@@ -78,27 +80,25 @@ input,button,canvas,select,.nodrag{
   background:transparent;
   outline:none;
   margin:0;padding:0;
-  /* The green fill is drawn as a background gradient that updates via JS */
   --fill-pct:80%;
   background:linear-gradient(to right,
-    rgba(129,255,40,0.85) 0%,
-    rgba(129,255,40,0.85) var(--fill-pct),
+    rgba(129,255,40,0.9) 0%,
+    rgba(129,255,40,0.9) var(--fill-pct),
     transparent var(--fill-pct),
     transparent 100%);
-  border-radius:4px;
-  box-shadow:inset 0 0 4px rgba(129,255,40,0.35);
+  border-radius:3px;
+  box-shadow:inset 0 0 3px rgba(129,255,40,0.4);
 }
 #vol-slider::-webkit-slider-runnable-track{
-  height:8px;background:transparent;border-radius:4px;
+  height:7px;background:transparent;border-radius:3px;
 }
 #vol-slider::-webkit-slider-thumb{
   -webkit-appearance:none;appearance:none;
-  width:14px;height:14px;border-radius:50%;
-  /* Silver spherical thumb to match the chrome aesthetic */
+  width:13px;height:13px;border-radius:50%;
   background:radial-gradient(circle at 35% 30%, #ffffff 0%, #e0e8f0 25%, #8090a8 70%, #4060a0 100%);
   box-shadow:0 0 3px rgba(0,0,0,0.6),inset 0 -1px 2px rgba(0,0,0,0.4);
   cursor:pointer;
-  /* Center the 14px thumb on the 8px track */
+  /* Center 13px thumb on 7px track */
   margin-top:-3px;
 }
 

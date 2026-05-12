@@ -767,7 +767,7 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 <!-- SETUP -->
 <div id="setup-screen">
   <div id="setup-box">
-    <img class="setup-logo" id="setup-logo" src="" alt="WWW"/>
+    <img class="setup-logo" id="setup-logo" src="" alt="WWW" style="display:none;"/>
     <div class="setup-body">
       <div class="setup-sec">👤 Your Account</div>
       <label class="setup-lbl">Screen Name (no spaces):</label>
@@ -792,7 +792,7 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 
 <!-- CONNECTING -->
 <div id="conn-screen">
-  <img id="conn-logo-img" src="" alt="WWW"/>
+  <img id="conn-logo-img" src="" alt="WWW" style="display:none;"/>
   <img id="conn-mascot" src="" alt="" style="visibility:hidden;"/>
   <div id="conn-status-txt">Initializing...</div>
   <div id="conn-bar-wrap"><div id="conn-bar"></div></div>
@@ -1449,9 +1449,10 @@ window.addEventListener('load',()=>{
   // Set logo/signin images
   const setupLogo=document.getElementById('setup-logo');
   const connLogo=document.getElementById('conn-logo-img');
-  // setupLogo uses WWWLOGO for the setup screen background
-  if(setupLogo) setupLogo.src=A.WWWLOGO||'';
-  if(connLogo) connLogo.src=A.WWWLOGO||'';
+  // R3.15 — only show the logo imgs once we have a real src; otherwise the
+  // browser renders a broken-image glyph + alt text "WWW".
+  if(setupLogo && A.WWWLOGO){setupLogo.src=A.WWWLOGO;setupLogo.style.display='';}
+  if(connLogo  && A.WWWLOGO){connLogo.src=A.WWWLOGO; connLogo.style.display='';}
   // Load config
   try{const s=localStorage.getItem('www_cfg');if(s)CFG=JSON.parse(s);}catch(e){CFG={};}
   try{const s=localStorage.getItem('www_settings');if(s)settings=JSON.parse(s);}catch(e){}
@@ -1468,7 +1469,8 @@ window.addEventListener('load',()=>{
       // Assets may not be loaded yet - wait for them then set mascot
       setTimeout(()=>{
         if(cm){cm.src=A[myMascot]||'';cm.style.visibility='visible';}
-        const cl=document.getElementById('conn-logo-img');if(cl)cl.src=A.WWWLOGO||'';
+        const cl=document.getElementById('conn-logo-img');
+        if(cl && A.WWWLOGO){cl.src=A.WWWLOGO;cl.style.display='';}
         playDialup();
       },300);
       const steps=[[200,'Dialing...',2,'Picking up the line...'],[1100,'Dialing...',7,'Listening for carrier...'],[2100,'Connecting...',12,'Carrier detected!'],[3100,'Handshaking...',18,'Negotiating 56Kbps...'],[4100,'Handshaking...',26,'Trading secrets with the modem...'],[5100,'Authenticating...',34,'Sending credentials...'],[6100,'Authenticating...',42,'Configuring TCP/IP stack...'],[7100,'Loading...',50,'Cleaning the dust off old bookmarks...'],[8100,'Loading...',60,'Defragging your past...'],[9100,'Loading...',68,'Synchronizing buddy list...'],[10100,'Loading...',76,'Saying hi to your old friends...'],[11100,'Almost ready...',82,'Loading your mascot personality...'],[12100,'Almost ready...',88,'Polishing the chrome...'],[13100,'Almost ready...',94,'Final preparations...'],[14500,'Connected!',100,'Welcome to What Web Was!']];
@@ -1509,7 +1511,7 @@ function saveSetup(){
     // Browser: show connecting screen then boot
     document.getElementById('conn-screen').style.display='flex';
     const cm=document.getElementById('conn-mascot'); if(cm){cm.src=A[myMascot]||'';cm.style.visibility='visible';}
-    const cl=document.getElementById('conn-logo-img'); if(cl) cl.src=A.WWWLOGO||'';
+    const cl=document.getElementById('conn-logo-img'); if(cl && A.WWWLOGO){cl.src=A.WWWLOGO;cl.style.display='';}
     setTimeout(()=>playDialup(),100);
     const _steps=[[100,'Dialing...',2,'...'],[1400,'Connecting...',25,'Carrier!'],[2800,'Auth...',55,'Verifying...'],[4000,'Connected!',100,'Welcome!']];
     _steps.forEach(([d,s,p,det])=>setTimeout(()=>{const c=document.getElementById('conn-status-txt');if(c)c.textContent=s;const b=document.getElementById('conn-bar');if(b)b.style.width=p+'%';},d));
