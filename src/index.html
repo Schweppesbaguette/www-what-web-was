@@ -1914,6 +1914,9 @@ function initAbly(){
       // Pre-subscribe DM channels for saved buddies
       setTimeout(()=>{
         myBuddyList.forEach(n=>subscribeIM(n));
+        // R3.21 — also pre-subscribe sig channels so we don't miss incoming
+        // call offers from buddies who initiate before we see their presence.
+        preSubscribeAllSig();
       }, 500);
     });
     ablyClient.connection.on('disconnected',()=>{setDot('🔴'); leaveHeartbeat();});
@@ -2058,33 +2061,48 @@ function onBuddyOff(name){
 function getSigCh(buddy){
   const name='www-sig-'+[CFG.screenName,buddy].sort().join('-');
   if(!sigChannels[name]&&ablyClient){
-    console.log('WWW R3.18 sig subscribe:', name);
-    sigChannels[name]=ablyClient.channels.get(name);
+    console.log('WWW R3.21 sig subscribe:', name);
+    // R3.21 — use Ably channel `rewind` so if we subscribe slightly after the
+    // other peer publishes their offer, we still receive it. Without this,
+    // a buddy who initiates a call right as we sign on may miss us entirely.
+    sigChannels[name]=ablyClient.channels.get(name, {
+      params: { rewind: '30s' }
+    });
     sigChannels[name].subscribe('sig',async msg=>{
       const d=msg.data;
-      if(d.from===CFG.screenName)return;
-      console.log('WWW R3.18 SIG-RECV', d.type, 'from', d.from, 'sig-state:', peerConn?.signalingState);
+      if(!d || d.from===CFG.screenName)return;
+      console.log('WWW R3.21 SIG-RECV', d.type, 'from', d.from, 'sig-state:', peerConn?.signalingState);
       try {
         if(d.type==='offer')  await handleRTCOffer(d.from,d.sdp);
         if(d.type==='answer'&&peerConn) {
-          // Only apply answer if we're expecting one
           if(peerConn.signalingState === 'have-local-offer'){
             await peerConn.setRemoteDescription({type:'answer',sdp:d.sdp});
-            console.log('WWW R3.18 answer applied');
+            console.log('WWW R3.21 answer applied');
           } else {
-            console.log('WWW R3.18 answer ignored, state:', peerConn.signalingState);
+            console.log('WWW R3.21 answer ignored, state:', peerConn.signalingState);
           }
         }
         if(d.type==='ice')    {if(peerConn && !ignoreOffer)await peerConn.addIceCandidate(d.candidate);}
         if(d.type==='reject') {showToast(d.from+' declined','');endVideoCall();}
       } catch(e){
-        // Silent on benign races — log loudly on real failures
         if(d.type==='ice' && e.name==='InvalidStateError') return;
-        console.error('WWW R3.18 sig handler error:', d.type, e);
+        console.error('WWW R3.21 sig handler error:', d.type, e);
       }
     });
   }
   return sigChannels[name];
+}
+
+// R3.21 — Pre-subscribe to sig channels for every buddy we know about, both
+// at sign-on time and whenever a buddy comes online. Without this, the sig
+// subscription only happens via the presence event for that buddy — which
+// races with publish if both peers connect within the same moment.
+function preSubscribeAllSig(){
+  if(!ablyClient || !CFG.screenName) return;
+  const buddies = new Set();
+  myBuddyList.forEach(n=>buddies.add(n));
+  Object.keys(onlineUsers).forEach(n=>buddies.add(n));
+  buddies.forEach(n=>{ if(n && n!==CFG.screenName) getSigCh(n); });
 }
 
 function sendSig(buddy,data){
@@ -2112,6 +2130,21 @@ function subscribeIM(name){
   ch.subscribe('typing', msg => {
     if(msg.data.from === CFG.screenName) return;
     showTyping(msg.data.from);
+  });
+
+  // R3.21 — backup ring event. Sent on the (always-subscribed) DM channel so
+  // the receiver gets a wakeup signal even if their sig channel subscription
+  // is somehow late. This makes sure the user at least gets a notification
+  // when their buddy initiates a call. The actual SDP offer still flows
+  // via the sig channel; the ring is just a courtesy notification.
+  ch.subscribe('ring', msg => {
+    if(!msg.data || msg.data.from === CFG.screenName) return;
+    console.log('WWW R3.21 DM-RING from', msg.data.from);
+    showToast('📞 '+msg.data.from+' is calling you!','buddy');
+    // Make sure our sig channel for this buddy is subscribed — guarantees
+    // we'll catch the offer that's about to arrive (or already arrived
+    // and is sitting in the rewind buffer).
+    getSigCh(msg.data.from);
   });
 
   console.log('WWW IM: subscribed to channel:', chName);
@@ -2423,9 +2456,23 @@ function _isPolite(buddy){
 
 async function startVideoCall(buddy){
   if(!buddy||buddy==='null'||buddy===''){quickVideoTest();return;}
-  console.log('WWW R3.18 startVideoCall:', buddy, 'polite:', _isPolite(buddy));
+  console.log('WWW R3.21 startVideoCall:', buddy, 'polite:', _isPolite(buddy));
   vidCallPartner=buddy;
   isPolite = _isPolite(buddy);
+
+  // R3.21 — Send a DM-channel "ring" FIRST so the receiver gets a wakeup
+  // notification even if their sig channel subscription is somehow late.
+  // Then a small delay before publishing the SDP offer, giving the receiver
+  // a moment to ensure they're subscribed.
+  try {
+    subscribeIM(buddy); // ensure our DM channel is subscribed
+    const chName = getDMCh(CFG.screenName, buddy);
+    if(dmChannels[chName]){
+      dmChannels[chName].publish('ring', {from: CFG.screenName, to: buddy});
+      console.log('WWW R3.21 ring sent on DM channel to', buddy);
+    }
+  } catch(e) { console.error('WWW R3.21 ring publish error:', e); }
+
   openWin('video-win');
   document.getElementById('vid-peer-name').textContent=buddy+' (calling...)';
   await startLocalVideo();
@@ -2434,14 +2481,18 @@ async function startVideoCall(buddy){
   setupPeerEvents(buddy);
   if(vidStream) vidStream.getTracks().forEach(t=>peerConn.addTrack(t,vidStream));
   getSigCh(buddy);
+  // R3.21 — Tiny delay (200ms) so the receiver's `ring` handler can fire and
+  // their getSigCh(d.from) can complete before we publish the offer. This
+  // is belt-and-suspenders: rewind:'30s' on the sig channel should already
+  // handle late subscribers, but a small extra pause cheaply ensures success.
+  await new Promise(r => setTimeout(r, 200));
   try {
     makingOffer = true;
-    // Use implicit createOffer via setLocalDescription() for perfect negotiation
     await peerConn.setLocalDescription();
     sendSig(buddy,{type:'offer',sdp:peerConn.localDescription.sdp});
-    console.log('WWW R3.18 offer sent to', buddy);
+    console.log('WWW R3.21 offer sent to', buddy);
   } catch(e) {
-    console.error('WWW R3.18 startVideoCall error:', e);
+    console.error('WWW R3.21 startVideoCall error:', e);
   } finally {
     makingOffer = false;
   }
@@ -2449,13 +2500,13 @@ async function startVideoCall(buddy){
 }
 
 async function handleRTCOffer(from,sdp){
-  console.log('WWW R3.18 HANDLE-OFFER from:', from, 'making:', makingOffer, 'sig:', peerConn?.signalingState);
+  console.log('WWW R3.21 HANDLE-OFFER from:', from, 'making:', makingOffer, 'sig:', peerConn?.signalingState);
   // Glare detection — if we're currently making an offer too, we have a collision
   const offerCollision = makingOffer ||
                          (peerConn && peerConn.signalingState !== 'stable');
   // Impolite peer wins the race; polite peer rolls back
   if(!isPolite && offerCollision){
-    console.log('WWW R3.18 impolite peer ignoring offer (collision)');
+    console.log('WWW R3.21 impolite peer ignoring offer (collision)');
     ignoreOffer = true;
     setTimeout(()=>{ ignoreOffer = false; }, 1000);
     return;
@@ -2475,7 +2526,7 @@ async function handleRTCOffer(from,sdp){
     setupPeerEvents(from);
     if(vidStream) vidStream.getTracks().forEach(t=>peerConn.addTrack(t,vidStream));
   } else if(offerCollision){
-    console.log('WWW R3.18 polite peer rolling back own offer to accept incoming');
+    console.log('WWW R3.21 polite peer rolling back own offer to accept incoming');
     try { await peerConn.setLocalDescription({type:'rollback'}); }
     catch(e){ console.error('rollback error:', e); }
   }
@@ -2484,9 +2535,9 @@ async function handleRTCOffer(from,sdp){
     await peerConn.setRemoteDescription({type:'offer',sdp});
     await peerConn.setLocalDescription();  // implicit answer
     sendSig(from,{type:'answer',sdp:peerConn.localDescription.sdp});
-    console.log('WWW R3.18 answer sent to', from);
+    console.log('WWW R3.21 answer sent to', from);
   } catch(e){
-    console.error('WWW R3.18 handleRTCOffer error:', e);
+    console.error('WWW R3.21 handleRTCOffer error:', e);
   }
 }
 
