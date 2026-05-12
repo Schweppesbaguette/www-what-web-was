@@ -43,9 +43,25 @@ webview,iframe{width:100%;height:100%;border:none;}
 
 #vol-slider{
   position:absolute;z-index:3;
-  top:540px;left:460px;width:160px;
+  top:520px;left:466px;width:215px;height:14px;
   accent-color:#81ff28;cursor:pointer;
   -webkit-app-region:no-drag;
+  -webkit-appearance:none;
+  appearance:none;
+  background:transparent;
+  outline:none;
+  margin:0;padding:0;
+}
+#vol-slider::-webkit-slider-runnable-track{
+  height:14px;background:transparent;border-radius:7px;
+}
+#vol-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:14px;height:14px;border-radius:50%;
+  background:#81ff28;
+  box-shadow:0 0 6px #81ff28,0 0 12px rgba(129,255,40,0.4);
+  cursor:pointer;
+  margin-top:0;
 }
 </style>
 </head>
@@ -58,8 +74,11 @@ webview,iframe{width:100%;height:100%;border:none;}
     <div style="color:#666;">NO SIGNAL</div>
     <div style="font-size:10px;color:#444;margin-top:4px;">Double-click a channel</div>
   </div>
-  <webview id="tv-webview" style="display:none;width:100%;height:100%;" allowpopups
-    useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"></webview>
+  <iframe id="tv-webview" style="display:none;width:100%;height:100%;border:none;" 
+    allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+    allowfullscreen
+    referrerpolicy="no-referrer-when-downgrade"
+    sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation"></iframe>
 </div>
 
 <div id="info-bar">
@@ -107,17 +126,17 @@ loadAssets();
 
 const CHANNELS=[
   {name:'Retro TV Live',channel:'RetroTV',url:'https://90s.myretrotvs.com/',bitrate:'128 kbps'},
-  {name:'Lo-Fi Hip Hop',channel:'LoFiTV',url:'https://www.youtube.com/watch?v=jfKfPfyJRdk',bitrate:'192 kbps'},
-  {name:'Chillhop Radio',channel:'ChillTV',url:'https://www.youtube.com/watch?v=5yx6BWlEVcY',bitrate:'128 kbps'},
-  {name:'Y2K Aesthetic',channel:'Y2KTV',url:'https://www.youtube.com/watch?v=BPzrwXhUxTM',bitrate:'192 kbps'},
-  {name:'Vaporwave',channel:'VaporTV',url:'https://www.youtube.com/watch?v=Km71Rr9K-Bw',bitrate:'128 kbps'},
-  {name:'90s MTV Hits',channel:'MTVRetro',url:'https://www.youtube.com/watch?v=09R8_2nJtjg',bitrate:'256 kbps'},
-  {name:'Synthwave',channel:'SynthTV',url:'https://www.youtube.com/watch?v=4xDzrJKXOOY',bitrate:'192 kbps'},
-  {name:'Space Ambient',channel:'SpaceTV',url:'https://www.youtube.com/watch?v=pXRviuL6vMY',bitrate:'128 kbps'},
-  {name:'City Pop Radio',channel:'CityTV',url:'https://www.youtube.com/watch?v=SnL1vOVJGVg',bitrate:'192 kbps'},
-  {name:'Winamp Vibes',channel:'WinampTV',url:'https://www.youtube.com/watch?v=bFSMtZgONss',bitrate:'128 kbps'},
-  {name:'Cassette Tape',channel:'CassetteTV',url:'https://www.youtube.com/watch?v=zLXl5AYKM_E',bitrate:'128 kbps'},
-  {name:'Electric Flow',channel:'ElectricTV',url:'https://www.youtube.com/watch?v=tDexBj46oNI',bitrate:'256 kbps'},
+  {name:'Lo-Fi Hip Hop',channel:'LoFiTV',url:'https://www.youtube.com/embed/jfKfPfyJRdk',bitrate:'192 kbps'},
+  {name:'Chillhop Radio',channel:'ChillTV',url:'https://www.youtube.com/embed/7NOSDKb0HlU',bitrate:'128 kbps'},
+  {name:'Y2K Aesthetic',channel:'Y2KTV',url:'https://www.youtube.com/embed/4xDzrJKXOOY',bitrate:'192 kbps'},
+  {name:'Vaporwave',channel:'VaporTV',url:'https://www.youtube.com/embed/Km71Rr9K-Bw',bitrate:'128 kbps'},
+  {name:'90s MTV Hits',channel:'MTVRetro',url:'https://www.youtube.com/embed/n_1apYo6-Ow',bitrate:'256 kbps'},
+  {name:'Synthwave',channel:'SynthTV',url:'https://www.youtube.com/embed/MVPTGNGiI-4',bitrate:'192 kbps'},
+  {name:'Space Ambient',channel:'SpaceTV',url:'https://www.youtube.com/embed/p_di4Zn4wz4',bitrate:'128 kbps'},
+  {name:'City Pop Radio',channel:'CityTV',url:'https://www.youtube.com/embed/dRRrhmGTGdU',bitrate:'192 kbps'},
+  {name:'Winamp Vibes',channel:'WinampTV',url:'https://www.youtube.com/embed/bFSMtZgONss',bitrate:'128 kbps'},
+  {name:'Cassette Tape',channel:'CassetteTV',url:'https://www.youtube.com/embed/zLXl5AYKM_E',bitrate:'128 kbps'},
+  {name:'Electric Flow',channel:'ElectricTV',url:'https://www.youtube.com/embed/tDexBj46oNI',bitrate:'256 kbps'},
 ];
 let currentIdx=null;
 
@@ -169,14 +188,7 @@ function setVol(v){}
 function winMin(){if(window.electronAPI&&window.electronAPI.minimizeTV)window.electronAPI.minimizeTV();}
 function winMax(){}
 function closeTV(){if(window.electronAPI&&window.electronAPI.closeTV)window.electronAPI.closeTV();else window.close();}
-window.addEventListener('load',()=>{
-  const wv=document.getElementById('tv-webview');
-  wv.addEventListener('did-finish-load',()=>{
-    try{
-      wv.insertCSS('header,.site-header,nav,#navbar{display:none!important;}body,html{margin:0!important;padding:0!important;overflow:hidden!important;}');
-    }catch(e){}
-  });
-});
+// iframe doesn't need did-finish-load handler since YouTube embed mode strips UI
 </script>
 </body>
 </html>

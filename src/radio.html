@@ -67,9 +67,26 @@ input,button,canvas,select,.nodrag{
 
 #vol-slider{
   position:absolute;z-index:3;
-  top:325px;left:480px;width:170px;
+  top:308px;left:497px;width:160px;height:14px;
   accent-color:#81ff28;cursor:pointer;
   -webkit-app-region:no-drag;
+  /* Custom slider appearance to fit inside chrome groove */
+  -webkit-appearance:none;
+  appearance:none;
+  background:transparent;
+  outline:none;
+  margin:0;padding:0;
+}
+#vol-slider::-webkit-slider-runnable-track{
+  height:14px;background:transparent;border-radius:7px;
+}
+#vol-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:14px;height:14px;border-radius:50%;
+  background:#81ff28;
+  box-shadow:0 0 6px #81ff28,0 0 12px rgba(129,255,40,0.4);
+  cursor:pointer;
+  margin-top:0;
 }
 
 #presets-panel{
@@ -116,12 +133,12 @@ input,button,canvas,select,.nodrag{
 <button class="skin-btn" style="left:781px;top:67px;width:20px;height:22px;" onclick="closeWin()" title="Close"><img id="btn-close" src=""/></button>
 
 <!-- 6 transport buttons -->
-<button class="skin-btn" style="left:129px;top:301px;width:36px;height:36px;" onclick="radioSkipPrev()" title="Previous"><img id="btn-rew" src=""/></button>
-<button class="skin-btn" style="left:177px;top:301px;width:36px;height:36px;" onclick="radioStop()" title="Stop"><img id="btn-stop" src=""/></button>
-<button class="skin-btn" style="left:227px;top:301px;width:36px;height:36px;" onclick="togglePlay()" title="Play"><img id="btn-play" src=""/></button>
-<button class="skin-btn" style="left:275px;top:301px;width:36px;height:36px;" onclick="togglePlay()" title="Pause"><img id="btn-pause" src=""/></button>
-<button class="skin-btn" style="left:321px;top:301px;width:36px;height:36px;" onclick="scanNext()" title="Scan"><img id="btn-scan" src=""/></button>
-<button class="skin-btn" style="left:372px;top:301px;width:36px;height:36px;" onclick="nextPreset()" title="Preset"><img id="btn-preset" src=""/></button>
+<button class="skin-btn" style="left:127px;top:298px;width:40px;height:40px;" onclick="radioSkipPrev()" title="Previous"><img id="btn-rew" src=""/></button>
+<button class="skin-btn" style="left:175px;top:298px;width:40px;height:40px;" onclick="radioStop()" title="Stop"><img id="btn-stop" src=""/></button>
+<button class="skin-btn" style="left:225px;top:298px;width:40px;height:40px;" onclick="togglePlay()" title="Play"><img id="btn-play" src=""/></button>
+<button class="skin-btn" style="left:273px;top:298px;width:40px;height:40px;" onclick="togglePlay()" title="Pause"><img id="btn-pause" src=""/></button>
+<button class="skin-btn" style="left:319px;top:298px;width:40px;height:40px;" onclick="scanNext()" title="Scan"><img id="btn-scan" src=""/></button>
+<button class="skin-btn" style="left:370px;top:298px;width:40px;height:40px;" onclick="nextPreset()" title="Preset"><img id="btn-preset" src=""/></button>
 
 <script>
 async function loadAssets() {
