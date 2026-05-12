@@ -12,10 +12,10 @@ input,button,select,webview,iframe,.nodrag{-webkit-app-region:no-drag;user-selec
    it inline-block which leaves a white border around the video */
 webview{display:inline-flex;}
 
-.skin-btn{position:absolute;cursor:pointer;z-index:3;-webkit-app-region:no-drag;background:transparent;border:none;padding:0;border-radius:50%;transition:box-shadow 0.1s,transform 0.1s;overflow:hidden;}
-/* R3.16 — transparent overlays; feedback via box-shadow ring */
-.skin-btn:hover{box-shadow:inset 0 0 0 2px rgba(146,217,255,0.6),0 0 8px rgba(146,217,255,0.4);}
-.skin-btn:active{box-shadow:inset 0 0 0 2px rgba(146,217,255,0.9);transform:scale(0.97);}
+.skin-btn{position:absolute;cursor:pointer;z-index:3;-webkit-app-region:no-drag;background:transparent;border:none;padding:0;border-radius:50%;transition:filter 0.1s,transform 0.1s;overflow:hidden;}
+/* R3.20 — buttons have visible icon graphics again; hover brightens them */
+.skin-btn:hover{filter:brightness(1.3) drop-shadow(0 0 4px rgba(255,255,255,0.5));transform:scale(1.05);}
+.skin-btn:active{filter:brightness(0.8);transform:scale(0.95);}
 .skin-btn img{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;}
 
 #screen-area{
@@ -23,7 +23,7 @@ webview{display:inline-flex;}
   top:106px;left:150px;width:474px;height:301px;
   background:#000;overflow:hidden;
 }
-webview,iframe{width:100%;height:100%;border:none;}
+webview,iframe,video{width:100%;height:100%;border:none;}
 #no-signal{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;color:#555;font-family:Tahoma;font-size:12px;text-align:center;background:#000;}
 
 #info-bar{
@@ -90,6 +90,15 @@ webview,iframe{width:100%;height:100%;border:none;}
     <div style="color:#666;">NO SIGNAL</div>
     <div style="font-size:10px;color:#444;margin-top:4px;">Double-click a channel</div>
   </div>
+  <!-- R3.20 — native video for Internet Archive URLs. Direct .mp4 playback
+       lets us style + size the video exactly how we want (object-fit:cover
+       fills the chrome's screen-area perfectly, unlike the IA embed's
+       JW Player which uses its own letterboxed layout). -->
+  <video id="tv-video"
+    style="display:none;width:100%;height:100%;background:#000;object-fit:cover;"
+    crossorigin="anonymous"
+    playsinline></video>
+  <!-- Webview is still used for YouTube/Wayback embeds. -->
   <webview id="tv-webview" 
     style="display:none;width:100%;height:100%;border:none;background:#000;"
     src="about:blank"
@@ -112,30 +121,38 @@ webview,iframe{width:100%;height:100%;border:none;}
 <button class="skin-btn" style="left:755px;top:66px;width:22px;height:23px;" onclick="winMax()" title="Maximize"><img id="btn-max" src=""/></button>
 <button class="skin-btn" style="left:781px;top:66px;width:22px;height:23px;" onclick="closeTV()" title="Close"><img id="btn-close" src=""/></button>
 
-<!-- 5 transport buttons — R3.16 transparent click-capture only. Chrome PNG has
-     them painted in. Big play button in center is wider/taller. -->
-<button class="skin-btn" style="left:130px;top:488px;width:34px;height:34px;background:transparent;" onclick="skipBack()" title="Back"></button>
-<button class="skin-btn" style="left:174px;top:488px;width:34px;height:34px;background:transparent;" onclick="stopTV()" title="Stop"></button>
-<button class="skin-btn" style="left:218px;top:476px;width:64px;height:62px;background:transparent;" onclick="playSelected()" title="Play"></button>
-<button class="skin-btn" style="left:293px;top:488px;width:34px;height:34px;background:transparent;" onclick="pauseTV()" title="Pause"></button>
-<button class="skin-btn" style="left:337px;top:488px;width:34px;height:34px;background:transparent;" onclick="skipNext()" title="Forward"></button>
+<!-- 5 transport buttons — R3.20: restored <img> overlays. Same reasoning as
+     radio.html R3.20 — the chrome has only blank circles; icons come from
+     button PNG assets. -->
+<button class="skin-btn" style="left:130px;top:488px;width:34px;height:34px;" onclick="skipBack()" title="Back"><img id="btn-back" src="" alt="" style="display:none;"/></button>
+<button class="skin-btn" style="left:174px;top:488px;width:34px;height:34px;" onclick="stopTV()" title="Stop"><img id="btn-stop" src="" alt="" style="display:none;"/></button>
+<button class="skin-btn" style="left:218px;top:476px;width:64px;height:62px;" onclick="playSelected()" title="Play"><img id="btn-play" src="" alt="" style="display:none;"/></button>
+<button class="skin-btn" style="left:293px;top:488px;width:34px;height:34px;" onclick="pauseTV()" title="Pause"><img id="btn-pause" src="" alt="" style="display:none;"/></button>
+<button class="skin-btn" style="left:337px;top:488px;width:34px;height:34px;" onclick="skipNext()" title="Forward"><img id="btn-forward" src="" alt="" style="display:none;"/></button>
 
 <script>
 async function loadAssets() {
-  // R3.16 — only load skin + window-control buttons. Transport buttons are
-  // painted into the chrome PNG; we don't overlay graphics anymore.
+  // R3.20 — load skin + all button PNGs (transport buttons need overlay icons).
   const files = {
     'skin':'tv2.png',
     'btn-min':'btn-tv-minimize.png',
     'btn-max':'btn-tv-fullscreen.png',
     'btn-close':'btn-tv-close.png',
+    'btn-back':'btn-back.png',
+    'btn-stop':'btn-stop.png',
+    'btn-play':'btn-play.png',
+    'btn-pause':'btn-resume.png',
+    'btn-forward':'btn-foward.png',
   };
   for (const [id, file] of Object.entries(files)) {
     let src;
     if (window.electronAPI && window.electronAPI.readAssetBase64) src = await window.electronAPI.readAssetBase64(file);
     if (!src) src = 'assets/' + file;
     const el = document.getElementById(id);
-    if (el) el.src = src;
+    if (el) {
+      el.src = src;
+      if (id !== 'skin') el.style.display = '';
+    }
   }
 }
 loadAssets();
@@ -198,8 +215,69 @@ function tuneChannel(i){
   document.getElementById('info-bitrate').textContent=ch.bitrate;
   document.getElementById('no-signal').style.display='none';
   const wv=document.getElementById('tv-webview');
-  wv.style.display='block';
-  wv.src=transformYouTubeUrl(ch.url);
+  const vid=document.getElementById('tv-video');
+  // R3.20 — for Internet Archive URLs, use native <video> with direct .mp4
+  // for proper sizing (fills screen-area perfectly, no JW Player letterbox).
+  // For YouTube/external, use the webview.
+  if(ch.url.includes('archive.org/embed/')){
+    // Hide webview, show video element
+    wv.style.display='none';
+    try{wv.src='about:blank';}catch(e){}
+    vid.style.display='block';
+    // Pull identifier from embed URL: archive.org/embed/<identifier>
+    const m = ch.url.match(/archive\.org\/embed\/([^?#\/]+)/);
+    if(m){
+      const ident = m[1];
+      loadArchiveVideo(ident, vid);
+    }
+  } else {
+    // Hide native video, show webview
+    vid.style.display='none';
+    try{vid.pause();vid.src='';}catch(e){}
+    wv.style.display='block';
+    wv.src=transformYouTubeUrl(ch.url);
+  }
+}
+
+// R3.20 — fetch IA metadata, find the main .mp4 file, play it natively.
+async function loadArchiveVideo(ident, videoEl){
+  try {
+    const res = await fetch('https://archive.org/metadata/' + encodeURIComponent(ident));
+    if(!res.ok) throw new Error('metadata fetch failed: ' + res.status);
+    const data = await res.json();
+    const dir = (data.dir || '').replace(/^\//,'');
+    const server = data.server || 'archive.org';
+    const files = data.files || [];
+    // Prefer h.264 mp4 (best browser compat), then any mp4, then any video file
+    const isVideo = f => /\.(mp4|webm|ogv|mov|m4v)$/i.test(f.name || '');
+    const isMp4 = f => /\.mp4$/i.test(f.name || '');
+    const h264 = files.find(f => isMp4(f) && /h\.?264/i.test(f.format||''));
+    const anyMp4 = files.find(isMp4);
+    const anyVid = files.find(isVideo);
+    const pick = h264 || anyMp4 || anyVid;
+    if(!pick){
+      console.warn('R3.20 IA: no playable video file in', ident);
+      // Fallback to embed
+      const wv=document.getElementById('tv-webview');
+      videoEl.style.display='none';
+      wv.style.display='block';
+      wv.src='https://archive.org/embed/' + ident + '?autoplay=1';
+      return;
+    }
+    const fileUrl = 'https://' + server + '/' + dir + '/' + encodeURIComponent(pick.name);
+    console.log('R3.20 IA video:', fileUrl);
+    videoEl.src = fileUrl;
+    videoEl.controls = true;
+    videoEl.muted = false;
+    videoEl.play().catch(e => console.log('IA video autoplay blocked:', e));
+  } catch(e){
+    console.error('R3.20 IA loadArchiveVideo error:', e);
+    // Fallback to embed if metadata fetch fails
+    const wv=document.getElementById('tv-webview');
+    videoEl.style.display='none';
+    wv.style.display='block';
+    wv.src='https://archive.org/embed/' + ident + '?autoplay=1';
+  }
 }
 
 // R3.17 — Inject CSS into the webview's guest page so the video fills the
@@ -259,9 +337,15 @@ function tuneChannel(i){
 })();
 function playSelected(){const a=document.querySelector('.pl-item.active');tuneChannel(a?parseInt(a.id.split('-')[1]):0);}
 function stopTV(){
-  // R3.12 — webview: clear by loading about:blank (empty string causes load errors)
-  const wv=document.getElementById('tv-webview');wv.style.display='none';
+  // R3.20 — stop both webview and native video
+  const wv=document.getElementById('tv-webview');
+  wv.style.display='none';
   try{wv.src='about:blank';}catch(e){}
+  const vid=document.getElementById('tv-video');
+  if(vid){
+    vid.style.display='none';
+    try{vid.pause();vid.removeAttribute('src');vid.load();}catch(e){}
+  }
   document.getElementById('no-signal').style.display='flex';
   document.getElementById('info-channel').textContent='—';
   document.getElementById('info-title').textContent='Stopped';
@@ -270,7 +354,13 @@ function stopTV(){
 function skipBack(){tuneChannel(Math.max(0,(currentIdx||0)-1));}
 function skipNext(){tuneChannel(Math.min(CHANNELS.length-1,(currentIdx||0)+1));}
 function pauseTV(){
-  // R3.12 — webview.reload() exists as a method on the element
+  // R3.20 — pause native video if visible, else reload webview
+  const vid=document.getElementById('tv-video');
+  if(vid && vid.style.display !== 'none'){
+    if(vid.paused) vid.play().catch(()=>{});
+    else vid.pause();
+    return;
+  }
   const wv=document.getElementById('tv-webview');
   try{if(wv.reload && wv.src && wv.src!=='about:blank') wv.reload();}catch(e){}
 }
@@ -278,8 +368,13 @@ function setVol(v){
   // R3.14 — update the green-fill gradient to match thumb position
   const sl=document.getElementById('vol-slider');
   if(sl) sl.style.setProperty('--fill-pct', v+'%');
-  // The actual audio volume is controlled by the YouTube player (not directly
-  // settable from outside the webview), so we just track the visual state.
+  // R3.20 — control the native video volume directly when it's the active player
+  const vid=document.getElementById('tv-video');
+  if(vid){
+    try{ vid.volume = Math.max(0, Math.min(1, v/100)); }catch(e){}
+  }
+  // The actual audio volume for webview is controlled by the YouTube player
+  // (not directly settable from outside the webview), so we just track visual state.
 }
 function winMin(){if(window.electronAPI&&window.electronAPI.minimizeTV)window.electronAPI.minimizeTV();}
 function winMax(){}
