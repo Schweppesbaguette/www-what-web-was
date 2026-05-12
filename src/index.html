@@ -4754,5 +4754,128 @@ console.log('WWW R3.5: messenger fix loaded');
 })();
 </script>
 
+
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- WWW R3.10 — WebRTC instrumentation                                -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+'use strict';
+console.log('WWW R3.10 instrumentation loading...');
+
+// Wrap sendSig to log every signal sent
+function _wrapSendSig(){
+  if(typeof window.sendSig !== 'function' || window.sendSig._wwwR310Wrapped) return;
+  const _orig = window.sendSig;
+  window.sendSig = function(buddy, data){
+    console.log('WWW SIG-OUT:', data.type, 'to:', buddy);
+    const result = _orig.apply(this, arguments);
+    console.log('WWW SIG-OUT:', data.type, 'publish result:', result);
+    return result;
+  };
+  window.sendSig._wwwR310Wrapped = true;
+}
+
+// Wrap getSigCh to log subscriptions
+function _wrapGetSigCh(){
+  if(typeof window.getSigCh !== 'function' || window.getSigCh._wwwR310Wrapped) return;
+  const _orig = window.getSigCh;
+  window.getSigCh = function(buddy){
+    const result = _orig.apply(this, arguments);
+    if(result){
+      console.log('WWW SIG-CH: got channel for buddy:', buddy, 'channel name:', result.name);
+    } else {
+      console.warn('WWW SIG-CH: getSigCh returned null/undefined for:', buddy);
+    }
+    return result;
+  };
+  window.getSigCh._wwwR310Wrapped = true;
+}
+
+// Wrap handleRTCOffer
+function _wrapHandleOffer(){
+  if(typeof window.handleRTCOffer !== 'function' || window.handleRTCOffer._wwwR310Wrapped) return;
+  const _orig = window.handleRTCOffer;
+  window.handleRTCOffer = async function(from, sdp){
+    console.log('WWW HANDLE-OFFER from:', from, 'sdp length:', (sdp || '').length);
+    try {
+      const result = await _orig.apply(this, arguments);
+      console.log('WWW HANDLE-OFFER completed for:', from);
+      return result;
+    } catch(e){
+      console.error('WWW HANDLE-OFFER error:', e);
+      throw e;
+    }
+  };
+  window.handleRTCOffer._wwwR310Wrapped = true;
+}
+
+// Wrap startVideoCall
+function _wrapStartCall(){
+  if(typeof window.startVideoCall !== 'function' || window.startVideoCall._wwwR310Wrapped) return;
+  const _orig = window.startVideoCall;
+  window.startVideoCall = async function(buddy){
+    console.log('WWW CALL: startVideoCall(' + buddy + ') — caller =', (window.CFG ? window.CFG.screenName : '?'));
+    try {
+      const result = await _orig.apply(this, arguments);
+      // After offer is sent, check peer connection state
+      setTimeout(()=>{
+        if(window.peerConn){
+          console.log('WWW CALL STATE after 1s: ice=' + window.peerConn.iceConnectionState +
+                      ' connection=' + window.peerConn.connectionState +
+                      ' signaling=' + window.peerConn.signalingState);
+        } else {
+          console.warn('WWW CALL: no peerConn 1s after startVideoCall!');
+        }
+      }, 1000);
+      setTimeout(()=>{
+        if(window.peerConn){
+          console.log('WWW CALL STATE after 5s: ice=' + window.peerConn.iceConnectionState +
+                      ' connection=' + window.peerConn.connectionState +
+                      ' signaling=' + window.peerConn.signalingState);
+        }
+      }, 5000);
+      return result;
+    } catch(e){
+      console.error('WWW CALL: startVideoCall error:', e);
+      throw e;
+    }
+  };
+  window.startVideoCall._wwwR310Wrapped = true;
+}
+
+// Try wrap right away and also at intervals (functions are hoisted but window.X
+// assignments happen as scripts run)
+function _wrapAll(){
+  _wrapSendSig();
+  _wrapGetSigCh();
+  _wrapHandleOffer();
+  _wrapStartCall();
+}
+_wrapAll();
+setTimeout(_wrapAll, 500);
+setTimeout(_wrapAll, 2000);
+setTimeout(_wrapAll, 5000);
+
+// Expose key state so user can inspect in console
+window.WWW_DEBUG = {
+  getPeerState: ()=>{
+    if(!window.peerConn) return 'no peerConn';
+    return {
+      ice: window.peerConn.iceConnectionState,
+      conn: window.peerConn.connectionState,
+      sig: window.peerConn.signalingState,
+      localDesc: !!window.peerConn.localDescription,
+      remoteDesc: !!window.peerConn.remoteDescription,
+    };
+  },
+  getMyName: ()=>(window.CFG ? window.CFG.screenName : 'unknown'),
+};
+
+console.log('WWW R3.10: instrumentation loaded. Run WWW_DEBUG.getPeerState() in console for state.');
+})();
+</script>
+
 </body>
 </html>
