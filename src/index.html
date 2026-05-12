@@ -2051,14 +2051,30 @@ function onBuddyOff(name){
 function getSigCh(buddy){
   const name='www-sig-'+[CFG.screenName,buddy].sort().join('-');
   if(!sigChannels[name]&&ablyClient){
+    console.log('WWW R3.18 sig subscribe:', name);
     sigChannels[name]=ablyClient.channels.get(name);
     sigChannels[name].subscribe('sig',async msg=>{
       const d=msg.data;
       if(d.from===CFG.screenName)return;
-      if(d.type==='offer')  await handleRTCOffer(d.from,d.sdp);
-      if(d.type==='answer'&&peerConn) await peerConn.setRemoteDescription({type:'answer',sdp:d.sdp});
-      if(d.type==='ice')    try{if(peerConn)await peerConn.addIceCandidate(d.candidate);}catch(e){}
-      if(d.type==='reject') {showToast(d.from+' declined','');endVideoCall();}
+      console.log('WWW R3.18 SIG-RECV', d.type, 'from', d.from, 'sig-state:', peerConn?.signalingState);
+      try {
+        if(d.type==='offer')  await handleRTCOffer(d.from,d.sdp);
+        if(d.type==='answer'&&peerConn) {
+          // Only apply answer if we're expecting one
+          if(peerConn.signalingState === 'have-local-offer'){
+            await peerConn.setRemoteDescription({type:'answer',sdp:d.sdp});
+            console.log('WWW R3.18 answer applied');
+          } else {
+            console.log('WWW R3.18 answer ignored, state:', peerConn.signalingState);
+          }
+        }
+        if(d.type==='ice')    {if(peerConn && !ignoreOffer)await peerConn.addIceCandidate(d.candidate);}
+        if(d.type==='reject') {showToast(d.from+' declined','');endVideoCall();}
+      } catch(e){
+        // Silent on benign races — log loudly on real failures
+        if(d.type==='ice' && e.name==='InvalidStateError') return;
+        console.error('WWW R3.18 sig handler error:', d.type, e);
+      }
     });
   }
   return sigChannels[name];
@@ -2382,9 +2398,27 @@ function setupPeerEvents(buddy){
   };
 }
 
+// R3.18 — Perfect negotiation pattern for WebRTC glare handling.
+// Both peers can call startVideoCall simultaneously; this picks a "polite"
+// peer (alphabetically smaller name) who rolls back its own offer when an
+// incoming offer arrives. The "impolite" peer ignores the incoming offer
+// in that race condition.
+// Also removed the blocking confirm() prompt — incoming calls are auto-accepted
+// since both peers explicitly initiated the call from the UI.
+let makingOffer = false;
+let ignoreOffer = false;
+let isPolite = false;
+
+function _isPolite(buddy){
+  // Alphabetical comparison decides politeness — both peers agree on this
+  return String(CFG.screenName||'').toLowerCase() < String(buddy||'').toLowerCase();
+}
+
 async function startVideoCall(buddy){
   if(!buddy||buddy==='null'||buddy===''){quickVideoTest();return;}
+  console.log('WWW R3.18 startVideoCall:', buddy, 'polite:', _isPolite(buddy));
   vidCallPartner=buddy;
+  isPolite = _isPolite(buddy);
   openWin('video-win');
   document.getElementById('vid-peer-name').textContent=buddy+' (calling...)';
   await startLocalVideo();
@@ -2393,26 +2427,60 @@ async function startVideoCall(buddy){
   setupPeerEvents(buddy);
   if(vidStream) vidStream.getTracks().forEach(t=>peerConn.addTrack(t,vidStream));
   getSigCh(buddy);
-  const offer=await peerConn.createOffer();
-  await peerConn.setLocalDescription(offer);
-  sendSig(buddy,{type:'offer',sdp:offer.sdp});
+  try {
+    makingOffer = true;
+    // Use implicit createOffer via setLocalDescription() for perfect negotiation
+    await peerConn.setLocalDescription();
+    sendSig(buddy,{type:'offer',sdp:peerConn.localDescription.sdp});
+    console.log('WWW R3.18 offer sent to', buddy);
+  } catch(e) {
+    console.error('WWW R3.18 startVideoCall error:', e);
+  } finally {
+    makingOffer = false;
+  }
   showToast('📹 Calling '+buddy+'...','');
 }
 
 async function handleRTCOffer(from,sdp){
-  if(!confirm(from+' wants to video chat! Answer?')){sendSig(from,{type:'reject'});return;}
+  console.log('WWW R3.18 HANDLE-OFFER from:', from, 'making:', makingOffer, 'sig:', peerConn?.signalingState);
+  // Glare detection — if we're currently making an offer too, we have a collision
+  const offerCollision = makingOffer ||
+                         (peerConn && peerConn.signalingState !== 'stable');
+  // Impolite peer wins the race; polite peer rolls back
+  if(!isPolite && offerCollision){
+    console.log('WWW R3.18 impolite peer ignoring offer (collision)');
+    ignoreOffer = true;
+    setTimeout(()=>{ ignoreOffer = false; }, 1000);
+    return;
+  }
+
   vidCallPartner=from;
+  // Re-compute politeness in case this is an unsolicited incoming call
+  isPolite = _isPolite(from);
   openWin('video-win');
   document.getElementById('vid-peer-name').textContent=from+' (connecting...)';
   await startLocalVideo();
-  closePeer();
-  peerConn=new RTCPeerConnection(ICE);
-  setupPeerEvents(from);
-  if(vidStream) vidStream.getTracks().forEach(t=>peerConn.addTrack(t,vidStream));
-  await peerConn.setRemoteDescription({type:'offer',sdp});
-  const answer=await peerConn.createAnswer();
-  await peerConn.setLocalDescription(answer);
-  sendSig(from,{type:'answer',sdp:answer.sdp});
+
+  // If we don't have a peer yet, create one. If we DO have one (glare on polite peer),
+  // rollback our local offer so we can accept the incoming offer.
+  if(!peerConn){
+    peerConn=new RTCPeerConnection(ICE);
+    setupPeerEvents(from);
+    if(vidStream) vidStream.getTracks().forEach(t=>peerConn.addTrack(t,vidStream));
+  } else if(offerCollision){
+    console.log('WWW R3.18 polite peer rolling back own offer to accept incoming');
+    try { await peerConn.setLocalDescription({type:'rollback'}); }
+    catch(e){ console.error('rollback error:', e); }
+  }
+
+  try {
+    await peerConn.setRemoteDescription({type:'offer',sdp});
+    await peerConn.setLocalDescription();  // implicit answer
+    sendSig(from,{type:'answer',sdp:peerConn.localDescription.sdp});
+    console.log('WWW R3.18 answer sent to', from);
+  } catch(e){
+    console.error('WWW R3.18 handleRTCOffer error:', e);
+  }
 }
 
 async function startLocalVideo(){
@@ -2778,8 +2846,11 @@ function navigateTo(url){
   } else {
     document.getElementById('wb-info').textContent='🕰️ '+fmtDate(waybackDate);
     document.getElementById('status-txt').textContent='Loading archive: '+url;
-    // Direct Wayback URL — no CDX API, let Wayback find nearest snapshot natively
-    const wbUrl='https://web.archive.org/web/'+waybackDate+'120000/'+url;
+    // R3.18 — `if_` flag tells Wayback to serve the page WITHOUT its toolbar
+    // while still rewriting links to archived versions. Without this, the
+    // gray Wayback nav bar (with timeline + capture counts) shows briefly
+    // before our CSS injection hides it.
+    const wbUrl='https://web.archive.org/web/'+waybackDate+'120000if_/'+url;
     loadInFrame(wbUrl);
   }
 }
@@ -2795,19 +2866,64 @@ function loadInFrame(src){
     frame.style.display='none'; view.style.display='block'; view.style.flex='1';
     let wv=document.getElementById('electron-webview');
     if(!wv){
-      view.innerHTML='<webview id="electron-webview" src="'+src+'" style="width:100%;height:100%;display:flex;" allowpopups useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"></webview>';
+      // R3.18 — wrap webview in a relative container with a Y2K loading overlay
+      // that hides the Wayback "Got an HTTP 301 response… Redirecting to…"
+      // intermediate page from view. The overlay sits ON TOP of the webview
+      // and is removed when did-finish-load fires (final page is rendered).
+      view.innerHTML = (
+        '<div id="wb-wrap" style="position:relative;width:100%;height:100%;background:#000820;">'
+      + '  <webview id="electron-webview" src="'+src+'" style="width:100%;height:100%;display:flex;opacity:0;transition:opacity 0.18s;" allowpopups useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"></webview>'
+      + '  <div id="wb-loading" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#001460,#000820 60%,#000410);color:white;font-family:Tahoma;text-align:center;gap:18px;pointer-events:none;">'
+      + '    <div style="font-size:13px;color:#AADDFF;letter-spacing:1px;">CONNECTING TO TIME MACHINE</div>'
+      + '    <div style="width:180px;height:14px;background:#000820;border:1px solid #1A3A8A;border-radius:7px;overflow:hidden;"><div id="wb-bar" style="height:100%;width:0;background:linear-gradient(90deg,#3A8AFF,#88CCFF);transition:width 0.4s;"></div></div>'
+      + '    <div id="wb-stat" style="font-size:11px;color:#6688AA;">Dialing 56K modem…</div>'
+      + '  </div>'
+      + '</div>'
+      );
       wv=document.getElementById('electron-webview');
+      // Animate the fake loading bar so users see progress
+      const wbBar=document.getElementById('wb-bar');
+      const wbStat=document.getElementById('wb-stat');
+      const wbSteps=[[60,'Carrier acquired…',20],[800,'Negotiating protocols…',45],[1700,'Receiving page…',75]];
+      wbSteps.forEach(([d,s,p])=>setTimeout(()=>{
+        if(wbBar)wbBar.style.width=p+'%';
+        if(wbStat)wbStat.textContent=s;
+      },d));
       if(wv){
         wv.addEventListener('did-start-loading',()=>{document.getElementById('status-txt').textContent='Loading...';});
         wv.addEventListener('did-finish-load',()=>{
           document.getElementById('status-txt').textContent='Done';
           try{document.getElementById('addr-bar').value=wv.getURL();}catch(e){}
-          // Hide Wayback Machine toolbar overlay
+          // Belt-and-suspenders — even with `if_`, hide any residual Wayback chrome
           try{wv.insertCSS('#wm-ipp-base,#wm-ipp,#donato,#wm-toolbar,.wb-autocomplete-suggestions{display:none!important;visibility:hidden!important;height:0!important;overflow:hidden!important;}body{margin-top:0!important;}');}catch(e){}
+          // R3.18 — fade in the webview and remove the loading overlay
+          if(wbBar)wbBar.style.width='100%';
+          if(wbStat)wbStat.textContent='Connected!';
+          setTimeout(()=>{
+            wv.style.opacity='1';
+            const ov=document.getElementById('wb-loading');
+            if(ov) ov.style.transition='opacity 0.25s';
+            if(ov) ov.style.opacity='0';
+            setTimeout(()=>{ if(ov && ov.parentNode) ov.parentNode.removeChild(ov); },280);
+          },120);
         });
         wv.addEventListener('did-fail-load',(e)=>{if(e.errorCode!==-3)document.getElementById('status-txt').textContent='Failed';});
       }
     } else {
+      // R3.18 — re-navigation: re-show loading overlay if it was removed
+      let ov=document.getElementById('wb-loading');
+      if(!ov){
+        const wrap=document.getElementById('wb-wrap');
+        if(wrap){
+          wrap.insertAdjacentHTML('beforeend',
+            '<div id="wb-loading" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#001460,#000820 60%,#000410);color:white;font-family:Tahoma;text-align:center;gap:18px;pointer-events:none;">'
+          + '  <div style="font-size:13px;color:#AADDFF;letter-spacing:1px;">CONNECTING TO TIME MACHINE</div>'
+          + '  <div style="width:180px;height:14px;background:#000820;border:1px solid #1A3A8A;border-radius:7px;overflow:hidden;"><div id="wb-bar" style="height:100%;width:30%;background:linear-gradient(90deg,#3A8AFF,#88CCFF);transition:width 0.4s;"></div></div>'
+          + '  <div id="wb-stat" style="font-size:11px;color:#6688AA;">Tuning the dial…</div>'
+          + '</div>');
+        }
+      }
+      wv.style.opacity='0';
       wv.setAttribute('src',src);
     }
     document.getElementById('status-txt').textContent='Loading...';
