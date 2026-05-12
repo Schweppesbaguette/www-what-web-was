@@ -209,6 +209,31 @@ function createRadioWindow() {
 // ── TV window ────────────────────────────────────────────
 function createTVWindow() {
   if (tvWindow) { tvWindow.focus(); return; }
+
+  // R3.13 — YouTube Error 153 root cause:
+  // Embedded YouTube checks the Referer + Origin headers on requests for
+  // /embed/<id>. Inside Electron's webview the parent page is file://,
+  // so the request goes out with no Referer (or a null/blank one), and
+  // YouTube refuses to render → "Error 153 — Video player configuration error".
+  // Fix: intercept the webview partition's outgoing requests and stamp a
+  // valid Referer + Origin onto YouTube and youtube-nocookie traffic.
+  try {
+    const tvSession = session.fromPartition('persist:tv');
+    tvSession.webRequest.onBeforeSendHeaders((details, cb) => {
+      const url = details.url || '';
+      if (url.includes('youtube.com') || url.includes('youtube-nocookie.com') || url.includes('ytimg.com') || url.includes('googlevideo.com')) {
+        details.requestHeaders['Referer'] = 'https://www.youtube.com/';
+        details.requestHeaders['Origin']  = 'https://www.youtube.com';
+      }
+      cb({ requestHeaders: details.requestHeaders });
+    });
+    // Permission handler for the TV webview's session, so getUserMedia/etc don't block
+    tvSession.setPermissionRequestHandler((wc, perm, cbk) => cbk(true));
+    tvSession.setPermissionCheckHandler(() => true);
+  } catch(e) {
+    console.error('TV session header rewrite setup failed:', e.message);
+  }
+
   tvWindow = new BrowserWindow({
     width: 850, height: 569,
     resizable: false,
