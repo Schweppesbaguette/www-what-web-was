@@ -67,28 +67,38 @@ input,button,canvas,select,.nodrag{
 
 #vol-slider{
   position:absolute;z-index:3;
-  /* R3.12 — aligned with the chrome's painted track: track sits at y≈340-345,
-     spanning x≈440-700. Slider thumb is rendered on top of the painted thumb. */
-  top:333px;left:440px;width:260px;height:18px;
-  accent-color:#81ff28;cursor:pointer;
+  /* R3.13 — chrome PNG now has the painted thumb erased (see radio2.png patch).
+     The cleaned dark track sits at y≈338-345, x≈449-700 (~252px wide).
+     Our live slider paints the green fill via gradient and a silver thumb. */
+  top:332px;left:449px;width:252px;height:14px;
+  cursor:pointer;
   -webkit-app-region:no-drag;
-  /* Custom slider appearance to fit inside chrome groove */
   -webkit-appearance:none;
   appearance:none;
   background:transparent;
   outline:none;
   margin:0;padding:0;
+  /* The green fill is drawn as a background gradient that updates via JS */
+  --fill-pct:80%;
+  background:linear-gradient(to right,
+    rgba(129,255,40,0.85) 0%,
+    rgba(129,255,40,0.85) var(--fill-pct),
+    transparent var(--fill-pct),
+    transparent 100%);
+  border-radius:7px;
+  box-shadow:inset 0 0 4px rgba(129,255,40,0.35);
 }
 #vol-slider::-webkit-slider-runnable-track{
-  height:18px;background:transparent;border-radius:9px;
+  height:14px;background:transparent;border-radius:7px;
 }
 #vol-slider::-webkit-slider-thumb{
   -webkit-appearance:none;appearance:none;
   width:14px;height:14px;border-radius:50%;
-  background:#81ff28;
-  box-shadow:0 0 6px #81ff28,0 0 12px rgba(129,255,40,0.4);
+  /* Silver spherical thumb to match the chrome aesthetic */
+  background:radial-gradient(circle at 35% 30%, #ffffff 0%, #e0e8f0 25%, #8090a8 70%, #4060a0 100%);
+  box-shadow:0 0 3px rgba(0,0,0,0.6),inset 0 -1px 2px rgba(0,0,0,0.4);
   cursor:pointer;
-  margin-top:2px;
+  margin-top:0;
 }
 
 #presets-panel{
@@ -134,14 +144,16 @@ input,button,canvas,select,.nodrag{
 <button class="skin-btn" style="left:755px;top:67px;width:20px;height:22px;" onclick="winMax()" title="Maximize"><img id="btn-max" src=""/></button>
 <button class="skin-btn" style="left:781px;top:67px;width:20px;height:22px;" onclick="closeWin()" title="Close"><img id="btn-close" src=""/></button>
 
-<!-- 6 transport buttons — R3.12 sized 30×30 to fit the chrome's 35px holes,
-     centered on measured hole positions x=148,196,246,293,340,390  y_center=318 -->
-<button class="skin-btn" style="left:133px;top:303px;width:30px;height:30px;" onclick="radioSkipPrev()" title="Previous"><img id="btn-rew" src=""/></button>
-<button class="skin-btn" style="left:181px;top:303px;width:30px;height:30px;" onclick="radioStop()" title="Stop"><img id="btn-stop" src=""/></button>
-<button class="skin-btn" style="left:231px;top:303px;width:30px;height:30px;" onclick="togglePlay()" title="Play"><img id="btn-play" src=""/></button>
-<button class="skin-btn" style="left:278px;top:303px;width:30px;height:30px;" onclick="togglePlay()" title="Pause"><img id="btn-pause" src=""/></button>
-<button class="skin-btn" style="left:325px;top:303px;width:30px;height:30px;" onclick="scanNext()" title="Scan"><img id="btn-scan" src=""/></button>
-<button class="skin-btn" style="left:375px;top:303px;width:30px;height:30px;" onclick="nextPreset()" title="Preset"><img id="btn-preset" src=""/></button>
+<!-- 6 transport buttons — R3.13 sized 40×40 to fully cover the chrome's 35px holes
+     (the button-asset face is ~85% of the asset, so 40px renders ~34px visible face).
+     Centered on measured hole centers x=147,196,246,293,340,390  y_center=318
+     (top = 318 - 20 = 298) -->
+<button class="skin-btn" style="left:127px;top:298px;width:40px;height:40px;" onclick="radioSkipPrev()" title="Previous"><img id="btn-rew" src=""/></button>
+<button class="skin-btn" style="left:176px;top:298px;width:40px;height:40px;" onclick="radioStop()" title="Stop"><img id="btn-stop" src=""/></button>
+<button class="skin-btn" style="left:226px;top:298px;width:40px;height:40px;" onclick="togglePlay()" title="Play"><img id="btn-play" src=""/></button>
+<button class="skin-btn" style="left:273px;top:298px;width:40px;height:40px;" onclick="togglePlay()" title="Pause"><img id="btn-pause" src=""/></button>
+<button class="skin-btn" style="left:320px;top:298px;width:40px;height:40px;" onclick="scanNext()" title="Scan"><img id="btn-scan" src=""/></button>
+<button class="skin-btn" style="left:370px;top:298px;width:40px;height:40px;" onclick="nextPreset()" title="Preset"><img id="btn-preset" src=""/></button>
 
 <script>
 async function loadAssets() {
@@ -204,7 +216,12 @@ function radioStop(){if(audio){audio.pause();audio.currentTime=0;playing=false;}
 function radioSkipPrev(){tunePreset(Math.max(0,(currentPreset||0)-1));}
 function scanNext(){tunePreset(((currentPreset||0)+1)%PRESETS.length);}
 function nextPreset(){tunePreset(((currentPreset||0)+1)%PRESETS.length);}
-function setVol(v){if(audio)audio.volume=v/100;}
+function setVol(v){
+  if(audio)audio.volume=v/100;
+  // R3.13 — keep the green-fill gradient in sync with the thumb position
+  const sl=document.getElementById('vol-slider');
+  if(sl) sl.style.setProperty('--fill-pct', v+'%');
+}
 function winMin(){if(window.electronAPI&&window.electronAPI.minimizeRadio)window.electronAPI.minimizeRadio();}
 function winMax(){}
 function closeWin(){if(window.electronAPI&&window.electronAPI.closeRadio)window.electronAPI.closeRadio();else window.close();}
@@ -229,6 +246,8 @@ function drawTuner(){
 }
 drawTuner();
 setTimeout(()=>tunePreset(0),400);
+// R3.13 — initialize volume fill gradient
+setVol(document.getElementById('vol-slider').value);
 </script>
 </body>
 </html>

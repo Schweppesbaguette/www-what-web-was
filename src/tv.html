@@ -130,6 +130,11 @@ async function loadAssets() {
 loadAssets();
 
 const CHANNELS=[
+  // R3.13 — Added 90s commercials playlist as first channel for testing.
+  // YouTube playlist embed format: /embed/videoseries?list=PLAYLIST_ID
+  {name:'90s Commercials',channel:'NostalgiaTV',url:'https://www.youtube.com/embed/videoseries?list=PLYumrCRePE56SCfIYojVGLQAHxDt718UO',bitrate:'240 kbps'},
+  {name:'90s TV Compilation',channel:'RetroAds',url:'https://www.youtube.com/embed/KOSmEw6mP6E',bitrate:'192 kbps'},
+  {name:'Late 90s Cable',channel:'Cable90',url:'https://www.youtube.com/embed/AeRTwWCCRaA',bitrate:'192 kbps'},
   {name:'Retro TV Live',channel:'RetroTV',url:'https://90s.myretrotvs.com/',bitrate:'128 kbps'},
   {name:'Lo-Fi Hip Hop',channel:'LoFiTV',url:'https://www.youtube.com/embed/jfKfPfyJRdk',bitrate:'192 kbps'},
   {name:'Chillhop Radio',channel:'ChillTV',url:'https://www.youtube.com/embed/7NOSDKb0HlU',bitrate:'128 kbps'},
@@ -146,8 +151,14 @@ const CHANNELS=[
 let currentIdx=null;
 
 function transformYouTubeUrl(url){
-  // R3.12 — extract YouTube ID and use standard youtube.com/embed URL.
-  // With <webview>, the guest page has its own origin so Error 153 stops firing.
+  // R3.13 — handle YouTube playlist URLs (/embed/videoseries?list=...) as-is.
+  // Single-video URLs are converted to /embed/<id> form.
+  // With <webview> + main.js Referer injection (R3.13), YouTube accepts the embed.
+  if (url.includes('/embed/videoseries')) {
+    // Add autoplay/rel params if not present
+    const sep = url.includes('?') ? '&' : '?';
+    return url + sep + 'autoplay=1&rel=0&playsinline=1&modestbranding=1';
+  }
   let m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/);
   if(m){
     return 'https://www.youtube.com/embed/' + m[1] + '?autoplay=1&rel=0&playsinline=1&modestbranding=1';
