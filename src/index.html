@@ -264,8 +264,12 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 /* R3.24 — login/connect screen styling. Background image replaces solid
    radial gradient; progress bar uses blue→neon-green gradient. */
 #conn-screen{position:fixed;inset:0;z-index:99997;display:none;flex-direction:column;align-items:center;justify-content:center;background:#000820 url('assets/login-bg.png') center center / cover no-repeat;color:white;font-family:Tahoma;}
-#conn-logo-img{width:200px;margin-bottom:16px;filter:drop-shadow(0 4px 14px rgba(0,30,80,0.9));}
-#conn-mascot{width:80px;height:100px;object-fit:contain;margin-bottom:10px;animation:bob 1s ease-in-out infinite;filter:drop-shadow(0 4px 10px rgba(0,30,80,0.8));}
+/* R3.31 — Logo replaces mascot on loading screen. ~2x the mascot's old footprint
+   (mascot was 80×100; logo at 200px wide reads much larger because logos are wider
+   than mascots). Same glow + bob animation. */
+#conn-logo-img{width:200px;margin-bottom:16px;filter:drop-shadow(0 4px 14px rgba(0,30,80,0.9));animation:bob 1s ease-in-out infinite;}
+/* R3.31 — Mascot hidden on loading screen (replaced by logo above). */
+#conn-mascot{display:none !important;}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}};
 #conn-status-txt{font-size:13px;margin-bottom:8px;color:#ffffff;text-shadow:0 2px 6px rgba(0,0,30,1),0 0 12px rgba(0,40,120,0.9),0 0 4px rgba(0,0,0,0.95);font-weight:bold;}
 #conn-bar-wrap{width:300px;height:18px;background:rgba(0,10,50,0.85);border:1px solid #ffffff;border-radius:9px;overflow:hidden;box-shadow:0 0 12px rgba(146,217,255,0.9),inset 0 2px 4px rgba(0,0,0,0.5);}
@@ -609,12 +613,15 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 }
 #vid-remote{animation:cglitch 5s ease-in-out infinite;}
 
-/* R3.30 — CARI BOOK WIDGET, skin version. The leather/gilt/pages are now
-   baked into assets/cari-skin.png. We use one container with the skin as
-   background and overlay all the interactive bits with percentage-based
-   absolute positioning so they scale with the widget. */
-#cari-body{flex:1;position:relative;background:#1a0e05;overflow:hidden;}
-#cari-skin{position:absolute;inset:0;width:100%;height:100%;background:url('assets/cari-skin.png') no-repeat center/contain;pointer-events:none;}
+/* R3.30/R3.31 — CARI BOOK WIDGET, skin version. The leather/gilt/pages are
+   baked into assets/cari-skin.png. R3.31: skin now FILLS the window body
+   (was contain with black margins). Mascot moved up and shrunk so the chip
+   strip doesn't clip him. */
+#cari-body{flex:1;position:relative;background:#3a2410;overflow:hidden;}
+/* R3.31 — background-size:cover so the skin fills the whole body. The window
+   has aspect 720×540 ≈ 4:3 which matches the skin's 900×675 ≈ 4:3, so cover
+   won't crop anything meaningful. */
+#cari-skin{position:absolute;inset:0;width:100%;height:100%;background:url('assets/cari-skin.png') no-repeat center/cover;pointer-events:none;}
 /* Open animation: a quick fade + slight scale-up. (No 3D page flip; the
    skin is already a fully-opened book.) */
 #cari-skin.cari-opening{animation:cariSkinIn 0.5s ease-out;}
@@ -625,10 +632,10 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 
 /* All interactive overlays sit ABOVE the skin (z>1) and are positioned in
    percentages over the body. The numbers come from measuring the skin PNG.
-   Left page text:    ~13–46% across, ~10–66% down
+   Left page text:    ~13–46% across, ~10–55% down
    Right page cutout: ~52–80% across, ~13–55% down
    Bottom dark strip: ~15–87% across, ~64–78% down (where the era arrows go) */
-#cari-left-text{position:absolute;left:13.5%;top:11%;width:32.5%;height:55%;display:flex;flex-direction:column;color:#3a2008;font-family:Georgia,serif;padding:4px 6px;overflow:hidden;z-index:3;}
+#cari-left-text{position:absolute;left:13.5%;top:11%;width:32.5%;height:46%;display:flex;flex-direction:column;color:#3a2008;font-family:Georgia,serif;padding:4px 6px;overflow:hidden;z-index:3;}
 #cari-era-label{font-size:9px;color:#7c4a18;letter-spacing:2px;font-weight:bold;font-family:Tahoma;border-bottom:1px solid rgba(124,74,24,0.3);padding-bottom:3px;}
 #cari-era-title{font-size:18px;color:#2a1505;font-family:Georgia,serif;font-weight:bold;margin-top:4px;line-height:1.1;}
 #cari-era-rule{height:1px;background:linear-gradient(90deg,transparent,#c8a050,transparent);margin:4px 0 6px;}
@@ -638,10 +645,10 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 .cari-info-attr{font-size:8px;color:#7c4a18;font-style:italic;border-top:1px dashed rgba(124,74,24,0.4);padding-top:4px;}
 #cari-info-aesthetic{margin-top:2px;font-style:italic;font-size:11px;color:#2a1505;font-weight:bold;}
 
-/* Mascot — bottom-left of the left page, positioned to feel like he's
-   standing at the foot of the page text. */
-#cari-mascot-wrap{position:absolute;left:14%;top:64%;width:23%;text-align:center;z-index:5;}
-#cari-mascot{width:75%;max-width:130px;height:auto;filter:drop-shadow(0 4px 8px rgba(80,40,10,0.5));cursor:pointer;transition:transform 0.15s;animation:cariMascotPulse 3.5s ease-in-out infinite;}
+/* R3.31 — Mascot moved up so chip strip doesn't clip him. Smaller too so
+   he fits on the parchment area without spilling onto the dark spine strip. */
+#cari-mascot-wrap{position:absolute;left:15%;top:53%;width:18%;text-align:center;z-index:5;}
+#cari-mascot{width:80%;max-width:95px;height:auto;filter:drop-shadow(0 4px 8px rgba(80,40,10,0.5));cursor:pointer;transition:transform 0.15s;animation:cariMascotPulse 3.5s ease-in-out infinite;}
 #cari-mascot:hover{transform:scale(1.06) rotate(-2deg);filter:drop-shadow(0 6px 12px rgba(160,100,30,0.6));}
 #cari-mascot:active{transform:scale(0.98);}
 @keyframes cariMascotPulse{
@@ -4106,26 +4113,31 @@ let cariCurrentAesthetic=null;
    pre-modern era aesthetics (Cave Painting, Renaissance, etc.) have no
    matching CARI page — those chips show a "no CARI page yet" message in the
    right-page cutout. */
+/* R3.31 — Pruned slug map. CARI's archive uses URLs like
+   cari.institute/aesthetics/<slug>. Only entries below have been verified
+   from CARI search results or its public Aesthetics Wiki page; the rest
+   404. Aesthetics without a CARI page fall through to the graceful
+   "No CARI page yet" message in cariSelectAesthetic. */
 const CARI_SLUG_MAP={
-  // Digital Dawn era — main CARI coverage
-  'Y2K Aesthetic':'y2k-futurism',
-  'Frutiger Aero':'frutiger-aero',
-  'Vaporwave':'vaporwave',
-  'Skeuomorphism':'skeuomorphism',
-  'Flat Design':'flat-design',
-  'Brutalism':'web-brutalism',
-  'Indie Web':'indie-web',
-  // Global era
-  'Global Village Coffeehouse':'global-village-coffeehouse',
-  'World Beat':'global-village-coffeehouse',
-  'Tribal Fusion':'global-village-coffeehouse',
-  'Multicultural Posters':'global-village-coffeehouse',
-  'New Age Visual':'global-village-coffeehouse',
-  // Industrial Age — some have CARI pages
-  'Art Nouveau':'art-nouveau',
-  'Victorian Gothic':'whimsigothic',
-  'Arts & Crafts':'arts-crafts',
-  // Pre-modern aesthetics: no CARI page — handled gracefully
+  // Verified working slugs (confirmed via cari.institute search results)
+  'Y2K Aesthetic':'y2k-futurism',          // CARI-coined; their canonical name
+  'Frutiger Aero':'frutiger-aero',         // CARI-coined by Sofi Lee
+  'Vaporwave':'vaporwave',                 // confirmed
+  'McBling':'mcbling',                     // CARI-coined; confirmed
+  'Global Village Coffeehouse':'global-village-coffeehouse', // CARI-coined
+  'Whimsigothic':'whimsigothic',           // CARI-coined
+  'Victorian Gothic':'whimsigothic',       // chip alias → same page
+  'Gen X Soft Club':'gen-x-soft-club',     // CARI-coined
+  'Utopian Scholastic':'utopian-scholastic', // CARI-coined
+  'Indie Sleaze':'indie-sleaze',           // CARI-coined
+  'Frasurbane':'frasurbane',               // CARI-coined
+  'Hipness Purgatory':'hipness-purgatory', // CARI-coined
+  'Dollar Store Vernacular':'dollar-store-vernacular', // CARI-coined
+  'Corporate Memphis':'corporate-memphis', // CARI-tracked
+  // Removed: Skeuomorphism (404), Flat Design, Brutalism, Indie Web, Art
+  // Nouveau, Arts & Crafts — all confirmed/likely 404 (not CARI-coined).
+  // These chips still appear but fall through to the graceful "no page yet"
+  // message in cariSelectAesthetic.
 };
 
 function openCari(){
