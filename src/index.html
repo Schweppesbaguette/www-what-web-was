@@ -609,80 +609,71 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 }
 #vid-remote{animation:cglitch 5s ease-in-out infinite;}
 
-/* R3.28 — CARI BOOK WIDGET. Leather + gilt edges, two-page spread, page-open
-   animation on display. Uses real layered shadows + radial gradients to fake
-   paper depth without external assets. */
-#cari-win{}
-#cari-body{flex:1;display:flex;flex-direction:column;background:linear-gradient(180deg,#2a1808,#1a0e05);overflow:hidden;padding:14px 14px 8px;gap:8px;}
-#cari-book{flex:1;position:relative;display:flex;background:
-  /* gilt corner glints */
-  radial-gradient(circle at 8px 8px, rgba(255,210,120,0.4) 0%, transparent 30px),
-  radial-gradient(circle at calc(100% - 8px) 8px, rgba(255,210,120,0.4) 0%, transparent 30px),
-  radial-gradient(circle at 8px calc(100% - 8px), rgba(255,210,120,0.4) 0%, transparent 30px),
-  radial-gradient(circle at calc(100% - 8px) calc(100% - 8px), rgba(255,210,120,0.4) 0%, transparent 30px),
-  /* leather */
-  linear-gradient(135deg,#4a2a14,#3a1e0e,#4a2a14);
-border:3px solid #8a5a20;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.65),inset 0 0 0 1px rgba(255,200,120,0.25),inset 0 0 60px rgba(0,0,0,0.55);overflow:hidden;perspective:1400px;transform-style:preserve-3d;}
-.cari-page{flex:1;background:
-  /* aged paper grain */
-  radial-gradient(ellipse at center, #f5e8c8 0%, #ecdaa4 70%, #d8c084 100%);
-  margin:8px;border-radius:3px;box-shadow:inset 0 0 30px rgba(120,80,30,0.35),0 2px 6px rgba(0,0,0,0.4);overflow:hidden;position:relative;transform-origin:right center;transition:transform 0.6s cubic-bezier(0.55,0.05,0.32,0.95);}
-#cari-page-left{transform-origin:right center;}
-#cari-page-right{transform-origin:left center;}
-/* Page-open animation: the right page starts rotated 180° on Y (closed book
-   showing front cover) and flips out to reveal the spread. */
-#cari-book.cari-closed #cari-page-right{transform:rotateY(180deg);transform-origin:left center;}
-#cari-book.cari-closed #cari-page-left{transform:rotateY(8deg);}
-#cari-book.cari-opening #cari-page-right{animation:cariFlip 0.9s cubic-bezier(0.55,0.05,0.32,0.95) forwards;}
-@keyframes cariFlip{
-  0%   {transform:rotateY(180deg);}
-  40%  {transform:rotateY(120deg);}
-  70%  {transform:rotateY(60deg);}
-  100% {transform:rotateY(0deg);}
+/* R3.30 — CARI BOOK WIDGET, skin version. The leather/gilt/pages are now
+   baked into assets/cari-skin.png. We use one container with the skin as
+   background and overlay all the interactive bits with percentage-based
+   absolute positioning so they scale with the widget. */
+#cari-body{flex:1;position:relative;background:#1a0e05;overflow:hidden;}
+#cari-skin{position:absolute;inset:0;width:100%;height:100%;background:url('assets/cari-skin.png') no-repeat center/contain;pointer-events:none;}
+/* Open animation: a quick fade + slight scale-up. (No 3D page flip; the
+   skin is already a fully-opened book.) */
+#cari-skin.cari-opening{animation:cariSkinIn 0.5s ease-out;}
+@keyframes cariSkinIn{
+  0%{opacity:0;transform:scale(0.94);}
+  100%{opacity:1;transform:scale(1);}
 }
-#cari-spine{position:absolute;left:50%;top:6px;bottom:6px;width:6px;transform:translateX(-50%);background:linear-gradient(90deg,rgba(0,0,0,0.4),rgba(80,40,10,0.6) 50%,rgba(0,0,0,0.4));border-radius:2px;box-shadow:0 0 10px rgba(0,0,0,0.6);pointer-events:none;z-index:5;}
-#cari-left-inner,#cari-right-inner{padding:14px 18px;height:100%;display:flex;flex-direction:column;color:#2a1505;font-family:Georgia,serif;}
-#cari-era-label{font-size:10px;color:#7c4a18;letter-spacing:2px;font-weight:bold;font-family:Tahoma;border-bottom:1px solid rgba(124,74,24,0.3);padding-bottom:4px;}
-#cari-era-title{font-size:22px;color:#2a1505;font-family:Georgia,serif;font-weight:bold;margin-top:6px;}
-#cari-era-rule{height:2px;background:linear-gradient(90deg,transparent,#c8a050,transparent);margin:6px 0 10px;}
-#cari-mascot-wrap{text-align:center;margin:4px 0 10px;position:relative;}
-/* R3.29 — mascot is clickable now; removed image-rendering:pixelated for a
-   softer look at scale. Hover cue + subtle pulse to invite clicks. */
-#cari-mascot{width:110px;height:auto;filter:drop-shadow(0 4px 8px rgba(80,40,10,0.4));cursor:pointer;transition:transform 0.15s;animation:cariMascotPulse 3.5s ease-in-out infinite;}
-#cari-mascot:hover{transform:scale(1.06) rotate(-2deg);filter:drop-shadow(0 6px 12px rgba(160,100,30,0.55));}
+
+/* All interactive overlays sit ABOVE the skin (z>1) and are positioned in
+   percentages over the body. The numbers come from measuring the skin PNG.
+   Left page text:    ~13–46% across, ~10–66% down
+   Right page cutout: ~52–80% across, ~13–55% down
+   Bottom dark strip: ~15–87% across, ~64–78% down (where the era arrows go) */
+#cari-left-text{position:absolute;left:13.5%;top:11%;width:32.5%;height:55%;display:flex;flex-direction:column;color:#3a2008;font-family:Georgia,serif;padding:4px 6px;overflow:hidden;z-index:3;}
+#cari-era-label{font-size:9px;color:#7c4a18;letter-spacing:2px;font-weight:bold;font-family:Tahoma;border-bottom:1px solid rgba(124,74,24,0.3);padding-bottom:3px;}
+#cari-era-title{font-size:18px;color:#2a1505;font-family:Georgia,serif;font-weight:bold;margin-top:4px;line-height:1.1;}
+#cari-era-rule{height:1px;background:linear-gradient(90deg,transparent,#c8a050,transparent);margin:4px 0 6px;}
+#cari-info-body{flex:1;overflow-y:auto;font-size:10px;line-height:1.45;color:#3a2008;padding-right:4px;}
+.cari-info-block{margin-bottom:6px;}
+.cari-info-h{font-family:Tahoma;font-weight:bold;font-size:9px;color:#7c4a18;text-transform:uppercase;letter-spacing:1px;}
+.cari-info-attr{font-size:8px;color:#7c4a18;font-style:italic;border-top:1px dashed rgba(124,74,24,0.4);padding-top:4px;}
+#cari-info-aesthetic{margin-top:2px;font-style:italic;font-size:11px;color:#2a1505;font-weight:bold;}
+
+/* Mascot — bottom-left of the left page, positioned to feel like he's
+   standing at the foot of the page text. */
+#cari-mascot-wrap{position:absolute;left:14%;top:64%;width:23%;text-align:center;z-index:5;}
+#cari-mascot{width:75%;max-width:130px;height:auto;filter:drop-shadow(0 4px 8px rgba(80,40,10,0.5));cursor:pointer;transition:transform 0.15s;animation:cariMascotPulse 3.5s ease-in-out infinite;}
+#cari-mascot:hover{transform:scale(1.06) rotate(-2deg);filter:drop-shadow(0 6px 12px rgba(160,100,30,0.6));}
 #cari-mascot:active{transform:scale(0.98);}
 @keyframes cariMascotPulse{
-  0%,100%{filter:drop-shadow(0 4px 8px rgba(80,40,10,0.4));}
+  0%,100%{filter:drop-shadow(0 4px 8px rgba(80,40,10,0.5));}
   50%{filter:drop-shadow(0 4px 12px rgba(200,160,80,0.55));}
 }
-/* Fact bubble — appears above mascot when clicked. Aged-paper style with
-   a tail pointing down at the mascot. */
-.cari-bubble{position:absolute;left:50%;top:-6px;transform:translate(-50%,-100%) scale(0.85);opacity:0;pointer-events:none;background:linear-gradient(180deg,#fff8e0,#f0dca0);border:2px solid #8a5a20;border-radius:10px;padding:10px 14px;width:230px;font-family:Georgia,serif;font-size:11px;line-height:1.45;color:#2a1505;box-shadow:0 6px 16px rgba(80,40,10,0.5),inset 0 0 0 1px rgba(255,220,140,0.6);transition:opacity 0.25s,transform 0.25s cubic-bezier(0.34,1.56,0.64,1);z-index:20;}
+#cari-mascot-cap{font-size:8px;color:#7c4a18;font-style:italic;letter-spacing:1px;font-family:Tahoma;margin-top:1px;}
+.cari-bubble{position:absolute;left:50%;top:-6px;transform:translate(-50%,-100%) scale(0.85);opacity:0;pointer-events:none;background:linear-gradient(180deg,#fff8e0,#f0dca0);border:2px solid #8a5a20;border-radius:10px;padding:9px 12px;width:210px;font-family:Georgia,serif;font-size:10.5px;line-height:1.4;color:#2a1505;box-shadow:0 6px 16px rgba(80,40,10,0.5),inset 0 0 0 1px rgba(255,220,140,0.6);transition:opacity 0.25s,transform 0.25s cubic-bezier(0.34,1.56,0.64,1);z-index:20;}
 .cari-bubble::after{content:'';position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-top:10px solid #8a5a20;}
 .cari-bubble::before{content:'';position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:8px solid #f0dca0;z-index:1;}
 .cari-bubble.cari-bubble-show{opacity:1;transform:translate(-50%,-100%) scale(1);pointer-events:auto;cursor:pointer;}
-#cari-mascot-cap{font-size:9px;color:#7c4a18;font-style:italic;letter-spacing:1px;font-family:Tahoma;margin-top:2px;}
-#cari-info-body{flex:1;overflow-y:auto;font-size:11px;line-height:1.55;color:#3a2008;}
-.cari-info-block{margin-bottom:10px;}
-.cari-info-h{font-family:Tahoma;font-weight:bold;font-size:10px;color:#7c4a18;text-transform:uppercase;letter-spacing:1px;}
-.cari-info-attr{font-size:9px;color:#7c4a18;font-style:italic;border-top:1px dashed rgba(124,74,24,0.4);padding-top:6px;}
-#cari-info-aesthetic{margin-top:3px;font-style:italic;font-size:12px;color:#2a1505;}
-#cari-cutout{flex:1;position:relative;border:4px solid #8a5a20;border-radius:4px;overflow:hidden;background:#f5e8c8;box-shadow:inset 0 0 0 1px rgba(255,200,120,0.4),inset 0 0 24px rgba(80,40,10,0.5),0 2px 6px rgba(0,0,0,0.3);min-height:0;}
-#cari-cutout-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;}
+
+/* Right page cutout — sits over the bright white box on the skin. */
+#cari-cutout{position:absolute;left:51.5%;top:12.5%;width:30%;height:43%;background:#fffaf0;overflow:hidden;z-index:3;}
+#cari-cutout-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:14px;}
 #cari-webview{width:100%;height:100%;border:0;background:white;}
-#cari-cutout-fallback{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f5e8c8;}
-#cari-ribbon{position:absolute;top:-6px;right:18px;width:18px;height:46px;background:linear-gradient(180deg,#a02020,#681010);border-radius:0 0 4px 4px;box-shadow:0 2px 4px rgba(0,0,0,0.4);z-index:3;}
-#cari-ribbon::after{content:'';position:absolute;bottom:-6px;left:0;width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-top:6px solid #681010;}
-#cari-right-caption{font-family:Tahoma;font-size:9px;color:#7c4a18;font-style:italic;text-align:center;margin-top:6px;letter-spacing:1px;}
-#cari-chips-strip{display:flex;gap:6px;align-items:center;background:linear-gradient(180deg,#3a1e0e,#2a1408);border:2px solid #8a5a20;border-radius:6px;padding:8px 10px;box-shadow:inset 0 0 16px rgba(0,0,0,0.5);}
-#cari-chips{flex:1;display:flex;gap:5px;overflow-x:auto;padding:2px 0;scrollbar-width:thin;}
-#cari-chips::-webkit-scrollbar{height:6px;}
+
+/* Bottom era nav arrows — aligned with the gold ◀ ▶ arrows baked into the
+   skin's dark bottom strip. */
+.cari-arrow-skin{position:absolute;top:70%;width:5%;height:6%;background:transparent;border:0;cursor:pointer;z-index:6;}
+.cari-arrow-skin:hover{background:rgba(255,220,140,0.25);border-radius:4px;}
+#cari-era-prev{left:14%;}
+#cari-era-next{right:14%;}
+
+/* Aesthetic chips — sit on the dark bottom strip between the arrows. */
+#cari-chips-strip{position:absolute;left:21%;right:21%;top:68%;height:9%;display:flex;align-items:center;justify-content:center;gap:5px;z-index:5;}
+#cari-chips{flex:1;display:flex;gap:4px;overflow-x:auto;padding:2px 0;scrollbar-width:thin;justify-content:flex-start;align-items:center;}
+#cari-chips::-webkit-scrollbar{height:5px;}
 #cari-chips::-webkit-scrollbar-thumb{background:rgba(200,160,80,0.4);border-radius:3px;}
-.cari-chip{background:linear-gradient(180deg,#5a3818,#3a2008);border:1px solid #8a5a20;border-radius:4px;padding:5px 11px;color:#f0d098;font-size:11px;font-family:Tahoma;cursor:pointer;white-space:nowrap;transition:all 0.15s;flex-shrink:0;font-weight:500;letter-spacing:0.3px;}
-.cari-chip:hover{background:linear-gradient(180deg,#7a4a20,#4a2810);color:#fff0c8;border-color:#c8a050;box-shadow:0 0 8px rgba(200,160,80,0.5);}
-.cari-chip.active{background:linear-gradient(180deg,#c8a050,#8a5a20);color:#1a0a04;border-color:#fff0c8;font-weight:bold;box-shadow:0 0 10px rgba(200,160,80,0.7),inset 0 1px 0 rgba(255,240,200,0.6);}
-.cari-arrow{background:linear-gradient(180deg,#5a3818,#3a2008);border:1px solid #8a5a20;border-radius:4px;color:#f0d098;width:28px;height:26px;font-size:13px;cursor:pointer;flex-shrink:0;transition:all 0.15s;}
-.cari-arrow:hover{background:linear-gradient(180deg,#7a4a20,#4a2810);color:#fff0c8;}
+.cari-chip{background:linear-gradient(180deg,rgba(90,55,20,0.85),rgba(50,30,10,0.85));border:1px solid #8a5a20;border-radius:3px;padding:3px 8px;color:#f0d098;font-size:9.5px;font-family:Tahoma;cursor:pointer;white-space:nowrap;transition:all 0.15s;flex-shrink:0;font-weight:500;letter-spacing:0.3px;}
+.cari-chip:hover{background:linear-gradient(180deg,#7a4a20,#4a2810);color:#fff0c8;border-color:#c8a050;box-shadow:0 0 6px rgba(200,160,80,0.5);}
+.cari-chip.active{background:linear-gradient(180deg,#c8a050,#8a5a20);color:#1a0a04;border-color:#fff0c8;font-weight:bold;box-shadow:0 0 8px rgba(200,160,80,0.7),inset 0 1px 0 rgba(255,240,200,0.6);}
 
 /* Radio */
 #radio-win{width:300px;height:350px;top:80px;right:210px;}
@@ -1258,11 +1249,10 @@ border:3px solid #8a5a20;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.65
     </div>
   </div>
 
-  <!-- R3.28 — CARI BOOK WIDGET (Time Travel Historian rebuilt as illustrated
-       book skin in collaboration with cari.institute). Aesthetic chips on the
-       bottom strip; the right page hosts an embedded CARI page in the cutout.
-       Opens with a book-opening animation. -->
-  <div class="wnd" id="cari-win" style="width:760px;height:530px;top:60px;left:120px;display:none;">
+  <!-- R3.30 — CARI BOOK WIDGET, skin version. The leather/gilt/pages are
+       baked into assets/cari-skin.png. All interactive bits overlay it with
+       percentage-based positioning so they scale with the widget. -->
+  <div class="wnd" id="cari-win" style="width:720px;height:540px;top:60px;left:120px;display:none;">
     <div class="wnd-title">
       <span>📖 CARI — Consumer Aesthetics Research Institute</span>
       <div class="wnd-btns">
@@ -1271,54 +1261,45 @@ border:3px solid #8a5a20;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.65
       </div>
     </div>
     <div id="cari-body">
-      <!-- The book frame — leather + gilt edging -->
-      <div id="cari-book" class="cari-closed">
-        <!-- Left page: mascot + era info + about CARI -->
-        <div id="cari-page-left" class="cari-page">
-          <div id="cari-left-inner">
-            <div id="cari-era-label">RENAISSANCE VISIONS · 1400–1700</div>
-            <div id="cari-era-title">Aesthetic Eras</div>
-            <div id="cari-era-rule"></div>
-            <div id="cari-mascot-wrap">
-              <!-- R3.29 — clickable mascot with fact bubble. Click for a fact;
-                   click again or wait 8s to dismiss. -->
-              <div id="cari-mascot-bubble" class="cari-bubble" onclick="cariMascotClick()"></div>
-              <img id="cari-mascot" src="assets/cari-mascot.png" alt="Cari" onclick="cariMascotClick()" title="Click me for a fact!"/>
-              <div id="cari-mascot-cap">Cari, your aesthetic curator<br/><span style="font-size:8px;opacity:0.7;">(click for a fact)</span></div>
-            </div>
-            <div id="cari-info-body">
-              <div class="cari-info-block"><span class="cari-info-h">About CARI</span><br/>
-                The Consumer Aesthetics Research Institute is an online community developing a visual lexicon of consumer ephemera from the 1970s to today — naming aesthetics like Y2K, Frutiger Aero, Vaporwave, and Whimsigothic. Browse and click an aesthetic chip below to load CARI's page.</div>
-              <div class="cari-info-block"><span class="cari-info-h">Now exploring</span><div id="cari-info-aesthetic">— pick one below —</div></div>
-              <div class="cari-info-block cari-info-attr">In collaboration with <a href="https://cari.institute" target="_blank" style="color:#7c4a18;text-decoration:underline;">cari.institute</a></div>
-            </div>
-          </div>
+      <!-- Painted book skin (background) -->
+      <div id="cari-skin"></div>
+
+      <!-- Left page text overlay -->
+      <div id="cari-left-text">
+        <div id="cari-era-label">DIGITAL DAWN · 2000–PRESENT</div>
+        <div id="cari-era-title">Digital Dawn</div>
+        <div id="cari-era-rule"></div>
+        <div id="cari-info-body">
+          <div class="cari-info-block"><span class="cari-info-h">About CARI</span><br/>
+            The Consumer Aesthetics Research Institute is an online community developing a visual lexicon of consumer ephemera from the 1970s to today — naming aesthetics like Y2K, Frutiger Aero, Vaporwave, and Whimsigothic.</div>
+          <div class="cari-info-block"><span class="cari-info-h">Now exploring</span><div id="cari-info-aesthetic">— pick one below —</div></div>
+          <div class="cari-info-block cari-info-attr">In collaboration with <a href="https://cari.institute" target="_blank" style="color:#7c4a18;text-decoration:underline;">cari.institute</a></div>
         </div>
-        <!-- Right page: cutout frame containing the embedded CARI page -->
-        <div id="cari-page-right" class="cari-page">
-          <div id="cari-right-inner">
-            <div id="cari-cutout">
-              <div id="cari-cutout-placeholder">
-                <div style="font-size:48px;opacity:0.5;">📖</div>
-                <div style="margin-top:8px;font-family:Georgia,serif;color:#6a3a18;font-style:italic;font-size:13px;">Choose an aesthetic from the chips below to open its CARI page here</div>
-              </div>
-              <!-- R3.29 — webview bypasses X-Frame-Options that was blocking the iframe;
-                   same pattern used by the main browser pane and TV. -->
-              <webview id="cari-webview" style="display:none;width:100%;height:100%;" allowpopups useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"></webview>
-              <!-- Spine bookmark ribbon -->
-              <div id="cari-ribbon"></div>
-            </div>
-            <div id="cari-right-caption">Page from cari.institute · click chips below to navigate</div>
-          </div>
-        </div>
-        <!-- Center book spine -->
-        <div id="cari-spine"></div>
       </div>
-      <!-- Aesthetic chip strip — bottom of the book -->
+
+      <!-- Clickable mascot, lower-left -->
+      <div id="cari-mascot-wrap">
+        <div id="cari-mascot-bubble" class="cari-bubble" onclick="cariMascotClick()"></div>
+        <img id="cari-mascot" src="assets/cari-mascot.png" alt="Cari" onclick="cariMascotClick()" title="Click me for a fact!"/>
+        <div id="cari-mascot-cap">click for a fact</div>
+      </div>
+
+      <!-- Right page cutout — webview overlays the white box on the skin -->
+      <div id="cari-cutout">
+        <div id="cari-cutout-placeholder">
+          <div style="font-size:42px;opacity:0.5;">📖</div>
+          <div style="margin-top:6px;font-family:Georgia,serif;color:#6a3a18;font-style:italic;font-size:11px;">Choose an aesthetic chip below</div>
+        </div>
+        <webview id="cari-webview" style="display:none;width:100%;height:100%;" allowpopups useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"></webview>
+      </div>
+
+      <!-- Era prev/next: invisible hit-areas over the gold ◀ ▶ on the skin -->
+      <button id="cari-era-prev" class="cari-arrow-skin" onclick="cariPrevEra()" title="Previous era"></button>
+      <button id="cari-era-next" class="cari-arrow-skin" onclick="cariNextEra()" title="Next era"></button>
+
+      <!-- Aesthetic chips on the dark bottom strip -->
       <div id="cari-chips-strip">
-        <button id="cari-era-prev" class="cari-arrow" onclick="cariPrevEra()" title="Previous era">◀</button>
         <div id="cari-chips"></div>
-        <button id="cari-era-next" class="cari-arrow" onclick="cariNextEra()" title="Next era">▶</button>
       </div>
     </div>
   </div>
@@ -4149,15 +4130,15 @@ const CARI_SLUG_MAP={
 
 function openCari(){
   openWin('cari-win');
-  // Default to the Digital Dawn era since that has the most CARI aesthetics
   if(!cariCurrentEra) cariCurrentEra=TTH_ERAS[5];
   cariRenderEra();
-  // Trigger the page-open animation: .cari-closed → .cari-opening → (removed)
-  const book=document.getElementById('cari-book');
-  if(book){
-    book.classList.remove('cari-closed');
-    book.classList.add('cari-opening');
-    setTimeout(()=>book.classList.remove('cari-opening'),950);
+  // R3.30 — skin fade-in (was book-flip; the skin is already an opened book)
+  const skin=document.getElementById('cari-skin');
+  if(skin){
+    skin.classList.remove('cari-opening');
+    void skin.offsetWidth; // force reflow so the animation restarts
+    skin.classList.add('cari-opening');
+    setTimeout(()=>skin.classList.remove('cari-opening'),550);
   }
 }
 
