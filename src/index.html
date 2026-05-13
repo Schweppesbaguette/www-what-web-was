@@ -605,6 +605,67 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 }
 #vid-remote{animation:cglitch 5s ease-in-out infinite;}
 
+/* R3.28 — CARI BOOK WIDGET. Leather + gilt edges, two-page spread, page-open
+   animation on display. Uses real layered shadows + radial gradients to fake
+   paper depth without external assets. */
+#cari-win{}
+#cari-body{flex:1;display:flex;flex-direction:column;background:linear-gradient(180deg,#2a1808,#1a0e05);overflow:hidden;padding:14px 14px 8px;gap:8px;}
+#cari-book{flex:1;position:relative;display:flex;background:
+  /* gilt corner glints */
+  radial-gradient(circle at 8px 8px, rgba(255,210,120,0.4) 0%, transparent 30px),
+  radial-gradient(circle at calc(100% - 8px) 8px, rgba(255,210,120,0.4) 0%, transparent 30px),
+  radial-gradient(circle at 8px calc(100% - 8px), rgba(255,210,120,0.4) 0%, transparent 30px),
+  radial-gradient(circle at calc(100% - 8px) calc(100% - 8px), rgba(255,210,120,0.4) 0%, transparent 30px),
+  /* leather */
+  linear-gradient(135deg,#4a2a14,#3a1e0e,#4a2a14);
+border:3px solid #8a5a20;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.65),inset 0 0 0 1px rgba(255,200,120,0.25),inset 0 0 60px rgba(0,0,0,0.55);overflow:hidden;perspective:1400px;transform-style:preserve-3d;}
+.cari-page{flex:1;background:
+  /* aged paper grain */
+  radial-gradient(ellipse at center, #f5e8c8 0%, #ecdaa4 70%, #d8c084 100%);
+  margin:8px;border-radius:3px;box-shadow:inset 0 0 30px rgba(120,80,30,0.35),0 2px 6px rgba(0,0,0,0.4);overflow:hidden;position:relative;transform-origin:right center;transition:transform 0.6s cubic-bezier(0.55,0.05,0.32,0.95);}
+#cari-page-left{transform-origin:right center;}
+#cari-page-right{transform-origin:left center;}
+/* Page-open animation: the right page starts rotated 180° on Y (closed book
+   showing front cover) and flips out to reveal the spread. */
+#cari-book.cari-closed #cari-page-right{transform:rotateY(180deg);transform-origin:left center;}
+#cari-book.cari-closed #cari-page-left{transform:rotateY(8deg);}
+#cari-book.cari-opening #cari-page-right{animation:cariFlip 0.9s cubic-bezier(0.55,0.05,0.32,0.95) forwards;}
+@keyframes cariFlip{
+  0%   {transform:rotateY(180deg);}
+  40%  {transform:rotateY(120deg);}
+  70%  {transform:rotateY(60deg);}
+  100% {transform:rotateY(0deg);}
+}
+#cari-spine{position:absolute;left:50%;top:6px;bottom:6px;width:6px;transform:translateX(-50%);background:linear-gradient(90deg,rgba(0,0,0,0.4),rgba(80,40,10,0.6) 50%,rgba(0,0,0,0.4));border-radius:2px;box-shadow:0 0 10px rgba(0,0,0,0.6);pointer-events:none;z-index:5;}
+#cari-left-inner,#cari-right-inner{padding:14px 18px;height:100%;display:flex;flex-direction:column;color:#2a1505;font-family:Georgia,serif;}
+#cari-era-label{font-size:10px;color:#7c4a18;letter-spacing:2px;font-weight:bold;font-family:Tahoma;border-bottom:1px solid rgba(124,74,24,0.3);padding-bottom:4px;}
+#cari-era-title{font-size:22px;color:#2a1505;font-family:Georgia,serif;font-weight:bold;margin-top:6px;}
+#cari-era-rule{height:2px;background:linear-gradient(90deg,transparent,#c8a050,transparent);margin:6px 0 10px;}
+#cari-mascot-wrap{text-align:center;margin:4px 0 10px;}
+#cari-mascot{width:110px;height:auto;filter:drop-shadow(0 4px 8px rgba(80,40,10,0.4));image-rendering:pixelated;}
+#cari-mascot-cap{font-size:9px;color:#7c4a18;font-style:italic;letter-spacing:1px;font-family:Tahoma;margin-top:2px;}
+#cari-info-body{flex:1;overflow-y:auto;font-size:11px;line-height:1.55;color:#3a2008;}
+.cari-info-block{margin-bottom:10px;}
+.cari-info-h{font-family:Tahoma;font-weight:bold;font-size:10px;color:#7c4a18;text-transform:uppercase;letter-spacing:1px;}
+.cari-info-attr{font-size:9px;color:#7c4a18;font-style:italic;border-top:1px dashed rgba(124,74,24,0.4);padding-top:6px;}
+#cari-info-aesthetic{margin-top:3px;font-style:italic;font-size:12px;color:#2a1505;}
+#cari-cutout{flex:1;position:relative;border:4px solid #8a5a20;border-radius:4px;overflow:hidden;background:#f5e8c8;box-shadow:inset 0 0 0 1px rgba(255,200,120,0.4),inset 0 0 24px rgba(80,40,10,0.5),0 2px 6px rgba(0,0,0,0.3);min-height:0;}
+#cari-cutout-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;}
+#cari-iframe{width:100%;height:100%;border:0;background:white;}
+#cari-cutout-fallback{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f5e8c8;}
+#cari-ribbon{position:absolute;top:-6px;right:18px;width:18px;height:46px;background:linear-gradient(180deg,#a02020,#681010);border-radius:0 0 4px 4px;box-shadow:0 2px 4px rgba(0,0,0,0.4);z-index:3;}
+#cari-ribbon::after{content:'';position:absolute;bottom:-6px;left:0;width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-top:6px solid #681010;}
+#cari-right-caption{font-family:Tahoma;font-size:9px;color:#7c4a18;font-style:italic;text-align:center;margin-top:6px;letter-spacing:1px;}
+#cari-chips-strip{display:flex;gap:6px;align-items:center;background:linear-gradient(180deg,#3a1e0e,#2a1408);border:2px solid #8a5a20;border-radius:6px;padding:8px 10px;box-shadow:inset 0 0 16px rgba(0,0,0,0.5);}
+#cari-chips{flex:1;display:flex;gap:5px;overflow-x:auto;padding:2px 0;scrollbar-width:thin;}
+#cari-chips::-webkit-scrollbar{height:6px;}
+#cari-chips::-webkit-scrollbar-thumb{background:rgba(200,160,80,0.4);border-radius:3px;}
+.cari-chip{background:linear-gradient(180deg,#5a3818,#3a2008);border:1px solid #8a5a20;border-radius:4px;padding:5px 11px;color:#f0d098;font-size:11px;font-family:Tahoma;cursor:pointer;white-space:nowrap;transition:all 0.15s;flex-shrink:0;font-weight:500;letter-spacing:0.3px;}
+.cari-chip:hover{background:linear-gradient(180deg,#7a4a20,#4a2810);color:#fff0c8;border-color:#c8a050;box-shadow:0 0 8px rgba(200,160,80,0.5);}
+.cari-chip.active{background:linear-gradient(180deg,#c8a050,#8a5a20);color:#1a0a04;border-color:#fff0c8;font-weight:bold;box-shadow:0 0 10px rgba(200,160,80,0.7),inset 0 1px 0 rgba(255,240,200,0.6);}
+.cari-arrow{background:linear-gradient(180deg,#5a3818,#3a2008);border:1px solid #8a5a20;border-radius:4px;color:#f0d098;width:28px;height:26px;font-size:13px;cursor:pointer;flex-shrink:0;transition:all 0.15s;}
+.cari-arrow:hover{background:linear-gradient(180deg,#7a4a20,#4a2810);color:#fff0c8;}
+
 /* Radio */
 #radio-win{width:300px;height:350px;top:80px;right:210px;}
 .radio-head{background:linear-gradient(180deg,#000820,#001060);padding:8px;display:flex;flex-direction:column;gap:5px;flex-shrink:0;border-bottom:2px solid var(--ta,#81ff28);box-shadow:0 2px 8px rgba(129,255,40,0.2);}
@@ -865,6 +926,7 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
       <div class="tb-btn" onclick="quickVideoTest()" title="Video"><img class="tb-btn-img" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgdmlld0JveD0iMCAwIDYwIDYwIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iYmciIGN4PSI1MCUiIGN5PSIzNSUiIHI9IjYwJSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM4YWM4ZjgiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSI0MCUiIHN0b3AtY29sb3I9IiM0ODg4ZTgiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDAxMDYwIi8+CiAgICA8L3JhZGlhbEdyYWRpZW50PgogICAgPHJhZGlhbEdyYWRpZW50IGlkPSJzaGluZSIgY3g9IjUwJSIgY3k9IjIwJSIgcj0iNTAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0icmdiYSgyNTUsMjU1LDI1NSwwLjU1KSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9InJnYmEoMjU1LDI1NSwyNTUsMCkiLz4KICAgIDwvcmFkaWFsR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjMwIiBjeT0iMzAiIHI9IjI4IiBmaWxsPSJ1cmwoI2JnKSIgc3Ryb2tlPSIjOTJkOWZmIiBzdHJva2Utd2lkdGg9IjEuNSIvPgogIDxjaXJjbGUgY3g9IjMwIiBjeT0iMzAiIHI9IjI4IiBmaWxsPSJ1cmwoI3NoaW5lKSIvPgogIDx0ZXh0IHg9IjMwIiB5PSIyNiIgZm9udC1zaXplPSIyMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSI+8J+TuTwvdGV4dD4KICA8dGV4dCB4PSIzMCIgeT0iNDgiIGZvbnQtc2l6ZT0iOSIgZm9udC1mYW1pbHk9IlRhaG9tYSxBcmlhbCIgZm9udC13ZWlnaHQ9ImJvbGQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIiBzdHlsZT0idGV4dC1zaGFkb3c6MCAxcHggMnB4IHJnYmEoMCwwLDgwLDAuOCk7Ij5WaWRlbzwvdGV4dD4KPC9zdmc+" alt="Video"/><span class="tb-lbl">Video</span></div>
       <div class="tb-btn" onclick="initRadio()" title="Radio"><img class="tb-btn-img" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgdmlld0JveD0iMCAwIDYwIDYwIj4KICA8ZGVmcz4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0iYmciIGN4PSI1MCUiIGN5PSIzNSUiIHI9IjYwJSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM4YWM4ZjgiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSI0MCUiIHN0b3AtY29sb3I9IiM0ODg4ZTgiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDAxMDYwIi8+CiAgICA8L3JhZGlhbEdyYWRpZW50PgogICAgPHJhZGlhbEdyYWRpZW50IGlkPSJzaGluZSIgY3g9IjUwJSIgY3k9IjIwJSIgcj0iNTAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0icmdiYSgyNTUsMjU1LDI1NSwwLjU1KSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9InJnYmEoMjU1LDI1NSwyNTUsMCkiLz4KICAgIDwvcmFkaWFsR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjMwIiBjeT0iMzAiIHI9IjI4IiBmaWxsPSJ1cmwoI2JnKSIgc3Ryb2tlPSIjOTJkOWZmIiBzdHJva2Utd2lkdGg9IjEuNSIvPgogIDxjaXJjbGUgY3g9IjMwIiBjeT0iMzAiIHI9IjI4IiBmaWxsPSJ1cmwoI3NoaW5lKSIvPgogIDx0ZXh0IHg9IjMwIiB5PSIyNiIgZm9udC1zaXplPSIyMCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSI+8J+TuzwvdGV4dD4KICA8dGV4dCB4PSIzMCIgeT0iNDgiIGZvbnQtc2l6ZT0iOSIgZm9udC1mYW1pbHk9IlRhaG9tYSxBcmlhbCIgZm9udC13ZWlnaHQ9ImJvbGQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIiBzdHlsZT0idGV4dC1zaGFkb3c6MCAxcHggMnB4IHJnYmEoMCwwLDgwLDAuOCk7Ij5SYWRpbzwvdGV4dD4KPC9zdmc+" alt="Radio"/><span class="tb-lbl">Radio</span></div>
       <div class="tb-btn" onclick="openTV()" title="TV"><img class="tb-btn-img" src="data:image/png;base64,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" alt="TV"/><span class="tb-lbl">TV</span></div>
+      <div class="tb-btn" onclick="openCari()" title="CARI"><img class="tb-btn-img" src="assets/cari-book.png" alt="CARI"/><span class="tb-lbl">CARI</span></div>
       <div class="tb-btn" onclick="tryFlash()" title="Flash"><img class="tb-btn-img" src="data:image/png;base64,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" alt="Flash"/><span class="tb-lbl">Flash</span></div>
     </div>
     <div class="addr-row">
@@ -908,7 +970,7 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
         <div class="sb-sec">QUICK</div>
         <div class="sb-it" onclick="initRadio()">📻 Radio</div>
         <div class="sb-it" onclick="openTV()">📺 Retro TV</div>
-        <div class="sb-it" onclick="openTimeHistorian()">🕰️ Time Historian</div>
+        <div class="sb-it" onclick="openCari()">📖 CARI</div>
         <div class="sb-it" onclick="openWeather()">🌤️ Weather</div>
         <div class="sb-it" onclick="tryFlash()">⚡ Flash</div>
         <div class="sb-it" onclick="toggleMascotPanel()">🎨 Mascot</div>
@@ -1174,6 +1236,70 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
           <button class="tv-skim-btn" onclick="tvSkim(30)" title="Forward 30s">30s ⏩</button>
           <span id="tv-skim-status" style="color:#888;font-size:9px;font-family:'Courier New';margin-left:auto;"></span>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- R3.28 — CARI BOOK WIDGET (Time Travel Historian rebuilt as illustrated
+       book skin in collaboration with cari.institute). Aesthetic chips on the
+       bottom strip; the right page hosts an embedded CARI page in the cutout.
+       Opens with a book-opening animation. -->
+  <div class="wnd" id="cari-win" style="width:760px;height:530px;top:60px;left:120px;display:none;">
+    <div class="wnd-title">
+      <span>📖 CARI — Consumer Aesthetics Research Institute</span>
+      <div class="wnd-btns">
+        <div class="wb wb-min" onclick="minimizeWin('cari-win')">─</div>
+        <div class="wb wb-cls" onclick="closeWin('cari-win')">✕</div>
+      </div>
+    </div>
+    <div id="cari-body">
+      <!-- The book frame — leather + gilt edging -->
+      <div id="cari-book" class="cari-closed">
+        <!-- Left page: mascot + era info + about CARI -->
+        <div id="cari-page-left" class="cari-page">
+          <div id="cari-left-inner">
+            <div id="cari-era-label">RENAISSANCE VISIONS · 1400–1700</div>
+            <div id="cari-era-title">Aesthetic Eras</div>
+            <div id="cari-era-rule"></div>
+            <div id="cari-mascot-wrap">
+              <img id="cari-mascot" src="assets/cari-mascot.png" alt="Cari"/>
+              <div id="cari-mascot-cap">Cari, your aesthetic curator</div>
+            </div>
+            <div id="cari-info-body">
+              <div class="cari-info-block"><span class="cari-info-h">About CARI</span><br/>
+                The Consumer Aesthetics Research Institute is an online community developing a visual lexicon of consumer ephemera from the 1970s to today — naming aesthetics like Y2K, Frutiger Aero, Vaporwave, and Whimsigothic. Browse and click an aesthetic chip below to load CARI's page.</div>
+              <div class="cari-info-block"><span class="cari-info-h">Now exploring</span><div id="cari-info-aesthetic">— pick one below —</div></div>
+              <div class="cari-info-block cari-info-attr">In collaboration with <a href="https://cari.institute" target="_blank" style="color:#7c4a18;text-decoration:underline;">cari.institute</a></div>
+            </div>
+          </div>
+        </div>
+        <!-- Right page: cutout frame containing the embedded CARI page -->
+        <div id="cari-page-right" class="cari-page">
+          <div id="cari-right-inner">
+            <div id="cari-cutout">
+              <div id="cari-cutout-placeholder">
+                <div style="font-size:48px;opacity:0.5;">📖</div>
+                <div style="margin-top:8px;font-family:Georgia,serif;color:#6a3a18;font-style:italic;font-size:13px;">Choose an aesthetic from the chips below to open its CARI page here</div>
+              </div>
+              <iframe id="cari-iframe" style="display:none;" referrerpolicy="no-referrer"></iframe>
+              <div id="cari-cutout-fallback" style="display:none;">
+                <div style="font-size:32px;">🔒</div>
+                <div style="margin-top:8px;font-family:Georgia;color:#6a3a18;font-size:12px;text-align:center;padding:0 14px;">CARI blocked embedding inside the book.<br/><a id="cari-fallback-link" href="#" target="_blank" style="color:#7c4a18;text-decoration:underline;">Open it on cari.institute →</a></div>
+              </div>
+              <!-- Spine bookmark ribbon -->
+              <div id="cari-ribbon"></div>
+            </div>
+            <div id="cari-right-caption">Page from cari.institute · click chips below to navigate</div>
+          </div>
+        </div>
+        <!-- Center book spine -->
+        <div id="cari-spine"></div>
+      </div>
+      <!-- Aesthetic chip strip — bottom of the book -->
+      <div id="cari-chips-strip">
+        <button id="cari-era-prev" class="cari-arrow" onclick="cariPrevEra()" title="Previous era">◀</button>
+        <div id="cari-chips"></div>
+        <button id="cari-era-next" class="cari-arrow" onclick="cariNextEra()" title="Next era">▶</button>
       </div>
     </div>
   </div>
@@ -3399,9 +3525,6 @@ function reloadPage(){
   // re-trigger whatever loader matches the current address bar value.
   const addr = document.getElementById('addr-bar');
   const cur = (addr && addr.value) ? addr.value : '';
-  if(cur.startsWith('time-travel-historian')){
-    if(typeof openTimeHistorian === 'function'){ openTimeHistorian(); return; }
-  }
   if(cur === 'www://home' || cur === '' || cur === 'about:home'){
     loadHomepage(); return;
   }
@@ -3974,140 +4097,155 @@ const TTH_ERAS=[
     impact:'Democratized design, created entirely new aesthetics, and collapsed the distance between designer and audience.'},
 ];
 
-let tthCurrentEra=null;
+let cariCurrentEra=null;
+let cariCurrentAesthetic=null;
 
-function openTimeHistorian(){
-  // Always use in-browser inline render (electron routing removed)
-  // Browser fallback - render inline
-  const view=document.getElementById('html-view');
-  const frame=document.getElementById('site-frame');
-  frame.style.display='none';view.style.display='block';view.style.flex='1';
-  document.getElementById('addr-bar').value='time-travel-historian://aesthetics';
-  document.getElementById('status-txt').textContent='Time Travel Historian';
-  tthCurrentEra=TTH_ERAS[4];
-  renderTimeHistorian();
+/* R3.28 — CARI BOOK WIDGET. Replaces the old Time Travel Historian.
+   Slug map: aesthetic name (as it appears in TTH_ERAS) → cari.institute URL
+   slug. CARI's archive primarily covers post-1970 consumer aesthetics, so
+   pre-modern era aesthetics (Cave Painting, Renaissance, etc.) have no
+   matching CARI page — those chips show a "no CARI page yet" message in the
+   right-page cutout. */
+const CARI_SLUG_MAP={
+  // Digital Dawn era — main CARI coverage
+  'Y2K Aesthetic':'y2k-futurism',
+  'Frutiger Aero':'frutiger-aero',
+  'Vaporwave':'vaporwave',
+  'Skeuomorphism':'skeuomorphism',
+  'Flat Design':'flat-design',
+  'Brutalism':'web-brutalism',
+  'Indie Web':'indie-web',
+  // Global era
+  'Global Village Coffeehouse':'global-village-coffeehouse',
+  'World Beat':'global-village-coffeehouse',
+  'Tribal Fusion':'global-village-coffeehouse',
+  'Multicultural Posters':'global-village-coffeehouse',
+  'New Age Visual':'global-village-coffeehouse',
+  // Industrial Age — some have CARI pages
+  'Art Nouveau':'art-nouveau',
+  'Victorian Gothic':'whimsigothic',
+  'Arts & Crafts':'arts-crafts',
+  // Pre-modern aesthetics: no CARI page — handled gracefully
+};
+
+function openCari(){
+  openWin('cari-win');
+  // Default to the Digital Dawn era since that has the most CARI aesthetics
+  if(!cariCurrentEra) cariCurrentEra=TTH_ERAS[5];
+  cariRenderEra();
+  // Trigger the page-open animation: .cari-closed → .cari-opening → (removed)
+  const book=document.getElementById('cari-book');
+  if(book){
+    book.classList.remove('cari-closed');
+    book.classList.add('cari-opening');
+    setTimeout(()=>book.classList.remove('cari-opening'),950);
+  }
 }
 
-function renderTimeHistorian(eraId){
-  if(eraId) tthCurrentEra=TTH_ERAS.find(e=>e.id===eraId)||tthCurrentEra;
-  const era=tthCurrentEra||TTH_ERAS[4];
-  const m=MASCOTS[myMascot];
-  const view=document.getElementById('html-view');
-  const hp=[];
-  hp.push('<div style="display:flex;height:100%;background:linear-gradient(135deg,#2c1810,#1a0e08);font-family:Georgia,serif;overflow:hidden;">');
-  // Left spine (book)
-  hp.push('<div style="width:70px;background:linear-gradient(180deg,#1a0a05,#2a1008,#1a0a05);border-right:3px solid #5a2a10;display:flex;flex-direction:column;align-items:center;padding:12px 4px;flex-shrink:0;">');
-  hp.push('<div style="writing-mode:vertical-rl;transform:rotate(180deg);color:#c8a060;font-size:11px;font-weight:bold;letter-spacing:2px;text-align:center;line-height:1.3;text-shadow:0 0 8px rgba(200,160,96,0.4);">TIME TRAVEL HISTORIAN</div>');
-  hp.push('<div style="margin-top:12px;color:#806040;font-size:9px;writing-mode:vertical-rl;transform:rotate(180deg);letter-spacing:1px;">EXPLORE THE VISUAL AESTHETICS OF OUR WORLD</div>');
-  hp.push('</div>');
-  // Main content
-  hp.push('<div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">');
-  // Header
-  hp.push('<div style="background:linear-gradient(180deg,#3a1a08,#2a1005);border-bottom:3px solid #5a2a10;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;">');
-  hp.push('<div style="font-size:24px;">☀️</div>');
-  hp.push('<div><div style="color:#c8a060;font-size:20px;font-weight:bold;font-family:Georgia;text-shadow:0 0 10px rgba(200,160,96,0.3);">Time Travel Historian</div><div style="color:#806040;font-size:11px;">Explore the Visual Aesthetics of Our World</div></div>');
-  // Address bar
-  hp.push('<div style="flex:1;display:flex;align-items:center;gap:4px;background:rgba(0,0,0,0.3);border:1px solid #5a2a10;border-radius:4px;padding:4px 8px;margin-left:8px;">');
-  hp.push('<div style="font-size:12px;">🌐</div>');
-  hp.push('<div style="color:#c8a060;font-size:10px;font-family:\'Courier New\';flex:1;">time-travel-historian://aesthetics//'+era.id+'</div>');
-  hp.push('<div style="width:12px;height:12px;background:#4a2a10;border:1px solid #8a5a30;border-radius:2px;cursor:pointer;display:flex;align-items:center;justify-content:center;"><span style="color:#c8a060;font-size:8px;">▼</span></div>');
-  hp.push('</div>');
-  // Window buttons
-  hp.push('<div style="display:flex;gap:3px;margin-left:8px;">');
-  hp.push('<div onclick="loadHomepage()" style="width:22px;height:22px;background:#4a2a10;border:1px solid #8a5a30;border-radius:3px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#c8a060;font-size:12px;">?</div>');
-  hp.push('<div style="width:22px;height:22px;background:#4a2a10;border:1px solid #8a5a30;border-radius:3px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#c8a060;font-size:12px;">─</div>');
-  hp.push('<div onclick="loadHomepage()" style="width:22px;height:22px;background:#8a2a10;border:1px solid #c05030;border-radius:3px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:white;font-size:12px;">✕</div>');
-  hp.push('</div>');
-  hp.push('</div>');
-  // Nav tabs
-  hp.push('<div style="display:flex;gap:0;background:#2a1005;border-bottom:2px solid #5a2a10;padding:0 8px;flex-shrink:0;">');
-  ['Back','Forward','Home','Favorites'].forEach((t,i)=>{
-    const icons=['←','→','🏠','⭐'];
-    hp.push('<div onclick="'+(t==='Home'?'loadHomepage()':t==='Back'?'histBack()':'')+'" style="padding:6px 14px;cursor:pointer;color:#a07840;font-size:11px;display:flex;align-items:center;gap:4px;border-right:1px solid #3a1a08;transition:all 0.1s;" onmouseover="this.style.background=\'rgba(200,160,96,0.1)\'" onmouseout="this.style.background=\'\'">'+icons[i]+' '+t+'</div>');
-  });
-  ['Discover','Learn','Create','Quiz'].forEach((t,i)=>{
-    const icons=['🌍','📖','✏️','?'];const isActive=t==='Discover';
-    hp.push('<div style="margin-left:auto;padding:6px 14px;cursor:pointer;font-size:11px;display:flex;align-items:center;gap:4px;color:'+(isActive?'#c8a060':'#806040')+';background:'+(isActive?'rgba(200,160,96,0.15)':'')+';border-bottom:'+(isActive?'3px solid #c8a060':'')+';font-family:Tahoma;" onmouseover="this.style.background=\'rgba(200,160,96,0.1)\'" onmouseout="this.style.background=\''+(isActive?'rgba(200,160,96,0.15)':'')+'\'">'+icons[i]+' '+t+'</div>');
-  });
-  hp.push('</div>');
-  // Three-column body
-  hp.push('<div style="flex:1;display:flex;overflow:hidden;">');
-  // Left: era list
-  hp.push('<div style="width:180px;background:linear-gradient(180deg,#2a1005,#1a0803);border-right:2px solid #5a2a10;overflow-y:auto;flex-shrink:0;">');
-  hp.push('<div style="padding:6px 10px;color:#806040;font-size:10px;font-weight:bold;letter-spacing:1px;border-bottom:1px solid #3a1a08;">Aesthetic Era Explorer</div>');
-  TTH_ERAS.forEach(e=>{
-    const sel=e.id===era.id;
-    hp.push('<div onclick="renderTimeHistorian(\''+e.id+'\')" style="padding:8px 10px;cursor:pointer;border-bottom:1px solid #2a1005;display:flex;gap:8px;align-items:flex-start;background:'+(sel?'linear-gradient(90deg,rgba(200,160,96,0.2),rgba(200,160,96,0.05))':'')+';border-left:'+(sel?'3px solid #c8a060':'3px solid transparent')+';transition:all 0.1s;" onmouseover="if(!this.dataset.sel) this.style.background=\'rgba(200,160,96,0.08)\'" onmouseout="if(!this.dataset.sel) this.style.background=\'\'">');
-    hp.push('<div style="font-size:16px;flex-shrink:0;">'+e.icon+'</div>');
-    hp.push('<div><div style="color:'+(sel?'#c8a060':'#a07840')+';font-size:11px;font-weight:'+(sel?'bold':'normal')+';font-family:Georgia;">'+e.label+'</div><div style="color:#604020;font-size:9px;font-family:Tahoma;margin-top:1px;">'+e.years+'</div></div>');
-    hp.push('</div>');
-  });
-  hp.push('<div onclick="renderTimeHistorian()" style="padding:8px 10px;cursor:pointer;border-top:2px solid #3a1a08;color:#806040;font-size:11px;display:flex;align-items:center;gap:6px;"><span style="font-size:16px;">🔄</span> All Timelines</div>');
-  hp.push('</div>');
-  // Center: main content
-  hp.push('<div style="flex:1;overflow-y:auto;padding:14px 16px;background:linear-gradient(180deg,#f5e8d0,#efe0c0);color:#2a1505;">');
-  hp.push('<div style="color:#604020;font-size:11px;font-family:Tahoma;margin-bottom:4px;">Now Exploring:</div>');
-  hp.push('<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">');
-  hp.push('<h2 style="font-size:22px;color:#2a1505;font-family:Georgia;font-weight:bold;">'+era.label+'</h2>');
-  hp.push('<span style="background:#c8a060;color:#2a1505;font-size:10px;padding:2px 8px;border-radius:2px;font-family:Tahoma;margin-left:4px;">★</span>');
-  hp.push('<span style="background:#806040;color:#f5e8d0;font-size:10px;padding:2px 8px;border-radius:2px;font-family:Tahoma;">🖨</span>');
-  hp.push('</div>');
-  hp.push('<div style="color:#604020;font-size:12px;font-family:Tahoma;margin-bottom:12px;">'+era.years+'</div>');
-  // Content grid
-  hp.push('<div style="display:flex;gap:12px;">');
-  // Art image placeholder (patterned)
-  hp.push('<div style="width:180px;min-height:180px;flex-shrink:0;background:linear-gradient(135deg,#8B4513,#D2691E,#8B4513,#5C3317);border:2px solid #8B4513;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:48px;box-shadow:inset 0 0 20px rgba(0,0,0,0.3);">'+era.icon+'</div>');
-  // Text
-  hp.push('<div style="flex:1;">');
-  hp.push('<p style="font-size:12px;line-height:1.7;color:#2a1505;margin-bottom:10px;font-family:Georgia;">'+era.desc+'</p>');
-  hp.push('<div style="display:flex;gap:8px;margin-bottom:8px;">');
-  hp.push('<div style="font-size:16px;">🌀</div><div><strong style="color:#2a1505;font-size:11px;font-family:Tahoma;">Key Themes</strong><div style="font-size:11px;color:#4a2510;font-family:Tahoma;line-height:1.5;">'+era.themes+'</div></div>');
-  hp.push('</div>');
-  hp.push('<div style="display:flex;gap:8px;">');
-  hp.push('<div style="font-size:16px;">⭐</div><div><strong style="color:#2a1505;font-size:11px;font-family:Tahoma;">Cultural Impact</strong><div style="font-size:11px;color:#4a2510;font-family:Tahoma;line-height:1.5;">'+era.impact+'</div></div>');
-  hp.push('</div>');
-  hp.push('</div>');
-  hp.push('</div>');
-  // Aesthetics list
-  hp.push('<div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px;">');
-  era.aesthetics.forEach(a=>{
-    hp.push('<div style="background:#8B4513;color:#f5e8d0;padding:4px 10px;border-radius:3px;font-size:10px;font-family:Tahoma;cursor:pointer;border:1px solid #c8a060;" onmouseover="this.style.background=\'#a05820\'" onmouseout="this.style.background=\'#8B4513\'">'+a+'</div>');
-  });
-  hp.push('</div>');
-  // Bottom action buttons
-  hp.push('<div style="display:flex;gap:8px;margin-top:14px;">');
-  [['🔍','Explore','Dive into visual examples'],['⏰','Timeline','See how it evolved'],['🏺','Artifacts','Browse iconic pieces']].forEach(([ico,lbl,desc])=>{
-    hp.push('<div style="flex:1;background:#e8d5b0;border:2px solid #8B4513;border-radius:6px;padding:8px;cursor:pointer;text-align:center;transition:all 0.1s;" onmouseover="this.style.background=\'#d4c09a\'" onmouseout="this.style.background=\'#e8d5b0\'">');
-    hp.push('<div style="font-size:18px;">'+ico+'</div>');
-    hp.push('<div style="font-weight:bold;color:#2a1505;font-size:11px;font-family:Tahoma;">'+lbl+'</div>');
-    hp.push('<div style="color:#604020;font-size:9px;font-family:Tahoma;">'+desc+'</div>');
-    hp.push('</div>');
-  });
-  hp.push('</div>');
-  hp.push('</div>');
-  // Right: guide panel
-  hp.push('<div style="width:160px;background:linear-gradient(180deg,#f0e0c0,#e8d4a8);border-left:2px solid #8B4513;overflow-y:auto;flex-shrink:0;padding:8px;">');
-  hp.push('<div style="color:#2a1505;font-size:12px;font-weight:bold;font-family:Georgia;border-bottom:2px solid #8B4513;padding-bottom:4px;margin-bottom:8px;">Your Guide</div>');
-  hp.push('<div style="font-size:11px;color:#4a2510;font-family:Georgia;line-height:1.6;margin-bottom:10px;">Welcome, traveler! I\'m your humble guide through time and art. Let us explore the <em>'+era.label+'</em> era together.</div>');
-  // Mascot guide image
-  hp.push('<div style="text-align:center;margin:8px 0;"><img src="'+(A[myMascot]||'')+'" style="height:70px;object-fit:contain;filter:sepia(0.4) saturate(0.8);"/></div>');
-  hp.push('<div style="background:#d4c09a;border:1px solid #8B4513;border-radius:4px;padding:6px;margin-top:6px;">');
-  hp.push('<div style="font-size:10px;font-weight:bold;color:#2a1505;font-family:Tahoma;margin-bottom:3px;">☀️ Did You Know?</div>');
-  hp.push('<div style="font-size:10px;color:#4a2510;font-family:Georgia;line-height:1.5;">The term "'+era.label+'" was coined to describe the visual spirit of an entire era — a shared aesthetic language across cultures.</div>');
-  hp.push('</div>');
-  hp.push('</div>');
-  hp.push('</div>'); // three-col
-  // Bottom status bar
-  hp.push('<div style="background:#2a1005;border-top:2px solid #5a2a10;padding:5px 12px;display:flex;align-items:center;gap:10px;flex-shrink:0;">');
-  hp.push('<div onclick="loadHomepage()" style="display:flex;align-items:center;gap:4px;padding:3px 8px;background:#4a2a10;border:1px solid #7a4a20;border-radius:4px;cursor:pointer;color:#c8a060;font-size:10px;font-family:Tahoma;">▶ Media Player</div>');
-  hp.push('<div style="display:flex;align-items:center;gap:4px;padding:3px 8px;background:#4a2a10;border:1px solid #7a4a20;border-radius:4px;cursor:pointer;color:#c8a060;font-size:10px;font-family:Tahoma;">📁 My Collection</div>');
-  hp.push('<div style="flex:1;text-align:center;font-family:Tahoma;font-size:10px;"><span style="color:#c8a060;">Level 2: Visual Voyager</span> <span style="color:#806040;margin-left:8px;">650 / 1000 XP</span></div>');
-  hp.push('<div style="display:flex;align-items:center;gap:4px;padding:3px 8px;background:#4a2a10;border:1px solid #7a4a20;border-radius:4px;cursor:pointer;color:#c8a060;font-size:10px;font-family:Tahoma;">? Help</div>');
-  hp.push('<div style="display:flex;align-items:center;gap:4px;padding:3px 8px;background:#4a2a10;border:1px solid #7a4a20;border-radius:4px;cursor:pointer;color:#c8a060;font-size:10px;font-family:Tahoma;">⚙ Settings</div>');
-  hp.push('</div>');
-  hp.push('</div>'); // main content
-  hp.push('</div>'); // outer flex
-  view.innerHTML=hp.join('');
+function cariRenderEra(eraId){
+  if(eraId){ const e=TTH_ERAS.find(x=>x.id===eraId); if(e) cariCurrentEra=e; }
+  const era=cariCurrentEra||TTH_ERAS[5];
+  // Update era label + title on left page
+  const lbl=document.getElementById('cari-era-label');
+  const ttl=document.getElementById('cari-era-title');
+  if(lbl) lbl.textContent=(era.label+' · '+era.years).toUpperCase();
+  if(ttl) ttl.textContent=era.label;
+  // Build chips
+  const chips=document.getElementById('cari-chips');
+  if(chips){
+    chips.innerHTML='';
+    era.aesthetics.forEach(name=>{
+      const btn=document.createElement('button');
+      btn.className='cari-chip';
+      btn.textContent=name;
+      btn.onclick=()=>cariSelectAesthetic(name,btn);
+      if(name===cariCurrentAesthetic) btn.classList.add('active');
+      chips.appendChild(btn);
+    });
+  }
+  // Reset right page to placeholder when switching eras
+  const ph=document.getElementById('cari-cutout-placeholder');
+  const ifr=document.getElementById('cari-iframe');
+  const fb=document.getElementById('cari-cutout-fallback');
+  if(ph) ph.style.display='flex';
+  if(ifr){ ifr.style.display='none'; ifr.src='about:blank'; }
+  if(fb) fb.style.display='none';
+  const info=document.getElementById('cari-info-aesthetic');
+  if(info) info.textContent='— pick one below —';
+  cariCurrentAesthetic=null;
+}
+
+function cariSelectAesthetic(name,btnEl){
+  cariCurrentAesthetic=name;
+  // Highlight active chip
+  document.querySelectorAll('.cari-chip').forEach(b=>b.classList.remove('active'));
+  if(btnEl) btnEl.classList.add('active');
+  // Update info on left page
+  const info=document.getElementById('cari-info-aesthetic');
+  if(info) info.textContent=name;
+  // Load CARI page or show "no page yet"
+  const slug=CARI_SLUG_MAP[name];
+  const ph=document.getElementById('cari-cutout-placeholder');
+  const ifr=document.getElementById('cari-iframe');
+  const fb=document.getElementById('cari-cutout-fallback');
+  const fbLink=document.getElementById('cari-fallback-link');
+  if(!slug){
+    // No CARI page for this aesthetic
+    if(ph){
+      ph.style.display='flex';
+      ph.innerHTML='<div style="font-size:48px;opacity:0.5;">🔎</div><div style="margin-top:8px;font-family:Georgia,serif;color:#6a3a18;font-style:italic;font-size:13px;text-align:center;padding:0 14px;">No CARI page yet for <b>'+name+'</b>. CARI primarily catalogs post-1970 consumer aesthetics.</div>';
+    }
+    if(ifr){ ifr.style.display='none'; ifr.src='about:blank'; }
+    if(fb) fb.style.display='none';
+    return;
+  }
+  const url='https://cari.institute/aesthetics/'+slug;
+  if(fbLink){ fbLink.href=url; fbLink.textContent='Open '+name+' on cari.institute →'; }
+  if(ph) ph.style.display='none';
+  if(fb) fb.style.display='none';
+  if(ifr){
+    ifr.style.display='block';
+    // Track if it loads — if X-Frame-Options blocks it, onerror won't fire but
+    // the frame stays blank, so we use onload + a delayed check.
+    ifr.onload=function(){
+      try{
+        // If we can access the iframe's location, embedding succeeded.
+        // Cross-origin will throw — but that's actually FINE because the page
+        // is rendering, just not introspectable. The real failure mode for
+        // X-Frame-Options is the iframe rendering an error page or staying blank.
+        // We can't reliably detect that, so we just trust the load event.
+      }catch(e){}
+    };
+    ifr.src=url;
+    // Belt-and-suspenders: if iframe hasn't fired load in 6s, show fallback link.
+    const startedAt=Date.now();
+    setTimeout(function(){
+      // If the user has since clicked a different chip, don't override
+      if(cariCurrentAesthetic!==name) return;
+      // Check whether the iframe is visibly empty (heuristic: srcdoc/about:blank)
+      try{
+        if(ifr.contentDocument && ifr.contentDocument.body && ifr.contentDocument.body.childNodes.length===0){
+          ifr.style.display='none';
+          if(fb) fb.style.display='flex';
+        }
+      }catch(e){
+        // Cross-origin access denied = page is loaded, that's good
+      }
+    },6000);
+  }
+}
+
+function cariPrevEra(){
+  const idx=TTH_ERAS.findIndex(e=>e.id===(cariCurrentEra&&cariCurrentEra.id));
+  const ni=(idx-1+TTH_ERAS.length)%TTH_ERAS.length;
+  cariCurrentEra=TTH_ERAS[ni];
+  cariRenderEra();
+}
+function cariNextEra(){
+  const idx=TTH_ERAS.findIndex(e=>e.id===(cariCurrentEra&&cariCurrentEra.id));
+  const ni=(idx+1)%TTH_ERAS.length;
+  cariCurrentEra=TTH_ERAS[ni];
+  cariRenderEra();
 }
 
 // ═══════════════════════════════════════════════════════
