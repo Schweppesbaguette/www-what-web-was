@@ -666,8 +666,9 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 #cari-close-btn:hover,#cari-min-btn:hover{transform:scale(1.1);}
 #cari-close-btn:active,#cari-min-btn:active{transform:scale(0.95);}
 
-/* Left page overlays (unchanged from R3.31 positioning) */
-#cari-left-text{position:absolute;left:13.5%;top:11%;width:32.5%;height:46%;display:flex;flex-direction:column;color:#3a2008;font-family:Georgia,serif;padding:4px 6px;overflow:hidden;z-index:3;}
+/* Left page overlays. R3.34 — bumped left:13.5%→16% and width:32.5%→29%
+   to clear the painted spine/binding so text doesn't run into it. */
+#cari-left-text{position:absolute;left:16%;top:11%;width:29%;height:42%;display:flex;flex-direction:column;color:#3a2008;font-family:Georgia,serif;padding:4px 6px;overflow:hidden;z-index:3;}
 #cari-era-label{font-size:9px;color:#7c4a18;letter-spacing:2px;font-weight:bold;font-family:Tahoma;border-bottom:1px solid rgba(124,74,24,0.3);padding-bottom:3px;}
 #cari-era-title{font-size:18px;color:#2a1505;font-family:Georgia,serif;font-weight:bold;margin-top:4px;line-height:1.1;}
 #cari-era-rule{height:1px;background:linear-gradient(90deg,transparent,#c8a050,transparent);margin:4px 0 6px;}
@@ -677,12 +678,13 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 .cari-info-attr{font-size:8px;color:#7c4a18;font-style:italic;border-top:1px dashed rgba(124,74,24,0.4);padding-top:4px;}
 #cari-info-aesthetic{margin-top:2px;font-style:italic;font-size:11px;color:#2a1505;font-weight:bold;}
 
-/* R3.32 — Mascot relocated to lower-left over the EXPLORE HISTORY ribbon
-   zone. The skin has empty space below the parchment around the dangling
-   red ribbon — that's where Cari stands now, fully visible and out of the
-   way of the chip strip and right cutout. */
-#cari-mascot-wrap{position:absolute;left:31%;top:75%;width:11%;text-align:center;z-index:5;}
-#cari-mascot{width:100%;max-width:75px;height:auto;filter:drop-shadow(0 4px 8px rgba(80,40,10,0.6));cursor:pointer;transition:transform 0.15s;animation:cariMascotPulse 3.5s ease-in-out infinite;}
+/* R3.34 — Mascot moved AGAIN. R3.32 put him at left:31% top:75% over the
+   EXPLORE HISTORY ribbon, which clashed with the ribbon graphic. He now
+   stands as a "margin illustration" on the lower-left page, below the
+   left-page text block but above the chip strip. Smaller and out of the
+   way of all painted decoration. */
+#cari-mascot-wrap{position:absolute;left:17%;top:53%;width:11%;text-align:center;z-index:5;}
+#cari-mascot{width:100%;max-width:64px;height:auto;filter:drop-shadow(0 4px 8px rgba(80,40,10,0.6));cursor:pointer;transition:transform 0.15s;animation:cariMascotPulse 3.5s ease-in-out infinite;}
 #cari-mascot:hover{transform:scale(1.06) rotate(-2deg);filter:drop-shadow(0 6px 12px rgba(160,100,30,0.7));}
 #cari-mascot:active{transform:scale(0.98);}
 @keyframes cariMascotPulse{
@@ -702,6 +704,22 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 #cari-cutout-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,250,240,0.95);text-align:center;}
 .cari-spinner{width:32px;height:32px;border:3px solid rgba(138,90,32,0.2);border-top-color:#8a5a20;border-radius:50%;animation:cariSpin 0.8s linear infinite;}
 @keyframes cariSpin{to{transform:rotate(360deg);}}
+
+/* R3.34 — Slideshow nav overlays. The right-page cutout was a filtered
+   image grid in R3.32; this round turns it into a single-image carousel.
+   Prev/Next buttons + counter sit OVER the webview (renderer DOM, not
+   injected) so click events don't get swallowed by the webview process.
+   Buttons hidden by default; cariShowSlideshowNav(true) reveals them after
+   first image loads. */
+.cari-slide-btn{position:absolute;top:50%;transform:translateY(-50%);width:26px;height:38px;border:1px solid #8a5a20;background:linear-gradient(180deg,rgba(255,250,232,0.92),rgba(220,190,130,0.92));color:#3a2008;font-family:Georgia,serif;font-size:18px;font-weight:bold;cursor:pointer;z-index:8;border-radius:3px;box-shadow:0 2px 6px rgba(80,40,10,0.4);display:none;align-items:center;justify-content:center;padding:0;line-height:1;user-select:none;transition:all 0.12s;}
+.cari-slide-btn:hover{background:linear-gradient(180deg,#fff8e0,#f0dca0);box-shadow:0 3px 9px rgba(80,40,10,0.5);}
+.cari-slide-btn:active{transform:translateY(-50%) scale(0.96);}
+.cari-slide-btn[disabled]{opacity:0.35;cursor:default;}
+#cari-slide-prev{left:2px;}
+#cari-slide-next{right:2px;}
+#cari-slide-counter{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);background:rgba(40,20,8,0.78);color:#f0dca0;font-family:Tahoma;font-size:10px;font-weight:bold;padding:2px 8px;border-radius:10px;z-index:8;display:none;letter-spacing:0.5px;}
+#cari-cutout.cari-slideshow .cari-slide-btn,#cari-cutout.cari-slideshow #cari-slide-counter{display:flex;}
+#cari-cutout.cari-slideshow #cari-slide-counter{display:block;}
 
 /* Era prev/next arrows over the gold ones baked into the skin */
 .cari-arrow-skin{position:absolute;top:70%;width:5%;height:6%;background:transparent;border:0;cursor:pointer;z-index:6;}
@@ -1353,22 +1371,31 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
         </div>
       </div>
 
-      <!-- R3.32 — Mascot moved out of the chip strip / cutout zone to the
-           bottom-left of the book where the EXPLORE HISTORY ribbon hangs.
-           This was the only empty space on the skin large enough. -->
+      <!-- R3.34 — Mascot relocated to lower-LEFT page (margin illustration
+           spot). R3.32 had him over the EXPLORE HISTORY ribbon which
+           clashed with that painted graphic. Now he stands between the
+           left-text block and the chip strip — clean blank parchment. -->
       <div id="cari-mascot-wrap">
         <div id="cari-mascot-bubble" class="cari-bubble" onclick="cariMascotClick()"></div>
         <img id="cari-mascot" src="assets/cari-mascot.png" alt="Cari" onclick="cariMascotClick()" title="Click me for a fact!"/>
       </div>
 
-      <!-- Right page cutout — webview shows ONLY the CARI image grid (rest hidden via CSS injection) -->
+      <!-- Right page cutout — R3.34 turned this from filtered-grid into a
+           single-image SLIDESHOW. Webview loads the CARI aesthetic page;
+           injected JS collects image URLs and renders one big image at a
+           time. Prev/Next buttons live OUT here in renderer DOM and
+           command the webview via executeJavaScript to swap images. -->
       <div id="cari-cutout">
         <div id="cari-cutout-placeholder">
           <div style="font-size:42px;opacity:0.5;">📖</div>
           <div style="margin-top:6px;font-family:Georgia,serif;color:#6a3a18;font-style:italic;font-size:11px;">Click an aesthetic thumbnail below</div>
         </div>
-        <!-- R3.32 — webview loads CARI page; inserted CSS hides everything but image grid -->
+        <!-- R3.32 — webview loads CARI page; R3.34 turned the injected CSS+JS into a slideshow -->
         <webview id="cari-webview" style="display:none;width:100%;height:100%;" allowpopups useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"></webview>
+        <!-- R3.34 — slideshow controls overlay -->
+        <button id="cari-slide-prev" class="cari-slide-btn" onclick="cariSlidePrev()" title="Previous image">‹</button>
+        <button id="cari-slide-next" class="cari-slide-btn" onclick="cariSlideNext()" title="Next image">›</button>
+        <div id="cari-slide-counter">— / —</div>
         <div id="cari-cutout-loading" style="display:none;">
           <div class="cari-spinner"></div>
           <div style="margin-top:8px;font-family:Georgia,serif;color:#6a3a18;font-size:11px;">Loading images...</div>
@@ -4370,9 +4397,13 @@ function cariRenderEra(eraId){
   const ph=document.getElementById('cari-cutout-placeholder');
   const wv=document.getElementById('cari-webview');
   const ld=document.getElementById('cari-cutout-loading');
+  const cutout=document.getElementById('cari-cutout');
   if(ph) ph.style.display='flex';
   if(wv){ wv.style.display='none'; try{ wv.src='about:blank'; }catch(e){} }
   if(ld) ld.style.display='none';
+  // R3.34 — also clear slideshow nav/state when switching eras
+  if(cutout) cutout.classList.remove('cari-slideshow');
+  cariSlideImages=[]; cariSlideIndex=0; cariSlideAesthetic=null;
   const info=document.getElementById('cari-info-aesthetic');
   if(info) info.textContent='— pick a thumbnail below —';
   cariCurrentAesthetic=null;
@@ -4399,9 +4430,12 @@ function cariSetThumbImage(btn,url){
 /* R3.32 — Thumbnail extraction: spawn a hidden webview for the aesthetic's
    CARI page, wait for it to load, then run JS inside it to grab the first
    image's src. POST that back via console message (cleanest IPC for webview).
-   Cache results in localStorage so we don't re-extract on every open. */
+   Cache results in localStorage so we don't re-extract on every open.
+   R3.34 — was serial (one at a time); now runs up to 3 concurrent so all
+   thumbs in an era load promptly instead of trickling in. */
 let _cariExtractQueue=[];
-let _cariExtractBusy=false;
+let _cariExtractInFlight=0;
+const _CARI_EXTRACT_PARALLEL=3;
 
 function cariGetCachedThumb(slug){
   try{
@@ -4417,16 +4451,22 @@ function cariSetCachedThumb(slug,url){
 
 function cariQueueThumbExtraction(slug,targetBtn){
   _cariExtractQueue.push({slug,targetBtn});
-  if(!_cariExtractBusy) cariRunNextExtraction();
+  cariRunNextExtraction();
 }
 
 function cariRunNextExtraction(){
-  if(_cariExtractQueue.length===0){ _cariExtractBusy=false; return; }
-  _cariExtractBusy=true;
-  const {slug,targetBtn}=_cariExtractQueue.shift();
+  // R3.34 — keep filling slots up to the parallel cap
+  while(_cariExtractInFlight<_CARI_EXTRACT_PARALLEL && _cariExtractQueue.length>0){
+    const job=_cariExtractQueue.shift();
+    _cariExtractInFlight++;
+    cariSpawnExtractor(job.slug,job.targetBtn);
+  }
+}
+
+function cariSpawnExtractor(slug,targetBtn){
   // Build hidden helper webview
   const host=document.getElementById('cari-thumb-helpers');
-  if(!host){ _cariExtractBusy=false; return; }
+  if(!host){ _cariExtractInFlight=Math.max(0,_cariExtractInFlight-1); return; }
   const helper=document.createElement('webview');
   helper.style.cssText='width:600px;height:600px;';
   helper.setAttribute('useragent','Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
@@ -4434,7 +4474,9 @@ function cariRunNextExtraction(){
   const cleanup=()=>{
     if(done) return; done=true;
     try{ helper.remove(); }catch(e){}
-    setTimeout(cariRunNextExtraction,150); // brief gap before next
+    _cariExtractInFlight=Math.max(0,_cariExtractInFlight-1);
+    // R3.34 — small gap before refilling so we don't hammer cari.institute
+    setTimeout(cariRunNextExtraction,150);
   };
   // Timeout safety: kill helper after 12s if it never finishes
   const timer=setTimeout(()=>{
@@ -4489,6 +4531,13 @@ function cariRunNextExtraction(){
   host.appendChild(helper);
 }
 
+/* R3.34 — Slideshow state. cariSlideImages holds URLs harvested from the
+   CARI page; cariSlideIndex is the currently displayed image. Webview is
+   commanded via executeJavaScript to swap the single visible image. */
+let cariSlideImages=[];
+let cariSlideIndex=0;
+let cariSlideAesthetic=null; // tracks which aesthetic the current slides belong to
+
 function cariSelectAesthetic(name,btnEl){
   cariCurrentAesthetic=name;
   // Highlight active thumb
@@ -4497,12 +4546,14 @@ function cariSelectAesthetic(name,btnEl){
   // Update info on left page
   const info=document.getElementById('cari-info-aesthetic');
   if(info) info.textContent=name;
-  // Load the aesthetic's CARI page in the right-page webview, with CSS
-  // injected on did-finish-load to hide everything but the image grid.
   const slug=CARI_SLUG_MAP[name];
+  const cutout=document.getElementById('cari-cutout');
   const ph=document.getElementById('cari-cutout-placeholder');
   const wv=document.getElementById('cari-webview');
   const ld=document.getElementById('cari-cutout-loading');
+  // R3.34 — reset slideshow chrome when switching aesthetics
+  if(cutout) cutout.classList.remove('cari-slideshow');
+  cariSlideImages=[]; cariSlideIndex=0; cariSlideAesthetic=null;
   if(!slug){
     if(ph){
       ph.style.display='flex';
@@ -4517,36 +4568,121 @@ function cariSelectAesthetic(name,btnEl){
   if(ld) ld.style.display='flex';
   if(wv){
     wv.style.display='block';
-    // Attach one-time load handler that injects CSS to show only the image grid
+    // R3.34 — instead of injecting CSS to show a filtered grid, we inject JS
+    // that harvests all real image URLs and replaces the page DOM with a
+    // single <img>. Prev/next buttons in renderer DOM command the webview to
+    // swap which URL the <img> displays. Still a live link to cari.institute
+    // (URLs reference their CDN); we just present one at a time.
     const onReady=()=>{
-      try{
-        wv.insertCSS(`
-          /* R3.32 — show ONLY image grid on CARI aesthetic pages.
-             Hide site nav, header, footer, hero text, descriptions. */
-          header,nav,footer,.menu,.site-header,.site-footer,.page-header,.page-footer,.description,.about,.intro,.text,.hero,.about-section,.metadata,.related,.links,h1,h2,h3,p{display:none !important;}
-          body{background:#fffaf0 !important;margin:0 !important;padding:6px !important;}
-          /* Force any image container to a tight grid */
-          main,.content,.main-content,#main,#content,.gallery,.images,.image-grid{
-            display:grid !important;
-            grid-template-columns:repeat(3,1fr) !important;
-            gap:4px !important;
-            padding:0 !important;
-            margin:0 !important;
-            max-width:none !important;
-          }
-          img{max-width:100% !important;height:auto !important;display:block !important;border-radius:2px !important;}
-          /* Hide anything that's a list of links or non-image card */
-          a:not(:has(img)){display:none !important;}
-          /* Smooth scrolling */
-          html{scroll-behavior:smooth;}
-        `);
-      }catch(e){ console.warn('WWW R3.32 insertCSS failed',e); }
-      if(ld) ld.style.display='none';
+      const harvest=`
+        (function(){
+          try{
+            var imgs=Array.from(document.querySelectorAll('img'));
+            var urls=[]; var seen={};
+            for(var i=0;i<imgs.length;i++){
+              var im=imgs[i];
+              var src=im.currentSrc||im.src;
+              if(!src) continue;
+              if(src.indexOf('data:')===0) continue;
+              if(/logo|icon|sprite|favicon|avatar/i.test(src)) continue;
+              var w=im.naturalWidth||0,h=im.naturalHeight||0;
+              if(w>0&&h>0&&(w<80||h<80)) continue;
+              if(seen[src]) continue; seen[src]=1;
+              urls.push(src);
+            }
+            // Replace page with a minimal slideshow shell
+            document.documentElement.innerHTML=
+              '<head><style>'+
+              'html,body{margin:0;padding:0;height:100%;background:#fffaf0;overflow:hidden;}'+
+              '#cari-slide-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fffaf0;transition:opacity 0.18s ease-out;}'+
+              '#cari-slide-img.swap{opacity:0;}'+
+              '</style></head>'+
+              '<body><img id="cari-slide-img" alt="" /></body>';
+            console.log('CARI_SLIDES::'+JSON.stringify(urls));
+          }catch(e){ console.log('CARI_SLIDES_ERR::'+e.message); }
+        })();
+      `;
+      try{ wv.executeJavaScript(harvest); }catch(e){ console.warn('WWW R3.34 slideshow harvest failed',e); if(ld) ld.style.display='none'; }
       wv.removeEventListener('did-finish-load',onReady);
     };
     wv.addEventListener('did-finish-load',onReady);
-    try{ wv.src=url; }catch(e){ console.warn('WWW R3.32 webview load failed:',e); if(ld) ld.style.display='none'; }
+    // R3.34 — capture console messages once. The handler self-removes after
+    // matching the slug to avoid leaking listeners across aesthetic switches.
+    const onMsg=(ev)=>{
+      const msg=ev.message||'';
+      if(msg.indexOf('CARI_SLIDES::')===0){
+        let urls=[];
+        try{ urls=JSON.parse(msg.slice('CARI_SLIDES::'.length))||[]; }catch(e){ urls=[]; }
+        wv.removeEventListener('console-message',onMsg);
+        if(cariCurrentAesthetic!==name){ if(ld) ld.style.display='none'; return; } // user moved on
+        cariSlideImages=urls;
+        cariSlideAesthetic=name;
+        cariSlideIndex=0;
+        if(ld) ld.style.display='none';
+        if(urls.length===0){
+          // Nothing to show — leave placeholder visible
+          if(ph){
+            ph.style.display='flex';
+            ph.innerHTML='<div style="font-size:42px;opacity:0.5;">📭</div><div style="margin-top:8px;font-family:Georgia,serif;color:#6a3a18;font-style:italic;font-size:11px;text-align:center;padding:0 14px;">No images found on the <b>'+name+'</b> page.</div>';
+          }
+          if(wv) wv.style.display='none';
+          return;
+        }
+        if(cutout) cutout.classList.add('cari-slideshow');
+        cariShowSlide(0);
+      } else if(msg.indexOf('CARI_SLIDES_ERR::')===0){
+        wv.removeEventListener('console-message',onMsg);
+        if(ld) ld.style.display='none';
+        console.warn('WWW R3.34 slideshow error:',msg);
+      }
+    };
+    wv.addEventListener('console-message',onMsg);
+    try{ wv.src=url; }catch(e){ console.warn('WWW R3.34 webview load failed:',e); if(ld) ld.style.display='none'; }
   }
+}
+
+/* R3.34 — Update the currently visible slide. Runs JS inside the webview
+   to swap the <img> src with a fade transition, and updates the counter
+   chip in renderer DOM. */
+function cariShowSlide(i){
+  if(!cariSlideImages.length) return;
+  cariSlideIndex=((i%cariSlideImages.length)+cariSlideImages.length)%cariSlideImages.length;
+  const wv=document.getElementById('cari-webview');
+  const counter=document.getElementById('cari-slide-counter');
+  const prev=document.getElementById('cari-slide-prev');
+  const next=document.getElementById('cari-slide-next');
+  if(counter) counter.textContent=(cariSlideIndex+1)+' / '+cariSlideImages.length;
+  // Disable arrows when only one image, otherwise wrap-around
+  const single=cariSlideImages.length<=1;
+  if(prev) prev.disabled=single;
+  if(next) next.disabled=single;
+  if(!wv) return;
+  const url=cariSlideImages[cariSlideIndex];
+  // Quick fade by toggling .swap then setting src then removing .swap
+  const cmd=`
+    (function(){
+      try{
+        var el=document.getElementById('cari-slide-img');
+        if(!el) return;
+        el.classList.add('swap');
+        setTimeout(function(){
+          el.onload=function(){ el.classList.remove('swap'); };
+          el.onerror=function(){ el.classList.remove('swap'); };
+          el.src=${JSON.stringify(url)};
+        },140);
+      }catch(e){}
+    })();
+  `;
+  try{ wv.executeJavaScript(cmd); }catch(e){ console.warn('WWW R3.34 slide swap failed',e); }
+}
+
+function cariSlidePrev(){
+  if(!cariSlideImages.length) return;
+  cariShowSlide(cariSlideIndex-1);
+}
+function cariSlideNext(){
+  if(!cariSlideImages.length) return;
+  cariShowSlide(cariSlideIndex+1);
 }
 
 function cariPrevEra(){
