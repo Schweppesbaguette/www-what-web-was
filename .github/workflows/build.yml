@@ -41,9 +41,9 @@ jobs:
       - name: Write Gmail credentials
         run: |
           mkdir -p src
-          cat > src/gmail-credentials.json <<EOF
-          ${{ secrets.GMAIL_CREDENTIALS_JSON }}
-          EOF
+          printf '%s' "$GMAIL_CREDS" > src/gmail-credentials.json
+        env:
+          GMAIL_CREDS: ${{ secrets.GMAIL_CREDENTIALS_JSON }}
           
       - name: Build App
         run: npm run dist
