@@ -670,9 +670,11 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 
 /* Left page overlays. R3.34 — bumped left:13.5%→16% and width:32.5%→29%
    to clear the painted spine/binding so text doesn't run into it.
-   R3.35 — text was wrapping awkwardly (4 words per line). Widened to 33%
-   so the body copy can use more of the left page. */
-#cari-left-text{position:absolute;left:16%;top:11%;width:33%;height:42%;display:flex;flex-direction:column;color:#3a2008;font-family:Georgia,serif;padding:4px 6px;overflow:hidden;z-index:3;}
+   R3.35 — text was wrapping awkwardly (4 words per line). Widened to 33%.
+   R3.36 — text was overflowing the LEFT painted border (page edge of the
+   leather book). Pushed left:16→18% and pulled width back to 30% so text
+   sits cleanly within the painted parchment on both sides. */
+#cari-left-text{position:absolute;left:18%;top:11%;width:30%;height:42%;display:flex;flex-direction:column;color:#3a2008;font-family:Georgia,serif;padding:4px 6px;overflow:hidden;z-index:3;}
 #cari-era-label{font-size:9px;color:#7c4a18;letter-spacing:2px;font-weight:bold;font-family:Tahoma;border-bottom:1px solid rgba(124,74,24,0.3);padding-bottom:3px;}
 #cari-era-title{font-size:18px;color:#2a1505;font-family:Georgia,serif;font-weight:bold;margin-top:4px;line-height:1.1;}
 #cari-era-rule{height:1px;background:linear-gradient(90deg,transparent,#c8a050,transparent);margin:4px 0 6px;}
@@ -686,8 +688,11 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
    EXPLORE HISTORY ribbon, which clashed with the ribbon graphic. He now
    stands as a "margin illustration" on the lower-left page, below the
    left-page text block but above the chip strip. Smaller and out of the
-   way of all painted decoration. */
-#cari-mascot-wrap{position:absolute;left:17%;top:53%;width:11%;text-align:center;z-index:5;}
+   way of all painted decoration.
+   R3.36 — bumped left:17→20% to stay aligned with the new left-text
+   block (left:18% width:30%, centered horizontally is at 33%). Mascot is
+   slightly left of that for visual balance. */
+#cari-mascot-wrap{position:absolute;left:20%;top:53%;width:11%;text-align:center;z-index:5;}
 #cari-mascot{width:100%;max-width:64px;height:auto;filter:drop-shadow(0 4px 8px rgba(80,40,10,0.6));cursor:pointer;transition:transform 0.15s;animation:cariMascotPulse 3.5s ease-in-out infinite;}
 #cari-mascot:hover{transform:scale(1.06) rotate(-2deg);filter:drop-shadow(0 6px 12px rgba(160,100,30,0.7));}
 #cari-mascot:active{transform:scale(0.98);}
@@ -1055,7 +1060,7 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
         <option value="modern" selected>🌐 Modern Web</option>
       </select>
       <button class="wb-set-btn" onclick="applyWayback()">Set Date</button>
-      <span id="wb-status" style="color:#1040A0;font-size:10px;font-weight:bold;"></span>
+      <span id="wb-status" style="color:#92d9ff;font-size:10px;font-weight:bold;text-shadow:0 0 6px rgba(120,200,255,0.5);"></span>
     </div>
     <div class="ticker"><span class="ticker-inner" id="ticker-txt">Loading...</span></div>
     <div class="browser-body">
@@ -4351,6 +4356,30 @@ const CARI_SLUG_MAP={
   // message in cariSelectAesthetic.
 };
 
+/* R3.36 — Per-aesthetic descriptions shown on the left page when the user
+   selects a thumbnail. Each entry has a years range, a short blurb (1-2
+   sentences), and a couple of key visual signatures. Written in our own
+   words from public sources; no verbatim quotes from cari.institute. */
+const CARI_AESTHETIC_DESCRIPTIONS={
+  'Y2K Aesthetic':{years:'1998–2003', blurb:'Translucent plastic, frosted-blue gradients, chrome blobjects, and the optimistic glow of a wired future. Born from late-90s tech ads and music videos.', motifs:'iMacs · Bond film menus · liquid metal · star-field backgrounds'},
+  'Frutiger Aero':{years:'2004–2013', blurb:'The era when interfaces went wet and natural. Glassy panes, bokeh, tropical fish, and aurora skies stood in for "the future is friendly."', motifs:'Vista Aero glass · Wii UI · grass macros · orb logos'},
+  'Vaporwave':{years:'2010–present', blurb:'A music-led aesthetic that turns 90s corporate optimism into pink-and-cyan melancholy. Born on Tumblr and music subreddits.', motifs:'Roman busts · palm trees · katakana · mall fountains'},
+  'McBling':{years:'2003–2009', blurb:'Bedazzled, glossy, brand-saturated maximalism: rhinestones on flip phones, Juicy tracksuits, paparazzi flash. The aesthetic of celebrity tabloid culture.', motifs:'Pink rhinestones · Sidekick phones · gold logos · velour'},
+  'Frasurbane':{years:'1988–1995', blurb:'A subdued, sophisticated postmodern style targeting affluent suburbanites — the visual world of Frasier reruns and Pier 1 catalogs. Classical motifs through a softened, conservative lens.', motifs:'Serif typography · sepia photography · astrolabes · Vitruvian Man'},
+  'Gen X Soft Club':{years:'1989–1995', blurb:'A muted, vaguely Memphis-derived aesthetic of softened pastels, geometric patterns, and quiet maturity. The visual style of magazine ads aimed at adults too old for grunge.', motifs:'Dusty pinks · loose curls · cream blazers · soft jazz'},
+  'Indie Sleaze':{years:'2006–2012', blurb:'Flash-photo party photos, smudged eyeliner, neon-on-black, hipster cigarettes. Documented on early Tumblr by The Cobrasnake and Last Nights Party.', motifs:'On-camera flash · skinny jeans · keffiyehs · disposable cameras'},
+  'Hipness Purgatory':{years:'2010–2016', blurb:'The flat-pack hipster aesthetic of artisanal toast and Edison bulbs that became so universal it stopped being cool. CARI named it for the moment trends curdled into a corporate template.', motifs:'Subway tile · exposed bulbs · ampersand signage · chalkboards'},
+  'Corporate Memphis':{years:'2017–present', blurb:'Big-headed flat illustrations with floating limbs and pastel washes. The default visual style of unicorn-startup landing pages.', motifs:'Floating hands · noodle limbs · pastel palette · vague gestures'},
+  'Utopian Scholastic':{years:'1988–2001', blurb:'The "kids version" of Frasurbane: classical typography meets stock-photo collages of children, globes, and concepts. The visual world of pre-9/11 edutainment and encyclopedia CD-ROMs.', motifs:'Stock photo collage · Encarta CDs · serif fonts · globes'},
+  'Dollar Store Vernacular':{years:'2000s–present', blurb:'The unintentional aesthetic of off-brand packaging, generic logos, and budget-store signage. Comic Sans, cheap clipart, and confidently misaligned grids.', motifs:'Off-brand mascots · clipart · sun-faded vinyl · Comic Sans'},
+  'Whimsigothic':{years:'1993–2001', blurb:'The maximalist Lisa-Frank-meets-Practical-Magic aesthetic: purple velvet, moon-and-star prints, lava lamps, sage bundles. Witchy but pastel.', motifs:'Crescent moons · velvet drapes · cobalt blue · iridescent glass'},
+  // Older eras keep generic about-CARI text via the fallback path below.
+};
+
+function cariGetDescription(name){
+  return CARI_AESTHETIC_DESCRIPTIONS[name] || null;
+}
+
 function openCari(){
   openWin('cari-win');
   if(!cariCurrentEra) cariCurrentEra=TTH_ERAS[5];
@@ -4416,8 +4445,9 @@ function cariRenderEra(eraId){
   // R3.34 — also clear slideshow nav/state when switching eras
   if(cutout) cutout.classList.remove('cari-slideshow');
   cariSlideImages=[]; cariSlideIndex=0; cariSlideAesthetic=null;
-  const info=document.getElementById('cari-info-aesthetic');
-  if(info) info.textContent='— pick a thumbnail below —';
+  // R3.36 — also reset the dynamic left-page text back to the About CARI
+  // intro so it doesn't carry an aesthetic description across eras
+  cariResetLeftPageDefault();
   cariCurrentAesthetic=null;
 }
 
@@ -4550,14 +4580,63 @@ let cariSlideImages=[];
 let cariSlideIndex=0;
 let cariSlideAesthetic=null; // tracks which aesthetic the current slides belong to
 
+/* R3.36 — Render the left-page info area for a specific aesthetic.
+   Pulls description/years/motifs from CARI_AESTHETIC_DESCRIPTIONS. If the
+   aesthetic isn't in that dict (older eras), shows a graceful generic
+   blurb so the page never goes blank. */
+function cariRenderLeftPageForAesthetic(name){
+  const body=document.getElementById('cari-info-body');
+  if(!body) return;
+  const desc=cariGetDescription(name);
+  const era=cariCurrentEra;
+  function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  if(desc){
+    body.innerHTML=
+      '<div class="cari-info-block">'+
+        '<span class="cari-info-h">'+esc(name)+'</span>'+
+        '<span style="float:right;font-size:8px;color:#7c4a18;letter-spacing:0.5px;">'+esc(desc.years)+'</span><br/>'+
+        esc(desc.blurb)+
+      '</div>'+
+      '<div class="cari-info-block">'+
+        '<span class="cari-info-h">Visual motifs</span><br/>'+
+        '<span style="font-style:italic;">'+esc(desc.motifs)+'</span>'+
+      '</div>'+
+      '<div class="cari-info-block cari-info-attr">In collaboration with <a href="https://cari.institute" target="_blank" style="color:#7c4a18;text-decoration:underline;">cari.institute</a></div>';
+  } else {
+    // Fallback for aesthetics without a dedicated description entry
+    body.innerHTML=
+      '<div class="cari-info-block">'+
+        '<span class="cari-info-h">'+esc(name)+'</span><br/>'+
+        'Part of the '+esc(era?era.label:'')+' era. Browse the right-page slideshow for the visual reference set.'+
+      '</div>'+
+      '<div class="cari-info-block cari-info-attr">In collaboration with <a href="https://cari.institute" target="_blank" style="color:#7c4a18;text-decoration:underline;">cari.institute</a></div>';
+  }
+}
+
+/* R3.36 — Reset left page back to the "About CARI" + "Now exploring" intro
+   block used when the widget first opens or the user switches eras. Mirrors
+   the static HTML defined at line ~1372. */
+function cariResetLeftPageDefault(){
+  const body=document.getElementById('cari-info-body');
+  if(!body) return;
+  body.innerHTML=
+    '<div class="cari-info-block"><span class="cari-info-h">About CARI</span><br/>'+
+      'The Consumer Aesthetics Research Institute is an online community developing a visual lexicon of consumer ephemera from the 1970s to today — naming aesthetics like Y2K, Frutiger Aero, Vaporwave, and Whimsigothic.</div>'+
+    '<div class="cari-info-block"><span class="cari-info-h">Now exploring</span><div id="cari-info-aesthetic">— pick one below —</div></div>'+
+    '<div class="cari-info-block cari-info-attr">In collaboration with <a href="https://cari.institute" target="_blank" style="color:#7c4a18;text-decoration:underline;">cari.institute</a></div>';
+}
+
 function cariSelectAesthetic(name,btnEl){
   cariCurrentAesthetic=name;
   // Highlight active thumb
   document.querySelectorAll('.cari-thumb').forEach(b=>b.classList.remove('active'));
   if(btnEl) btnEl.classList.add('active');
-  // Update info on left page
-  const info=document.getElementById('cari-info-aesthetic');
-  if(info) info.textContent=name;
+  // R3.36 — Replace the entire info-body with aesthetic-specific text
+  // (description, year range, key motifs). Was previously static "About
+  // CARI" text plus the aesthetic name. Falls back to the about-blurb
+  // for older-era aesthetics that don't have a CARI_AESTHETIC_DESCRIPTIONS
+  // entry yet.
+  cariRenderLeftPageForAesthetic(name);
   const slug=CARI_SLUG_MAP[name];
   const cutout=document.getElementById('cari-cutout');
   const ph=document.getElementById('cari-cutout-placeholder');
@@ -4586,17 +4665,18 @@ function cariSelectAesthetic(name,btnEl){
     // swap which URL the <img> displays. Still a live link to cari.institute
     // (URLs reference their CDN); we just present one at a time.
     const onReady=()=>{
-      // R3.35 — Two changes from R3.34:
-      // (1) Scroll the page to force lazy-loaded images to mount BEFORE
-      //     harvesting (R3.34 only ever got 1 image because CARI pages
-      //     lazy-load gallery imgs on scroll-into-view).
-      // (2) Relax the size filter — keep images that haven't measured yet
-      //     (naturalWidth=0). Still skip data:, logo/icon/avatar URLs.
-      // (3) Use object-fit:cover so the image fills the cutout with no
-      //     white letterbox bars. Crops a bit; user prefers fill over fit.
+      // R3.36 — Significant rework of the harvest+display:
+      // (1) Don't replace documentElement.innerHTML (some Electron webview
+      //     builds don't reliably parse <style> from that). Instead set
+      //     head.innerHTML and body.innerHTML separately AND put critical
+      //     fill rules inline on the img element. Belt + suspenders.
+      // (2) Image is now clickable — clicks post a CARI_SLIDE_CLICK message
+      //     back to the renderer, which opens the full-size image in a new
+      //     Electron BrowserWindow (via window.open since webview has
+      //     allowpopups). Hover cursor changes to zoom-in.
       const harvest=`
         (function(){
-          function harvest(){
+          function harvestAndRender(){
             try{
               var imgs=Array.from(document.querySelectorAll('img'));
               var urls=[]; var seen={};
@@ -4607,18 +4687,28 @@ function cariSelectAesthetic(name,btnEl){
                 if(src.indexOf('data:')===0) continue;
                 if(/logo|icon|sprite|favicon|avatar/i.test(src)) continue;
                 var w=im.naturalWidth||0,h=im.naturalHeight||0;
-                // Only filter out images we know are small. Unmeasured (w=0) stay in.
                 if(w>0&&h>0&&(w<80||h<80)) continue;
                 if(seen[src]) continue; seen[src]=1;
                 urls.push(src);
               }
-              document.documentElement.innerHTML=
-                '<head><style>'+
-                'html,body{margin:0;padding:0;height:100%;background:#fffaf0;overflow:hidden;}'+
-                '#cari-slide-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#1a0f06;transition:opacity 0.18s ease-out;}'+
+              // R3.36 — Replace via head + body separately (more reliable)
+              // and put the critical fill rules inline on the img too.
+              document.head.innerHTML=
+                '<style>'+
+                'html,body{margin:0;padding:0;width:100%;height:100%;background:#1a0f06;overflow:hidden;}'+
+                '#cari-slide-img{position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%;object-fit:cover;background:#1a0f06;transition:opacity 0.18s ease-out;cursor:zoom-in;}'+
                 '#cari-slide-img.swap{opacity:0;}'+
-                '</style></head>'+
-                '<body><img id="cari-slide-img" alt="" /></body>';
+                '</style>';
+              document.body.innerHTML=
+                '<img id="cari-slide-img" alt="" '+
+                'style="position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%;object-fit:cover;cursor:zoom-in;" />';
+              // R3.36 — click handler to open full-size in new window
+              var imgEl=document.getElementById('cari-slide-img');
+              if(imgEl){
+                imgEl.addEventListener('click',function(){
+                  if(imgEl.src) console.log('CARI_SLIDE_CLICK::'+imgEl.src);
+                });
+              }
               console.log('CARI_SLIDES::'+JSON.stringify(urls));
             }catch(e){ console.log('CARI_SLIDES_ERR::'+e.message); }
           }
@@ -4636,24 +4726,25 @@ function cariSelectAesthetic(name,btnEl){
               i++;
               if(i>=steps){
                 clearInterval(stepper);
-                // Settle delay for images to actually load after scroll-into-view
-                setTimeout(function(){ window.scrollTo(0,0); setTimeout(harvest,300); }, 800);
+                setTimeout(function(){ window.scrollTo(0,0); setTimeout(harvestAndRender,300); }, 800);
               }
             }, 120);
-          }catch(e){ harvest(); /* fallback: just harvest what's there */ }
+          }catch(e){ harvestAndRender(); /* fallback */ }
         })();
       `;
-      try{ wv.executeJavaScript(harvest); }catch(e){ console.warn('WWW R3.35 slideshow harvest failed',e); if(ld) ld.style.display='none'; }
+      try{ wv.executeJavaScript(harvest); }catch(e){ console.warn('WWW R3.36 slideshow harvest failed',e); if(ld) ld.style.display='none'; }
       wv.removeEventListener('did-finish-load',onReady);
     };
     wv.addEventListener('did-finish-load',onReady);
-    // R3.34 — capture console messages once. The handler self-removes after
-    // matching the slug to avoid leaking listeners across aesthetic switches.
+    // R3.34 — capture console messages once. Listener tracked module-side
+    // so we can detach the previous one when the user switches aesthetics.
     // R3.35 — added 15s safety timeout so spinner doesn't hang if the
     // scroll-and-harvest sequence never fires its CARI_SLIDES message.
+    // R3.36 — listener stays attached after CARI_SLIDES so it can also
+    // handle CARI_SLIDE_CLICK messages from the user clicking an image.
+    // Detach happens at the top of the NEXT cariSelectAesthetic call.
     let _slideHarvestSafety=setTimeout(()=>{
       console.warn('WWW R3.35 slideshow harvest timeout for',name);
-      try{ wv.removeEventListener('console-message',onMsg); }catch(e){}
       if(ld) ld.style.display='none';
       if(cariCurrentAesthetic===name && ph){
         ph.style.display='flex';
@@ -4667,7 +4758,6 @@ function cariSelectAesthetic(name,btnEl){
         clearTimeout(_slideHarvestSafety);
         let urls=[];
         try{ urls=JSON.parse(msg.slice('CARI_SLIDES::'.length))||[]; }catch(e){ urls=[]; }
-        wv.removeEventListener('console-message',onMsg);
         if(cariCurrentAesthetic!==name){ if(ld) ld.style.display='none'; return; } // user moved on
         cariSlideImages=urls;
         cariSlideAesthetic=name;
@@ -4684,13 +4774,26 @@ function cariSelectAesthetic(name,btnEl){
         }
         if(cutout) cutout.classList.add('cari-slideshow');
         cariShowSlide(0);
+      } else if(msg.indexOf('CARI_SLIDE_CLICK::')===0){
+        // R3.36 — user clicked the image in the slideshow; open full-size
+        // in a new browser window. Electron will route window.open through
+        // main.js's new-window handler (if any) — falls back to default.
+        const fullUrl=msg.slice('CARI_SLIDE_CLICK::'.length);
+        if(fullUrl){
+          try{
+            const w=window.open(fullUrl,'_blank','width=1000,height=750');
+            if(!w) console.warn('WWW R3.36 popup blocked for',fullUrl);
+          }catch(e){ console.warn('WWW R3.36 window.open failed',e); }
+        }
       } else if(msg.indexOf('CARI_SLIDES_ERR::')===0){
         clearTimeout(_slideHarvestSafety);
-        wv.removeEventListener('console-message',onMsg);
         if(ld) ld.style.display='none';
         console.warn('WWW R3.34 slideshow error:',msg);
       }
     };
+    // R3.36 — detach any previous listener before attaching new one
+    if(wv._cariOnMsg){ try{ wv.removeEventListener('console-message',wv._cariOnMsg); }catch(e){} }
+    wv._cariOnMsg=onMsg;
     wv.addEventListener('console-message',onMsg);
     try{ wv.src=url; }catch(e){ console.warn('WWW R3.34 webview load failed:',e); if(ld) ld.style.display='none'; }
   }
