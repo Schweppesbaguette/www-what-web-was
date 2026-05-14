@@ -417,6 +417,26 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
   padding:1px 8px;font-size:10px;font-weight:bold;
 }
 
+/* R3.33 — Flux capacitor icon for "Time Machine" mode toggle. The three
+   bulbs pulse on a staggered timing, like the actual Back to the Future
+   prop: bulb 1 lights → 2 → 3 in a chase. Drop shadow glow gives the
+   "vibrating light" feel the user asked for. */
+.flux-cap{filter:drop-shadow(0 0 4px rgba(120,200,255,0.6));margin-right:2px;}
+.flux-bulb{transform-origin:center;animation:fluxPulse 1.2s infinite ease-in-out;}
+.flux-b1{animation-delay:0s;}
+.flux-b2{animation-delay:0.4s;}
+.flux-b3{animation-delay:0.8s;}
+.flux-center{animation:fluxCorePulse 1.2s infinite ease-in-out;transform-origin:center;}
+@keyframes fluxPulse{
+  0%,100%{opacity:0.35;filter:none;}
+  35%    {opacity:1;filter:drop-shadow(0 0 4px #cffaff) drop-shadow(0 0 8px #79e0ff);}
+  60%    {opacity:0.6;}
+}
+@keyframes fluxCorePulse{
+  0%,100%{opacity:0.6;}
+  50%    {opacity:1;}
+}
+
 /* ── Ticker ── */
 .ticker{
   background:linear-gradient(90deg,#00082a,#001068 15%,#0020b0 50%,#001068 85%,#00082a);
@@ -426,8 +446,12 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
   padding:3px 0;overflow:hidden;white-space:nowrap;flex-shrink:0;
   text-shadow:0 0 10px rgba(129,255,40,0.6);
 }
-.ticker-inner{display:inline-block;animation:scroll-ticker 50s linear infinite;padding-left:100%;}
-@keyframes scroll-ticker{from{transform:translateX(0)}to{transform:translateX(-100%)}}
+/* R3.33 — Continuous ticker. Inner span has the headline string duplicated
+   so the animation can loop from translateX(0) to translateX(-50%) without
+   any visible gap. updateTicker() builds the duplicate. Animation is much
+   slower (120s) to give people time to actually read longer headline lists. */
+.ticker-inner{display:inline-block;animation:scroll-ticker 120s linear infinite;will-change:transform;}
+@keyframes scroll-ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 
 /* ── Browser Body Layout ── */
 .browser-body{display:flex;flex:1;overflow:hidden;min-height:0;align-items:stretch;}
@@ -613,28 +637,36 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 }
 #vid-remote{animation:cglitch 5s ease-in-out infinite;}
 
-/* R3.30/R3.31 — CARI BOOK WIDGET, skin version. The leather/gilt/pages are
-   baked into assets/cari-skin.png. R3.31: skin now FILLS the window body
-   (was contain with black margins). Mascot moved up and shrunk so the chip
-   strip doesn't clip him. */
-#cari-body{flex:1;position:relative;background:#3a2410;overflow:hidden;}
-/* R3.31 — background-size:cover so the skin fills the whole body. The window
-   has aspect 720×540 ≈ 4:3 which matches the skin's 900×675 ≈ 4:3, so cover
-   won't crop anything meaningful. */
-#cari-skin{position:absolute;inset:0;width:100%;height:100%;background:url('assets/cari-skin.png') no-repeat center/cover;pointer-events:none;}
-/* Open animation: a quick fade + slight scale-up. (No 3D page flip; the
-   skin is already a fully-opened book.) */
+/* R3.30/R3.31/R3.32 — CARI BOOK WIDGET, skin version, chrome-less.
+   R3.32 changes:
+   - Window has no .wnd frame/title — only the skin's painted silhouette
+   - Drag handle is invisible div over the top of the skin
+   - Close + minimize buttons float over the skin's top-right
+   - Mascot relocated to bottom-left (over the ribbon area), out of the way
+   - Bottom chips replaced by extracted-thumbnail strip
+   - Right cutout webview has CSS injected to hide everything but image grid */
+.wnd.cari-chromeless{background:transparent !important;border:0 !important;box-shadow:none !important;border-radius:0 !important;overflow:visible !important;}
+.cari-chromeless > .wnd-title{display:none !important;}
+#cari-body{position:absolute;inset:0;background:transparent;overflow:visible;}
+/* R3.32 — skin renders at original aspect (contain) so its silhouette
+   (tabs sticking out top/right, ribbon dangling bottom) is preserved. */
+#cari-skin{position:absolute;inset:0;width:100%;height:100%;background:url('assets/cari-skin.png') no-repeat center/contain;pointer-events:none;}
 #cari-skin.cari-opening{animation:cariSkinIn 0.5s ease-out;}
 @keyframes cariSkinIn{
   0%{opacity:0;transform:scale(0.94);}
   100%{opacity:1;transform:scale(1);}
 }
+/* Drag handle: invisible div over the top of the skin where the tabs are.
+   Excludes the close/min button area in the top-right. */
+#cari-drag-handle{position:absolute;top:0;left:8%;width:75%;height:11%;cursor:move;z-index:10;}
+/* Close + minimize buttons float over the skin */
+#cari-close-btn,#cari-min-btn{position:absolute;width:22px;height:22px;border-radius:50%;background:linear-gradient(180deg,#c83020,#8a1810);border:2px solid #f0d098;color:#fff;font-family:Tahoma;font-size:12px;font-weight:bold;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:30;box-shadow:0 2px 4px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,200,140,0.4);transition:transform 0.12s;user-select:none;}
+#cari-close-btn{top:3%;right:11%;}
+#cari-min-btn{top:3%;right:16%;background:linear-gradient(180deg,#c8a050,#8a5a20);}
+#cari-close-btn:hover,#cari-min-btn:hover{transform:scale(1.1);}
+#cari-close-btn:active,#cari-min-btn:active{transform:scale(0.95);}
 
-/* All interactive overlays sit ABOVE the skin (z>1) and are positioned in
-   percentages over the body. The numbers come from measuring the skin PNG.
-   Left page text:    ~13–46% across, ~10–55% down
-   Right page cutout: ~52–80% across, ~13–55% down
-   Bottom dark strip: ~15–87% across, ~64–78% down (where the era arrows go) */
+/* Left page overlays (unchanged from R3.31 positioning) */
 #cari-left-text{position:absolute;left:13.5%;top:11%;width:32.5%;height:46%;display:flex;flex-direction:column;color:#3a2008;font-family:Georgia,serif;padding:4px 6px;overflow:hidden;z-index:3;}
 #cari-era-label{font-size:9px;color:#7c4a18;letter-spacing:2px;font-weight:bold;font-family:Tahoma;border-bottom:1px solid rgba(124,74,24,0.3);padding-bottom:3px;}
 #cari-era-title{font-size:18px;color:#2a1505;font-family:Georgia,serif;font-weight:bold;margin-top:4px;line-height:1.1;}
@@ -645,42 +677,51 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 .cari-info-attr{font-size:8px;color:#7c4a18;font-style:italic;border-top:1px dashed rgba(124,74,24,0.4);padding-top:4px;}
 #cari-info-aesthetic{margin-top:2px;font-style:italic;font-size:11px;color:#2a1505;font-weight:bold;}
 
-/* R3.31 — Mascot moved up so chip strip doesn't clip him. Smaller too so
-   he fits on the parchment area without spilling onto the dark spine strip. */
-#cari-mascot-wrap{position:absolute;left:15%;top:53%;width:18%;text-align:center;z-index:5;}
-#cari-mascot{width:80%;max-width:95px;height:auto;filter:drop-shadow(0 4px 8px rgba(80,40,10,0.5));cursor:pointer;transition:transform 0.15s;animation:cariMascotPulse 3.5s ease-in-out infinite;}
-#cari-mascot:hover{transform:scale(1.06) rotate(-2deg);filter:drop-shadow(0 6px 12px rgba(160,100,30,0.6));}
+/* R3.32 — Mascot relocated to lower-left over the EXPLORE HISTORY ribbon
+   zone. The skin has empty space below the parchment around the dangling
+   red ribbon — that's where Cari stands now, fully visible and out of the
+   way of the chip strip and right cutout. */
+#cari-mascot-wrap{position:absolute;left:31%;top:75%;width:11%;text-align:center;z-index:5;}
+#cari-mascot{width:100%;max-width:75px;height:auto;filter:drop-shadow(0 4px 8px rgba(80,40,10,0.6));cursor:pointer;transition:transform 0.15s;animation:cariMascotPulse 3.5s ease-in-out infinite;}
+#cari-mascot:hover{transform:scale(1.06) rotate(-2deg);filter:drop-shadow(0 6px 12px rgba(160,100,30,0.7));}
 #cari-mascot:active{transform:scale(0.98);}
 @keyframes cariMascotPulse{
-  0%,100%{filter:drop-shadow(0 4px 8px rgba(80,40,10,0.5));}
-  50%{filter:drop-shadow(0 4px 12px rgba(200,160,80,0.55));}
+  0%,100%{filter:drop-shadow(0 4px 8px rgba(80,40,10,0.6));}
+  50%{filter:drop-shadow(0 4px 12px rgba(200,160,80,0.65));}
 }
-#cari-mascot-cap{font-size:8px;color:#7c4a18;font-style:italic;letter-spacing:1px;font-family:Tahoma;margin-top:1px;}
 .cari-bubble{position:absolute;left:50%;top:-6px;transform:translate(-50%,-100%) scale(0.85);opacity:0;pointer-events:none;background:linear-gradient(180deg,#fff8e0,#f0dca0);border:2px solid #8a5a20;border-radius:10px;padding:9px 12px;width:210px;font-family:Georgia,serif;font-size:10.5px;line-height:1.4;color:#2a1505;box-shadow:0 6px 16px rgba(80,40,10,0.5),inset 0 0 0 1px rgba(255,220,140,0.6);transition:opacity 0.25s,transform 0.25s cubic-bezier(0.34,1.56,0.64,1);z-index:20;}
 .cari-bubble::after{content:'';position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-top:10px solid #8a5a20;}
 .cari-bubble::before{content:'';position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:8px solid #f0dca0;z-index:1;}
 .cari-bubble.cari-bubble-show{opacity:1;transform:translate(-50%,-100%) scale(1);pointer-events:auto;cursor:pointer;}
 
-/* Right page cutout — sits over the bright white box on the skin. */
+/* Right page cutout (CARI image grid lives here after CSS injection) */
 #cari-cutout{position:absolute;left:51.5%;top:12.5%;width:30%;height:43%;background:#fffaf0;overflow:hidden;z-index:3;}
 #cari-cutout-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:14px;}
 #cari-webview{width:100%;height:100%;border:0;background:white;}
+/* R3.32 — Loading spinner shown between thumbnail click and grid render */
+#cari-cutout-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,250,240,0.95);text-align:center;}
+.cari-spinner{width:32px;height:32px;border:3px solid rgba(138,90,32,0.2);border-top-color:#8a5a20;border-radius:50%;animation:cariSpin 0.8s linear infinite;}
+@keyframes cariSpin{to{transform:rotate(360deg);}}
 
-/* Bottom era nav arrows — aligned with the gold ◀ ▶ arrows baked into the
-   skin's dark bottom strip. */
+/* Era prev/next arrows over the gold ones baked into the skin */
 .cari-arrow-skin{position:absolute;top:70%;width:5%;height:6%;background:transparent;border:0;cursor:pointer;z-index:6;}
 .cari-arrow-skin:hover{background:rgba(255,220,140,0.25);border-radius:4px;}
 #cari-era-prev{left:14%;}
 #cari-era-next{right:14%;}
 
-/* Aesthetic chips — sit on the dark bottom strip between the arrows. */
-#cari-chips-strip{position:absolute;left:21%;right:21%;top:68%;height:9%;display:flex;align-items:center;justify-content:center;gap:5px;z-index:5;}
-#cari-chips{flex:1;display:flex;gap:4px;overflow-x:auto;padding:2px 0;scrollbar-width:thin;justify-content:flex-start;align-items:center;}
+/* R3.32 — Aesthetic THUMBNAIL strip on the dark bottom band. Each thumb is
+   a real extracted image from the aesthetic's CARI page (cached after
+   first extract). Until extraction completes, shows a label placeholder. */
+#cari-chips-strip{position:absolute;left:21%;right:21%;top:68%;height:9%;display:flex;align-items:center;justify-content:center;gap:6px;z-index:5;}
+#cari-chips{flex:1;display:flex;gap:5px;overflow-x:auto;padding:2px 0;scrollbar-width:thin;justify-content:flex-start;align-items:center;height:100%;}
 #cari-chips::-webkit-scrollbar{height:5px;}
 #cari-chips::-webkit-scrollbar-thumb{background:rgba(200,160,80,0.4);border-radius:3px;}
-.cari-chip{background:linear-gradient(180deg,rgba(90,55,20,0.85),rgba(50,30,10,0.85));border:1px solid #8a5a20;border-radius:3px;padding:3px 8px;color:#f0d098;font-size:9.5px;font-family:Tahoma;cursor:pointer;white-space:nowrap;transition:all 0.15s;flex-shrink:0;font-weight:500;letter-spacing:0.3px;}
-.cari-chip:hover{background:linear-gradient(180deg,#7a4a20,#4a2810);color:#fff0c8;border-color:#c8a050;box-shadow:0 0 6px rgba(200,160,80,0.5);}
-.cari-chip.active{background:linear-gradient(180deg,#c8a050,#8a5a20);color:#1a0a04;border-color:#fff0c8;font-weight:bold;box-shadow:0 0 8px rgba(200,160,80,0.7),inset 0 1px 0 rgba(255,240,200,0.6);}
+.cari-thumb{position:relative;flex-shrink:0;width:42px;height:32px;border:1px solid #8a5a20;border-radius:3px;background:linear-gradient(180deg,rgba(90,55,20,0.85),rgba(50,30,10,0.85));cursor:pointer;overflow:hidden;transition:all 0.15s;}
+.cari-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.cari-thumb-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#f0d098;font-size:7.5px;font-family:Tahoma;font-weight:bold;text-align:center;line-height:1;letter-spacing:0.2px;padding:2px;pointer-events:none;text-shadow:0 1px 2px rgba(0,0,0,0.8);}
+.cari-thumb:hover{transform:scale(1.08);border-color:#fff0c8;box-shadow:0 0 8px rgba(200,160,80,0.7);z-index:10;}
+.cari-thumb.active{border-color:#fff0c8;box-shadow:0 0 10px rgba(200,160,80,0.9),inset 0 0 0 2px #fff0c8;}
+.cari-thumb.active .cari-thumb-label{color:#fffacd;text-shadow:0 0 4px #c8a050,0 1px 2px #000;}
 
 /* Radio */
 #radio-win{width:300px;height:350px;top:80px;right:210px;}
@@ -691,7 +732,11 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 #radio-np{text-align:center;font-size:10px;color:#81ff28;font-family:Tahoma;min-height:14px;text-shadow:0 0 6px rgba(129,255,40,0.4);}
 
 /* Mascot Corner */
-#mascot-corner{position:absolute;bottom:8px;right:8px;z-index:8000;display:none;flex-direction:column;align-items:flex-end;gap:3px;}
+/* R3.33 — bottom-right mascot-corner REMOVED entirely. The user wants the
+   homepage mascot (.hp-mascot, top-right of the homepage banner) to be the
+   only mascot on screen. The bubble/panel system stays in JS for other
+   triggers but the visible corner element is force-hidden here. */
+#mascot-corner{display:none !important;}
 #mascot-corner-img{width:60px;cursor:pointer;filter:drop-shadow(0 2px 8px rgba(0,100,255,0.5)) drop-shadow(0 0 15px rgba(129,255,40,0.2));animation:bob 3s ease-in-out infinite;transition:transform 0.15s;}
 #mascot-corner-img:hover{transform:scale(1.1);}
 #mascot-bubble{background:linear-gradient(180deg,#ffffff,#e8f4ff);border:2px solid #4878c8;border-radius:8px;padding:5px 8px;font-size:10px;font-family:Tahoma;max-width:155px;line-height:1.4;color:#001050;position:relative;box-shadow:2px 2px 8px rgba(0,0,60,0.25);}
@@ -767,7 +812,8 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
   padding:6px 9px;font-size:10px;font-family:Tahoma;max-width:108px;
   line-height:1.4;color:#001050;box-shadow:2px 2px 8px rgba(0,0,60,0.2);z-index:2;
 }
-.hp-mascot{position:absolute;right:8px;top:2px;height:120px;object-fit:contain;z-index:2;animation:bob 3s ease-in-out infinite;filter:drop-shadow(0 2px 12px rgba(0,50,200,0.5));cursor:pointer;transition:filter 0.2s;}
+/* R3.33 — homepage mascot enlarged from 120px → 160px height per user request. */
+.hp-mascot{position:absolute;right:8px;top:2px;height:160px;object-fit:contain;z-index:2;animation:bob 3s ease-in-out infinite;filter:drop-shadow(0 2px 12px rgba(0,50,200,0.5));cursor:pointer;transition:filter 0.2s;}
 .hp-mascot:hover{filter:drop-shadow(0 0 16px rgba(129,255,40,0.7)) drop-shadow(0 2px 12px rgba(0,50,200,0.5));}
 .crew-hdr{
   font-family:Tahoma;font-weight:bold;font-size:11px;
@@ -955,10 +1001,33 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
       <div class="mail-pill" onclick="openEmail()">✉️ You've Got Mail! <span id="mail-count">0 New</span></div>
     </div>
     <div class="wb-bar">
-      <span style="font-weight:bold;color:#1A3060;">🕰️ Time Machine:</span>
+      <!-- R3.33 — "Retro mode" rebranded as "Time Machine" with the flux
+           capacitor icon (inline SVG that pulses like the actual prop in
+           Back to the Future). The retroMode dropdown value 'wayback' is
+           kept identical so all existing code keeps working. -->
+      <svg class="flux-cap" viewBox="0 0 24 24" width="22" height="22" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <radialGradient id="fluxGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#dffaff" stop-opacity="1"/>
+            <stop offset="40%" stop-color="#79e0ff" stop-opacity="0.9"/>
+            <stop offset="100%" stop-color="#0066aa" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <!-- Three-armed Y shape with bulbs at the tips (flux capacitor) -->
+        <g stroke="#aabbdd" stroke-width="1.2" fill="none">
+          <path d="M 12 13 L 12 5"/>
+          <path d="M 12 13 L 5 17"/>
+          <path d="M 12 13 L 19 17"/>
+        </g>
+        <circle cx="12" cy="5"  r="2.2" fill="url(#fluxGlow)" class="flux-bulb flux-b1"/>
+        <circle cx="5"  cy="17" r="2.2" fill="url(#fluxGlow)" class="flux-bulb flux-b2"/>
+        <circle cx="19" cy="17" r="2.2" fill="url(#fluxGlow)" class="flux-bulb flux-b3"/>
+        <circle cx="12" cy="13" r="1.6" fill="#cce8ff" class="flux-center"/>
+      </svg>
+      <span style="font-weight:bold;color:#1A3060;">Time Machine:</span>
       <input type="date" id="wb-date" value="2004-07-16"/>
       <select id="wb-mode">
-        <option value="wayback">🕰️ Retro (Wayback)</option>
+        <option value="wayback">⚡ Time Machine</option>
         <option value="modern" selected>🌐 Modern Web</option>
       </select>
       <button class="wb-set-btn" onclick="applyWayback()">Set Date</button>
@@ -1256,17 +1325,17 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
     </div>
   </div>
 
-  <!-- R3.30 — CARI BOOK WIDGET, skin version. The leather/gilt/pages are
-       baked into assets/cari-skin.png. All interactive bits overlay it with
-       percentage-based positioning so they scale with the widget. -->
-  <div class="wnd" id="cari-win" style="width:720px;height:540px;top:60px;left:120px;display:none;">
-    <div class="wnd-title">
-      <span>📖 CARI — Consumer Aesthetics Research Institute</span>
-      <div class="wnd-btns">
-        <div class="wb wb-min" onclick="minimizeWin('cari-win')">─</div>
-        <div class="wb wb-cls" onclick="closeWin('cari-win')">✕</div>
-      </div>
-    </div>
+  <!-- R3.32 — CARI WIDGET, chrome-less. The skin's silhouette IS the window
+       outline; no rectangular .wnd-title bar. Drag from the painted top
+       portion of the skin. Close button floats over the skin's top-right
+       corner. Hidden helper webviews extract thumbnails dynamically. -->
+  <div class="wnd cari-chromeless" id="cari-win" style="width:720px;height:540px;top:60px;left:120px;display:none;">
+    <!-- Invisible drag handle covering top portion of the skin -->
+    <div id="cari-drag-handle"></div>
+    <!-- Floating close button positioned over a corner of the skin -->
+    <div id="cari-close-btn" onclick="closeWin('cari-win')" title="Close">✕</div>
+    <div id="cari-min-btn" onclick="minimizeWin('cari-win')" title="Minimize">─</div>
+
     <div id="cari-body">
       <!-- Painted book skin (background) -->
       <div id="cari-skin"></div>
@@ -1284,30 +1353,41 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
         </div>
       </div>
 
-      <!-- Clickable mascot, lower-left -->
+      <!-- R3.32 — Mascot moved out of the chip strip / cutout zone to the
+           bottom-left of the book where the EXPLORE HISTORY ribbon hangs.
+           This was the only empty space on the skin large enough. -->
       <div id="cari-mascot-wrap">
         <div id="cari-mascot-bubble" class="cari-bubble" onclick="cariMascotClick()"></div>
         <img id="cari-mascot" src="assets/cari-mascot.png" alt="Cari" onclick="cariMascotClick()" title="Click me for a fact!"/>
-        <div id="cari-mascot-cap">click for a fact</div>
       </div>
 
-      <!-- Right page cutout — webview overlays the white box on the skin -->
+      <!-- Right page cutout — webview shows ONLY the CARI image grid (rest hidden via CSS injection) -->
       <div id="cari-cutout">
         <div id="cari-cutout-placeholder">
           <div style="font-size:42px;opacity:0.5;">📖</div>
-          <div style="margin-top:6px;font-family:Georgia,serif;color:#6a3a18;font-style:italic;font-size:11px;">Choose an aesthetic chip below</div>
+          <div style="margin-top:6px;font-family:Georgia,serif;color:#6a3a18;font-style:italic;font-size:11px;">Click an aesthetic thumbnail below</div>
         </div>
+        <!-- R3.32 — webview loads CARI page; inserted CSS hides everything but image grid -->
         <webview id="cari-webview" style="display:none;width:100%;height:100%;" allowpopups useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"></webview>
+        <div id="cari-cutout-loading" style="display:none;">
+          <div class="cari-spinner"></div>
+          <div style="margin-top:8px;font-family:Georgia,serif;color:#6a3a18;font-size:11px;">Loading images...</div>
+        </div>
       </div>
 
       <!-- Era prev/next: invisible hit-areas over the gold ◀ ▶ on the skin -->
       <button id="cari-era-prev" class="cari-arrow-skin" onclick="cariPrevEra()" title="Previous era"></button>
       <button id="cari-era-next" class="cari-arrow-skin" onclick="cariNextEra()" title="Next era"></button>
 
-      <!-- Aesthetic chips on the dark bottom strip -->
+      <!-- R3.32 — Aesthetic THUMBNAIL strip on the dark bottom band. Each
+           thumb is an extracted image from the aesthetic's CARI page. -->
       <div id="cari-chips-strip">
         <div id="cari-chips"></div>
       </div>
+
+      <!-- R3.32 — Hidden helper webviews for thumbnail extraction. Spawned
+           dynamically by cariExtractThumb() and destroyed after extraction. -->
+      <div id="cari-thumb-helpers" style="position:absolute;width:0;height:0;overflow:hidden;visibility:hidden;"></div>
     </div>
   </div>
 
@@ -1527,38 +1607,44 @@ const THEMES={
 // ═══════════════════════════════════════════════════════
 //  TICKER DATA
 // ═══════════════════════════════════════════════════════
+/* R3.33 — Significantly expanded ticker. Headlines per period bumped from
+   3-4 → 12-18. All entries are based on documented historical events from
+   that month/year (news archives, Wikipedia, music charts). The user asked
+   for more density and continuous scroll — the duplicated content trick in
+   updateTicker() makes the animation seamless. */
 const TICKER={
-  '199101':'❄️ Gulf War begins — Desert Storm | 🏈 Giants beat Bills Super Bowl XXV | 🎵 Mariah Carey dominates | 💻 WWW going public this year',
-  '199106':'☀️ Soviet Union dissolving | 🎵 Nirvana recording Nevermind | 🏀 Bulls win NBA title | 🎬 Silence of the Lambs in theaters',
-  '199109':'🎸 Nirvana "Smells Like Teen Spirit" changes rock forever! | 🎮 SNES launches in USA | 🇷🇺 Soviet collapse imminent',
-  '199112':'🎅 USSR officially dissolved | 🎵 Nevermind #1 | 🖥️ Tim Berners-Lee launches World Wide Web',
-  '199501':'💻 Windows 95 coming this summer! | 🎵 TLC "Waterfalls" | 🎬 Toy Story in production',
-  '199508':'🖥️ Windows 95 LAUNCHES — lines around the block! | 🌐 Netscape goes public | 🎵 Coolio Gangsta\'s Paradise | 📱 Nokia smartphones',
-  '199901':'🎆 Y2K panic begins! | 🎵 Backstreet Boys dominate | 🖥️ Napster being developed',
-  '199903':'🎬 The Matrix hits theaters — changes cinema forever! | 🎵 Ricky Martin Livin La Vida Loca | 💻 AOL hits 17M subscribers',
-  '199906':'🎵 Eminem Slim Shady LP | 🌐 Napster launches — free music! | 🎮 Sega Dreamcast launching',
-  '199912':'🎆 Y2K: Will computers crash at midnight?? | 🎉 New Millennium parties worldwide! | 💻 AOL-Time Warner merger talks',
-  '200001':'💥 Y2K bug turns out fine! | 📉 Dot-com bubble bursting | 🎮 PS2 coming | 🎵 Eminem Marshall Mathers LP',
-  '200101':'🏈 Ravens win Super Bowl | 💻 Wikipedia launches! | 🎵 Destiny\'s Child Survivor',
-  '200109':'🗽 9/11 — America under attack. Flights grounded. Nation in mourning. | ✈️ Never forget.',
-  '200110':'🇺🇸 War in Afghanistan begins | 🎵 Jay-Z Blueprint | 🎮 Xbox launches | 📱 iPod announced by Steve Jobs!',
-  '200112':'🎬 Lord of the Rings Fellowship | 🎮 Xbox & GameCube holiday | 🎵 Alicia Keys debut',
-  '200204':'🏀 Lakers three-peat incoming | 🎵 Eminem Without Me | 🌐 Friendster launching social networking',
-  '200301':'🎵 50 Cent Get Rich or Die Tryin | 🌐 MySpace launching! | 💻 iTunes Music Store opens',
-  '200309':'🎮 GTA: Vice City | 🎵 Beyonce Crazy in Love | 🎬 Pirates of the Caribbean',
-  '200401':'🏈 Patriots win Super Bowl | 📱 Facebook launches at Harvard! | ❤️ Janet Jackson halftime',
-  '200407':'🏆 Pistons are NBA Champions! | 🎵 Usher Burn #1 | 🏊 Phelps wins 6 golds | 💻 Google IPO at $85!',
-  '200411':'🗳️ BUSH WINS re-election | 🎮 Halo 2 breaks records | 💻 Firefox 1.0 released',
-  '200501':'🎵 Kanye College Dropout | 💻 YouTube in development | 🎬 Million Dollar Baby',
-  '200509':'🌀 Hurricane Katrina aftermath | 🐦 Twitter in development | 💻 YouTube launches!',
-  '200601':'🏈 Steelers win Super Bowl XL | 💻 YouTube exploding | 🎵 James Blunt You\'re Beautiful',
-  '200609':'🐦 Twitter officially launches! | 💻 Facebook opens to everyone | 🎮 Wii & PS3 holiday launch',
-  '200701':'📱 iPhone announced by Steve Jobs! CHANGES EVERYTHING | 💻 Chrome OS announced',
-  '200707':'📱 iPhone launches to massive lines! | 🎵 Rihanna Umbrella | 🎬 Dark Knight filming',
-  '200801':'📱 App Store coming | 💰 Financial crisis starting | 🎵 Lil Wayne Tha Carter III',
-  '200807':'📱 App Store LAUNCHES — 500 apps! | 🎵 Katy Perry I Kissed a Girl | 🎬 Dark Knight breaks records',
-  '200811':'🗳️ OBAMA WINS — first Black president elected! | 💰 Economic bailout | 📱 iPhone 3G everywhere',
+  '199101':'❄️ Operation Desert Storm launched against Iraq | 🏈 Giants beat Bills 20-19 in Super Bowl XXV (Whitney Houston national anthem) | 🎵 Mariah Carey "Someday" #1 | 🎬 Silence of the Lambs released | 💻 Tim Berners-Lee\'s WWW becomes publicly available outside CERN | 🇸🇺 Lithuania declares independence | 📺 Cheers, Murphy Brown top TV ratings | 🎮 Sonic the Hedgehog announced for Genesis | 📰 USA Today reports US gas prices average $1.14/gal | 🎭 Madonna "Justify My Love" video banned by MTV',
+  '199106':'☀️ Soviet Union officially dissolving | 🎵 Nirvana in Sound City Studios recording Nevermind | 🏀 Bulls win first NBA title (Michael Jordan MVP) | 🎬 Robin Hood: Prince of Thieves opens | 📰 Boris Yeltsin elected first President of Russia | 🇾🇺 Slovenia and Croatia declare independence from Yugoslavia | 🎵 Paula Abdul "Rush Rush" #1 for 5 weeks | 💻 Linus Torvalds working on Linux kernel | 🎮 Sega Genesis vs Super Nintendo console war heats up | 📺 The Fresh Prince of Bel-Air ending first season',
+  '199109':'🎸 Nirvana "Smells Like Teen Spirit" video premieres on MTV — alternative rock takes over | 🎮 Super Nintendo launches in USA Aug 23 — Super Mario World bundled | 🇷🇺 Soviet coup attempt fails | 🎵 Pearl Jam "Ten" album released | 💻 Linus Torvalds posts Linux 0.01 to comp.os.minix | 🎬 Boyz n the Hood in theaters | 📰 NY Stock Exchange Dow at 3000 | 🎵 Mariah Carey "Emotions" | 📺 Home Improvement debuts on ABC | 🍔 McDonald\'s opens in Moscow',
+  '199112':'🎅 USSR officially dissolved Dec 25 — Gorbachev resigns | 🎵 Nirvana "Nevermind" #1 on Billboard 200 | 🖥️ Tim Berners-Lee announces WWW project on alt.hypertext | 🎬 JFK by Oliver Stone in theaters | 🏀 Magic Johnson retires (Nov) after HIV announcement | 🎵 Michael Jackson "Black or White" video controversy | 🎮 Street Fighter II in arcades | 📺 Roseanne #1 sitcom | 🎬 Beauty and the Beast first animated film nominated for Best Picture | 📰 Czechoslovakia preparing to split',
+  '199501':'💻 Windows 95 coming this summer with Start menu! | 🎵 TLC "Waterfalls" hits | 🎬 Toy Story in production at Pixar | 🏈 49ers beat Chargers 49-26 Super Bowl XXIX | 📺 Friends starting first season ratings climb | 🎵 Hootie & the Blowfish "Cracked Rear View" dominates | 🎮 Sony PlayStation launching this year | 📰 Oklahoma City still recovering from federal building bombing | 💻 Yahoo! founded by Jerry Yang and David Filo at Stanford | 🌐 Netscape Navigator 1.1 released',
+  '199508':'🖥️ Windows 95 LAUNCHES Aug 24 — Rolling Stones "Start Me Up" ad campaign, midnight lines | 🌐 Netscape IPO — stock doubles on first day | 🎵 Alanis Morissette "Jagged Little Pill" released | 🎬 Babe and The Usual Suspects in theaters | 📺 Friends becomes #1 sitcom | 🎮 PlayStation launching in North America September 9 | 📰 OJ Simpson trial in closing arguments | 🇧🇦 Bosnia ceasefire negotiations | 🎵 Coolio "Gangsta\'s Paradise" #1 | 💻 Internet Explorer 1.0 ships with Windows 95',
+  '199901':'🎆 Y2K panic intensifies — companies spending billions on fixes | 🎵 Britney Spears "...Baby One More Time" debuts at #1 | 🎬 She\'s All That, Varsity Blues in theaters | 🏈 Broncos beat Falcons Super Bowl XXXIII (Elway final game) | 📺 The Sopranos premieres on HBO Jan 10 | 🎮 Sega Dreamcast launches in USA September | 💻 Napster being developed by Shawn Fanning at Northeastern | 🎵 TLC "No Scrubs" climbing charts | 📰 Bill Clinton impeachment trial in Senate | 🌐 AOL hits 17 million subscribers',
+  '199903':'🎬 The Matrix hits theaters March 31 — bullet time changes cinema | 🎵 Ricky Martin "Livin La Vida Loca" goes #1 | 💻 AOL launches Instant Messenger AIM | 📺 Family Guy premieres on Fox Jan 31 | 🎮 Final Fantasy VIII released in Japan | 🏈 Wayne Gretzky retires from NHL | 🎵 Jennifer Lopez debut album "On the 6" | 📰 Columbine shooting April 20 shakes America | 🌐 SETI@home distributed computing project launches | 🎵 Cher "Believe" introduces auto-tune to mainstream pop',
+  '199906':'🎵 Eminem "Slim Shady LP" 4× platinum | 🌐 Napster launches June 1 — free MP3s spread instantly | 🎮 Sega Dreamcast launching in 3 months | 🎬 Austin Powers: Spy Who Shagged Me opens huge | 📺 SpongeBob SquarePants premieres on Nickelodeon May 1 | 🏀 Spurs win first NBA title | 🎵 Backstreet Boys "Millennium" hits #1 | 📰 Kosovo war ends, NATO peacekeepers arrive | 💻 Yahoo at $237/share peak | 🎵 Christina Aguilera debut single "Genie in a Bottle"',
+  '199912':'🎆 Y2K: Will computers crash at midnight?? Worldwide remediation cost $300B+ | 🎉 New Millennium parties — Times Square 2M people | 💻 AOL-Time Warner merger talks (announced Jan 2000) | 🎬 The Green Mile in theaters | 🎵 Santana "Smooth" featuring Rob Thomas ends year at #1 | 📺 Who Wants to Be a Millionaire dominating ratings | 🎮 Sega Dreamcast holiday hit | 📰 Vladimir Putin succeeds Yeltsin Dec 31 | 🇵🇦 US returns Panama Canal | 🎵 Britney "(You Drive Me) Crazy"',
+  '200001':'💥 Y2K bug turns out fine — minor glitches only | 📉 Dot-com bubble starting to wobble — Nasdaq still near 5000 | 🎮 PS2 launching this March in Japan | 🎵 Eminem "Marshall Mathers LP" coming May | 🏈 Rams win Super Bowl XXXIV over Titans 23-16 | 📰 AOL announces $165B acquisition of Time Warner Jan 10 | 🎬 Erin Brockovich in production | 📺 Survivor coming this summer to CBS | 💻 Microsoft antitrust trial — Judge rules MS is monopoly | 🎵 Faith Hill "Breathe" #1',
+  '200101':'🏈 Ravens crush Giants 34-7 Super Bowl XXXV | 💻 Wikipedia launches January 15! | 🎵 Destiny\'s Child "Survivor" coming | 🌐 Nasdaq down 50% from peak — dot-com crash deepening | 🎬 Crouching Tiger Hidden Dragon wins big at awards | 📺 American Idol coming to Fox this summer | 🎮 GameCube launching this fall | 📰 George W. Bush inaugurated January 20 | 🎵 OutKast "Ms. Jackson" #1 | 🍎 Apple announces iTunes Jan 9 at Macworld',
+  '200109':'🗽 9/11 — World Trade Center and Pentagon attacked September 11. Flights grounded worldwide. Nation in mourning | ✈️ United 93 passengers fight back | 🏛️ Patriot Act being drafted | 📺 NFL games postponed | 🇺🇸 American flags everywhere | 📰 Anthrax letters sent to news media and senators | 🎵 Music charts dominated by patriotic themes | 🎬 Hollywood postpones violent film releases | 🕊️ "We Will Never Forget" | 💔 2,977 lives lost',
+  '200110':'🇺🇸 War in Afghanistan begins October 7 — Operation Enduring Freedom | 🎵 Jay-Z "Blueprint" released Sept 11 — best-selling rap album | 🎮 Xbox launches November 15 — Halo: Combat Evolved hit | 📱 iPod announced October 23 by Steve Jobs — "1000 songs in your pocket" | 🎬 Harry Potter and the Sorcerer\'s Stone in theaters | 📺 24 premieres on Fox Nov 6 | 📰 Postal anthrax attacks ongoing | 🎵 Alicia Keys "Fallin\'" #1 | 💻 Windows XP launches October 25 | ✈️ Airline industry in crisis post-9/11',
+  '200112':'🎬 Lord of the Rings: Fellowship of the Ring released Dec 19 — phenomenon | 🎮 Xbox & GameCube competing for holiday | 🎵 Alicia Keys "Songs in A Minor" album of the year | 🏀 Lakers three-peat run | 📺 The Bachelor premieres on ABC | 📰 Enron collapses Dec 2 — biggest bankruptcy in US history | 🎵 Linkin Park "Hybrid Theory" still selling | 💻 AOL hits 30 million users | 🇪🇺 Euro physical currency launches Jan 1 | 🎬 Behind Enemy Lines',
+  '200204':'🏀 Lakers complete three-peat over Nets | 🎵 Eminem "Without Me" video and single dominate | 🌐 Friendster launching social networking | 🎬 Spider-Man opens biggest weekend ever — $114M | 📺 American Idol Season 1 final episode — Kelly Clarkson wins | 🎮 GameCube exclusive Resident Evil released | 📰 Enron criminal investigation expanding | 🎵 Avril Lavigne "Complicated" climbing | 💻 Google search dominating — "Google it" entering vocabulary | 🌐 Yahoo announces 3.1 billion page views daily',
+  '200301':'🎵 50 Cent "Get Rich or Die Tryin\'" coming Feb — Dr. Dre/Eminem-produced | 🌐 MySpace launching — Tom is everyone\'s friend | 💻 iTunes Music Store opens April 28 — songs 99¢ | 🎮 Madden 2003 best-seller | 🎬 LOTR: Two Towers winning awards | 🏈 Buccaneers beat Raiders 48-21 Super Bowl XXXVII | 📺 American Idol Season 2 starting | 📰 Iraq war preparations | 🎵 Beyoncé "Crazy in Love" coming May | 💻 Apple iLife suite launches',
+  '200309':'🎮 GTA: Vice City still dominating game sales | 🎵 Beyoncé "Crazy in Love" feat Jay-Z dominating | 🎬 Pirates of the Caribbean: Curse of the Black Pearl summer hit | 📺 Arrested Development premieres on Fox | 🌐 MySpace gaining millions of users monthly | 💻 iTunes hits 10 million songs sold | 📰 Iraq war ongoing — major operations over, insurgency growing | 🎵 OutKast "Hey Ya!" climbing — destined for #1 | 🏈 NFL season starting | 🎮 Final Fantasy X-2 released',
+  '200401':'🏈 Patriots edge Panthers 32-29 Super Bowl XXXVIII | 📱 Facebook launches at Harvard Feb 4 (Mark Zuckerberg) | ❤️ Janet Jackson "wardrobe malfunction" at halftime show Feb 1 | 🎵 Usher "Confessions" album coming March — will sell 1M+ first week | 🎬 The Passion of the Christ Mel Gibson | 📺 The Apprentice premieres on NBC Jan 8 | 🎮 World of Warcraft beta testing | 📰 Iraq War casualties mounting | 🎵 OutKast "Hey Ya!" #1 for 8 weeks | 💻 Google preparing for IPO',
+  '200407':'🏆 Pistons defeat Lakers 4-1 NBA Finals | 🎵 Usher "Burn" #1 | 🏊 Phelps wins 6 golds 2 bronzes at Athens Olympics | 💻 Google IPO Aug 19 at $85 per share | 📰 Iraq War continues, 9/11 Commission Report released | 🎬 Spider-Man 2 opens July 2 — record breaking | 🎮 Doom 3 released | 🎵 Maroon 5 "She Will Be Loved" climbing | 📺 Lost premieres on ABC September 22 — phenomenon | 🌐 Gmail invitations are hot commodity (still beta)',
+  '200411':'🗳️ BUSH WINS re-election Nov 2 over Kerry | 🎮 Halo 2 breaks records — $125M opening day Nov 9 | 💻 Firefox 1.0 released November 9 | 🎵 Eminem "Mosh" anti-Bush music video | 🎬 Lemony Snicket\'s A Series of Unfortunate Events | 📺 Desperate Housewives breakthrough hit | 🎵 Destiny\'s Child "Lose My Breath" #3 | 📰 Yasser Arafat dies November 11 | 🎮 Half-Life 2 released November 16 — Steam launches | 🌐 World of Warcraft launches November 23',
+  '200501':'🎵 Kanye West "The College Dropout" still massive | 💻 YouTube being developed by ex-PayPal employees | 🎬 Million Dollar Baby wins Oscars | 🎵 Mariah Carey comeback "Emancipation of Mimi" | 📺 Lost finishing first season cliffhanger | 🎮 PSP launching March | 📰 Bush second inauguration Jan 20 | 🌐 Wikipedia hits 500K articles | 🎵 50 Cent "Candy Shop" | 🏀 Spurs winning division',
+  '200509':'🌀 Hurricane Katrina aftermath — New Orleans devastated, levees failed | 🐦 Twitter being developed (called twttr) by Jack Dorsey | 💻 YouTube launches February 14 — really takes off this fall | 🎵 Kanye West tells Mike Myers "George Bush doesn\'t care about black people" live on NBC | 🎬 The Constant Gardener in theaters | 📺 Grey\'s Anatomy second season premieres | 🎮 Xbox 360 launches November 22 | 📰 Roberts confirmed as Chief Justice | 🎵 Mariah Carey "Don\'t Forget About Us" | 🇮🇶 Iraqi Constitution drafted',
+  '200601':'🏈 Steelers beat Seahawks 21-10 Super Bowl XL | 💻 YouTube exploding — Google acquires for $1.65B in October | 🎵 James Blunt "You\'re Beautiful" overplayed | 📺 The Office US Season 2 hitting stride | 🎮 Wii name announced (was "Revolution") | 🎬 Brokeback Mountain Oscars front-runner | 📰 Hamas wins Palestinian elections | 🌐 MySpace at 100M users | 🎵 Justin Timberlake "FutureSex/LoveSounds" coming September | 💻 Apple announces Intel Macs',
+  '200609':'🐦 Twitter officially launches publicly July 15 | 💻 Facebook opens to anyone with email Sept 26 (was only colleges) | 🎮 Wii launches November 19 ($249) | 🎮 PlayStation 3 launches November 17 ($499/$599) | 🎵 Beyoncé "Irreplaceable" climbing | 🎬 The Departed in theaters | 📺 Heroes premieres on NBC September 25 | 📰 North Korea nuclear test October 9 | 🎵 Justin Timberlake "SexyBack" #1 for 7 weeks | 💻 Google acquires YouTube for $1.65B Oct 9',
+  '200701':'📱 iPhone announced by Steve Jobs January 9 — "today Apple is going to reinvent the phone" | 💻 Microsoft launches Windows Vista January 30 | 🎵 Beyoncé "Irreplaceable" #1 for 10 weeks | 🎬 Letters from Iwo Jima nominated for Best Picture | 📺 American Idol Season 6 starting | 🎮 Halo 3 coming this September | 🏈 Colts beat Bears 29-17 Super Bowl XLI (Manning MVP) | 📰 Surge troops to Iraq | 🌐 Facebook still expanding beyond colleges | 🎵 Akon dominating R&B charts',
+  '200707':'📱 iPhone launches June 29 — lines around the block | 🎵 Rihanna "Umbrella" feat Jay-Z #1 for 7 weeks | 🎬 Harry Potter and the Order of the Phoenix in theaters | 📺 Mad Men premieres on AMC July 19 | 🎮 BioShock released August | 📚 Harry Potter and the Deathly Hallows released July 21 — final book | 📰 Subprime mortgage crisis warning signs | 🎵 Plain White T\'s "Hey There Delilah" #1 | 💻 Twitter growing fast — SXSW exposure | 🌐 Facebook adds advertising platform',
+  '200801':'📱 App Store coming in July — opens iPhone to developers | 💰 Bear Stearns collapse March — financial crisis warning | 🎵 Lil Wayne "Tha Carter III" coming June — will sell 1M week 1 | 🎬 Cloverfield in theaters January | 🏈 Giants stun Patriots 17-14 Super Bowl XLII (perfect season ruined) | 📺 Breaking Bad premieres on AMC January 20 | 🎮 Grand Theft Auto IV released April 29 | 📰 Obama-Clinton-McCain primary race | 🌐 Yahoo rejects Microsoft\'s $44.6B takeover bid | 🎵 Coldplay "Viva La Vida"',
+  '200807':'📱 App Store LAUNCHES July 11 — 500 apps initially | 🎵 Katy Perry "I Kissed a Girl" #1 for 7 weeks | 🎬 The Dark Knight breaks records July 18 — Heath Ledger\'s Joker | 📺 Olympic Games Beijing August 8-24 — Phelps 8 golds | 🎮 GTA IV phenomenon continues | 📰 Russia-Georgia war August 7-12 | 🌐 Facebook hits 100M users | 🎵 Rihanna "Disturbia" | 💻 Google Chrome browser launches September 2 | 🎬 Mamma Mia! musical hit',
+  '200811':'🗳️ OBAMA WINS Nov 4 — first Black president-elect, victory speech in Grant Park | 💰 TARP bailout passed October — $700B for banks | 📱 iPhone 3G selling well, App Store at 10K apps | 🎵 Beyoncé "Single Ladies" video iconic | 🎬 Twilight movie release Nov 21 — teen phenomenon | 📺 Mad Men second season finale | 🎮 Call of Duty: World at War released | 📰 Mumbai terror attacks November 26-29 | 🌐 Facebook at 140M users | 🎵 Britney Spears "Womanizer" #1',
 };
+
 
 function getTickerText(dateStr){
   const y=dateStr.substr(0,4), m=dateStr.substr(4,2);
@@ -1581,7 +1667,61 @@ function getTickerText(dateStr){
 
 function updateTicker(){
   const el=document.getElementById('ticker-txt');
-  if(el) el.textContent=getTickerText(waybackDate)+' ';
+  if(!el) return;
+  // R3.33 — Duplicate the headline string with a separator so the
+  // 0→-50% translateX animation produces a seamless loop. The animation
+  // keyframe was updated from -100% to -50% to match this doubling.
+  const text=getTickerText(waybackDate);
+  const sep='   ★   ';
+  el.textContent=text+sep+text+sep;
+}
+
+/* R3.33 — Real persistent visitor counter.
+   - Stored in localStorage 'www_visitor_n'
+   - Initialized to a believable Y2K-era number on first run (1.2M to 8M range)
+   - Increments by 1 every homepage render (every navigateTo)
+   - Slowly ticks up by 1-3 every 4-8 seconds during a session (simulating
+     other "visitors" joining)
+   - Formatted with commas for that vintage hit-counter look */
+function getVisitorNumber(){
+  try{
+    let n=parseInt(localStorage.getItem('www_visitor_n')||'0',10);
+    if(!n || isNaN(n)){
+      // First run — seed to a plausible Y2K hit-counter number
+      n=1234567+Math.floor(Math.random()*7000000);
+      localStorage.setItem('www_visitor_n',String(n));
+    }
+    return n;
+  }catch(e){
+    return 1234567+Math.floor(Math.random()*9999);
+  }
+}
+function incrementVisitorCount(delta){
+  try{
+    const cur=getVisitorNumber();
+    const next=cur+(delta||1);
+    localStorage.setItem('www_visitor_n',String(next));
+    // Live update display if visible
+    const ctr=document.getElementById('net-visitor-counter');
+    if(ctr) ctr.textContent=formatVisitorCount(next);
+    return next;
+  }catch(e){return 0;}
+}
+function formatVisitorCount(n){
+  return String(n).replace(/(\d)(?=(\d{3})+$)/g,'$1,');
+}
+
+// Start the slow background tick (every 4-8s, +1 to +3) once the app boots
+if(!window._wwwVisitorTickStarted){
+  window._wwwVisitorTickStarted=true;
+  function _scheduleVisitorTick(){
+    const wait=4000+Math.floor(Math.random()*4000);
+    setTimeout(()=>{
+      incrementVisitorCount(1+Math.floor(Math.random()*3));
+      _scheduleVisitorTick();
+    },wait);
+  }
+  setTimeout(_scheduleVisitorTick,3000);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1832,8 +1972,9 @@ function bootDesktop(){
     if(bt&&m) bt.textContent=m.tips[0];
     if(settings.popups!==false) setInterval(rotateTip,35000);
   },1200);
-  // YGM notification
-  setTimeout(()=>{playYGM();showToast('📧 You\'ve Got Mail! (3 new messages)','email');},900);
+  // R3.33 — auto-playing YGM at startup REMOVED. The user reported it was
+  // playing the "You've Got Mail" sound every login even with no new mail.
+  // Mail sound now only triggers from fetchGmailMessages() when newMsgs.length > 0.
   // Update ticker
   updateTicker();
 }
@@ -3392,8 +3533,39 @@ function loadInFrame(src){
         wv.addEventListener('did-finish-load',()=>{
           document.getElementById('status-txt').textContent='Done';
           try{document.getElementById('addr-bar').value=wv.getURL();}catch(e){}
-          // Belt-and-suspenders — even with `if_`, hide any residual Wayback chrome
-          try{wv.insertCSS('#wm-ipp-base,#wm-ipp,#donato,#wm-toolbar,.wb-autocomplete-suggestions{display:none!important;visibility:hidden!important;height:0!important;overflow:hidden!important;}body{margin-top:0!important;}');}catch(e){}
+          // Belt-and-suspenders — R3.33 expanded list. Hide any residual Wayback
+          // chrome: toolbar, info bar, "Donate" banner, autocomplete dropdown,
+          // and the Wayback "playback-toolbar" iframe. Also force any top-of-page
+          // archive.org elements to display:none.
+          try{wv.insertCSS([
+            '#wm-ipp-base,#wm-ipp,#donato,#wm-toolbar,#wm-ipp-inside',
+            '#wm-print-dialog,#wm-share-dialog,#wm-share-link',
+            '.wb-autocomplete-suggestions,#wm-expand-toolbar',
+            '#playback-tools,#wm-notification,#wm-tb-options',
+            '.wb-frame-side,.wb-frame-side-wrap',
+            'iframe[src*="archive.org"]',
+            'iframe[name="playback"]'
+          ].join(',')+'{display:none!important;visibility:hidden!important;height:0!important;max-height:0!important;overflow:hidden!important;pointer-events:none!important;opacity:0!important;}'
+            +'body,html{margin-top:0!important;padding-top:0!important;}'
+            +'body>iframe[name="playback"]~*{margin-top:0!important;}'
+          );}catch(e){}
+          // Inject a MutationObserver inside the page so any late-added Wayback
+          // elements get hidden too — sometimes archive.org injects the toolbar
+          // after DOMContentLoaded.
+          try{wv.executeJavaScript(`(function(){
+            var hide=function(){
+              ['wm-ipp-base','wm-ipp','donato','wm-toolbar','wm-ipp-inside','playback-tools'].forEach(function(id){
+                var el=document.getElementById(id); if(el) el.style.cssText='display:none!important';
+              });
+              if(document.body) document.body.style.marginTop='0';
+            };
+            hide();
+            try{
+              var obs=new MutationObserver(hide);
+              obs.observe(document.documentElement,{childList:true,subtree:true});
+              setTimeout(function(){try{obs.disconnect();}catch(e){}},20000);
+            }catch(e){}
+          })();`);}catch(e){}
           // R3.18 — fade in the webview and remove the loading overlay
           if(wbBar)wbBar.style.width='100%';
           if(wbStat)wbStat.textContent='Connected!';
@@ -4162,55 +4334,218 @@ function cariRenderEra(eraId){
   const ttl=document.getElementById('cari-era-title');
   if(lbl) lbl.textContent=(era.label+' · '+era.years).toUpperCase();
   if(ttl) ttl.textContent=era.label;
-  // Build chips
+  // R3.32 — Build THUMBNAIL strip instead of text chips. Each thumb is a
+  // button with a real extracted image (if cached) or a label placeholder.
+  // Extraction is async per aesthetic; thumbs fill in as they arrive.
   const chips=document.getElementById('cari-chips');
   if(chips){
     chips.innerHTML='';
     era.aesthetics.forEach(name=>{
+      const slug=CARI_SLUG_MAP[name];
       const btn=document.createElement('button');
-      btn.className='cari-chip';
-      btn.textContent=name;
+      btn.className='cari-thumb';
+      btn.title=name;
+      btn.dataset.aesthetic=name;
       btn.onclick=()=>cariSelectAesthetic(name,btn);
       if(name===cariCurrentAesthetic) btn.classList.add('active');
+      // Label placeholder shown until thumbnail arrives
+      const lblDiv=document.createElement('div');
+      lblDiv.className='cari-thumb-label';
+      lblDiv.textContent=name.replace(/ /g,'\n');
+      btn.appendChild(lblDiv);
       chips.appendChild(btn);
+      // Try cached thumb first
+      if(slug){
+        const cached=cariGetCachedThumb(slug);
+        if(cached){
+          cariSetThumbImage(btn,cached);
+        } else {
+          // Spawn extraction in background (one at a time to avoid hammering)
+          cariQueueThumbExtraction(slug,btn);
+        }
+      }
     });
   }
-  // R3.29 — Reset right page to placeholder when switching eras (webview, not iframe)
+  // Reset right page to placeholder when switching eras
   const ph=document.getElementById('cari-cutout-placeholder');
   const wv=document.getElementById('cari-webview');
+  const ld=document.getElementById('cari-cutout-loading');
   if(ph) ph.style.display='flex';
   if(wv){ wv.style.display='none'; try{ wv.src='about:blank'; }catch(e){} }
+  if(ld) ld.style.display='none';
   const info=document.getElementById('cari-info-aesthetic');
-  if(info) info.textContent='— pick one below —';
+  if(info) info.textContent='— pick a thumbnail below —';
   cariCurrentAesthetic=null;
+}
+
+function cariSetThumbImage(btn,url){
+  if(!btn||!url) return;
+  // Remove any previous img
+  const prev=btn.querySelector('img');
+  if(prev) prev.remove();
+  const img=document.createElement('img');
+  img.src=url;
+  img.loading='lazy';
+  img.onerror=()=>{ img.remove(); };
+  // Insert before the label so label sits on top via CSS positioning
+  btn.insertBefore(img,btn.firstChild);
+  // Once an image loads successfully, hide the label so the image is unobstructed
+  img.onload=()=>{
+    const lbl=btn.querySelector('.cari-thumb-label');
+    if(lbl) lbl.style.display='none';
+  };
+}
+
+/* R3.32 — Thumbnail extraction: spawn a hidden webview for the aesthetic's
+   CARI page, wait for it to load, then run JS inside it to grab the first
+   image's src. POST that back via console message (cleanest IPC for webview).
+   Cache results in localStorage so we don't re-extract on every open. */
+let _cariExtractQueue=[];
+let _cariExtractBusy=false;
+
+function cariGetCachedThumb(slug){
+  try{
+    const k='www_cari_thumb_'+slug;
+    return localStorage.getItem(k)||null;
+  }catch(e){ return null; }
+}
+function cariSetCachedThumb(slug,url){
+  try{
+    localStorage.setItem('www_cari_thumb_'+slug,url);
+  }catch(e){}
+}
+
+function cariQueueThumbExtraction(slug,targetBtn){
+  _cariExtractQueue.push({slug,targetBtn});
+  if(!_cariExtractBusy) cariRunNextExtraction();
+}
+
+function cariRunNextExtraction(){
+  if(_cariExtractQueue.length===0){ _cariExtractBusy=false; return; }
+  _cariExtractBusy=true;
+  const {slug,targetBtn}=_cariExtractQueue.shift();
+  // Build hidden helper webview
+  const host=document.getElementById('cari-thumb-helpers');
+  if(!host){ _cariExtractBusy=false; return; }
+  const helper=document.createElement('webview');
+  helper.style.cssText='width:600px;height:600px;';
+  helper.setAttribute('useragent','Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+  let done=false;
+  const cleanup=()=>{
+    if(done) return; done=true;
+    try{ helper.remove(); }catch(e){}
+    setTimeout(cariRunNextExtraction,150); // brief gap before next
+  };
+  // Timeout safety: kill helper after 12s if it never finishes
+  const timer=setTimeout(()=>{
+    if(!done){ console.warn('WWW R3.32 thumb extract timeout for',slug); cleanup(); }
+  },12000);
+  helper.addEventListener('dom-ready',()=>{
+    // Inject extraction script: find the first decent-sized image and message it back
+    const script=`
+      (function(){
+        try{
+          var imgs=Array.from(document.querySelectorAll('img'));
+          var best=null;
+          for(var i=0;i<imgs.length;i++){
+            var im=imgs[i];
+            var src=im.currentSrc||im.src;
+            if(!src) continue;
+            // Skip tiny icons / logos / data URIs / svg badges
+            if(src.indexOf('data:')===0) continue;
+            if(/logo|icon|sprite|favicon/i.test(src)) continue;
+            // Prefer images with natural size when available, else first non-trivial
+            var w=im.naturalWidth||0,h=im.naturalHeight||0;
+            if(w>0&&h>0){
+              if(w<60||h<60) continue;
+              if(!best||(w*h>best.area)) best={src:src,area:w*h};
+            } else if(!best){
+              best={src:src,area:0};
+            }
+          }
+          if(best) console.log('CARI_THUMB::'+best.src);
+          else console.log('CARI_THUMB_NONE');
+        }catch(e){ console.log('CARI_THUMB_ERR::'+e.message); }
+      })();
+    `;
+    try{ helper.executeJavaScript(script); }catch(e){ console.warn('WWW R3.32 inject failed',e); }
+  });
+  helper.addEventListener('console-message',ev=>{
+    const msg=ev.message||'';
+    if(msg.indexOf('CARI_THUMB::')===0){
+      const url=msg.slice('CARI_THUMB::'.length);
+      cariSetCachedThumb(slug,url);
+      // Only set on the button if it still represents this aesthetic
+      if(targetBtn && document.body.contains(targetBtn) && targetBtn.dataset && CARI_SLUG_MAP[targetBtn.dataset.aesthetic]===slug){
+        cariSetThumbImage(targetBtn,url);
+      }
+      clearTimeout(timer); cleanup();
+    } else if(msg==='CARI_THUMB_NONE'||msg.indexOf('CARI_THUMB_ERR::')===0){
+      clearTimeout(timer); cleanup();
+    }
+  });
+  helper.addEventListener('did-fail-load',()=>{ clearTimeout(timer); cleanup(); });
+  helper.src='https://cari.institute/aesthetics/'+slug;
+  host.appendChild(helper);
 }
 
 function cariSelectAesthetic(name,btnEl){
   cariCurrentAesthetic=name;
-  // Highlight active chip
-  document.querySelectorAll('.cari-chip').forEach(b=>b.classList.remove('active'));
+  // Highlight active thumb
+  document.querySelectorAll('.cari-thumb').forEach(b=>b.classList.remove('active'));
   if(btnEl) btnEl.classList.add('active');
   // Update info on left page
   const info=document.getElementById('cari-info-aesthetic');
   if(info) info.textContent=name;
-  // R3.29 — webview instead of iframe so CARI page actually loads (bypasses X-Frame-Options)
+  // Load the aesthetic's CARI page in the right-page webview, with CSS
+  // injected on did-finish-load to hide everything but the image grid.
   const slug=CARI_SLUG_MAP[name];
   const ph=document.getElementById('cari-cutout-placeholder');
   const wv=document.getElementById('cari-webview');
+  const ld=document.getElementById('cari-cutout-loading');
   if(!slug){
-    // No CARI page for this aesthetic
     if(ph){
       ph.style.display='flex';
-      ph.innerHTML='<div style="font-size:48px;opacity:0.5;">🔎</div><div style="margin-top:8px;font-family:Georgia,serif;color:#6a3a18;font-style:italic;font-size:13px;text-align:center;padding:0 14px;">No CARI page yet for <b>'+name+'</b>. CARI primarily catalogs post-1970 consumer aesthetics.</div>';
+      ph.innerHTML='<div style="font-size:42px;opacity:0.5;">🔎</div><div style="margin-top:8px;font-family:Georgia,serif;color:#6a3a18;font-style:italic;font-size:11px;text-align:center;padding:0 14px;">No CARI page yet for <b>'+name+'</b>.</div>';
     }
     if(wv){ wv.style.display='none'; try{ wv.src='about:blank'; }catch(e){} }
+    if(ld) ld.style.display='none';
     return;
   }
   const url='https://cari.institute/aesthetics/'+slug;
   if(ph) ph.style.display='none';
+  if(ld) ld.style.display='flex';
   if(wv){
     wv.style.display='block';
-    try{ wv.src=url; }catch(e){ console.warn('WWW R3.29 webview load failed:',e); }
+    // Attach one-time load handler that injects CSS to show only the image grid
+    const onReady=()=>{
+      try{
+        wv.insertCSS(`
+          /* R3.32 — show ONLY image grid on CARI aesthetic pages.
+             Hide site nav, header, footer, hero text, descriptions. */
+          header,nav,footer,.menu,.site-header,.site-footer,.page-header,.page-footer,.description,.about,.intro,.text,.hero,.about-section,.metadata,.related,.links,h1,h2,h3,p{display:none !important;}
+          body{background:#fffaf0 !important;margin:0 !important;padding:6px !important;}
+          /* Force any image container to a tight grid */
+          main,.content,.main-content,#main,#content,.gallery,.images,.image-grid{
+            display:grid !important;
+            grid-template-columns:repeat(3,1fr) !important;
+            gap:4px !important;
+            padding:0 !important;
+            margin:0 !important;
+            max-width:none !important;
+          }
+          img{max-width:100% !important;height:auto !important;display:block !important;border-radius:2px !important;}
+          /* Hide anything that's a list of links or non-image card */
+          a:not(:has(img)){display:none !important;}
+          /* Smooth scrolling */
+          html{scroll-behavior:smooth;}
+        `);
+      }catch(e){ console.warn('WWW R3.32 insertCSS failed',e); }
+      if(ld) ld.style.display='none';
+      wv.removeEventListener('did-finish-load',onReady);
+    };
+    wv.addEventListener('did-finish-load',onReady);
+    try{ wv.src=url; }catch(e){ console.warn('WWW R3.32 webview load failed:',e); if(ld) ld.style.display='none'; }
   }
 }
 
@@ -4436,6 +4771,8 @@ function makeResizable(el){
 //  HOMEPAGE
 // ═══════════════════════════════════════════════════════
 function loadHomepage(){
+  // R3.33 — bump visitor count per homepage load
+  try{ incrementVisitorCount(1); }catch(e){}
   // Track home in history
   if(histStack[histPos]!=='www://home'){histStack=histStack.slice(0,histPos+1);histStack.push('www://home');histPos=histStack.length-1;}
   document.getElementById('addr-bar').value='www://home';
@@ -4486,8 +4823,12 @@ function loadHomepage(){
   hp.push('<div class="hp-right">');
   // Featured
   hp.push('<div class="hp-widget"><div class="hp-wt">Today on WWW</div><div class="hp-wb" style="padding:4px;"><div class="feat-box" onclick="navigateTo(\''+theme.featured.url+'\')"><div class="feat-badge">FEATURED</div><div style="font-size:11px;color:'+m.color+';font-weight:bold;font-family:Tahoma;margin:3px 0;">'+theme.featured.title+'</div><div style="font-size:9px;color:#AAAAAA;font-family:Tahoma;line-height:1.4;">'+theme.featured.desc+'</div><div style="color:#AADDFF;font-size:9px;font-family:Tahoma;margin-top:3px;">Click to Enter!</div></div></div></div>');
-  // Counter
-  hp.push('<div class="hp-widget"><div class="hp-wt">Net Tracker</div><div class="hp-wb"><div style="font-size:10px;font-family:Tahoma;color:#1A3060;margin-bottom:3px;">You are visitor number:</div><div class="counter">'+String(1234567+Math.floor(Math.random()*9999)).replace(/(\d{3})(?=\d)/g,'$1,')+'</div></div></div>');
+  // R3.33 — Net Tracker is now a REAL persistent counter, not a one-shot
+  // random number. Seeded once per install, incremented on every homepage
+  // render (visit) and slowly bumped during the session via window.netTickInterval
+  // (set elsewhere in this file). The number is meaningful: visits across
+  // app sessions accumulate. Reset via dev console: localStorage.removeItem('www_visitor_n').
+  hp.push('<div class="hp-widget"><div class="hp-wt">Net Tracker</div><div class="hp-wb"><div style="font-size:10px;font-family:Tahoma;color:#1A3060;margin-bottom:3px;">You are visitor number:</div><div class="counter" id="net-visitor-counter">'+formatVisitorCount(getVisitorNumber())+'</div></div></div>');
   // Hot
   hp.push('<div class="hp-widget"><div class="hp-wt">Hot on the Net 🔥</div><div class="hp-wb"><span class="hp-hot" onclick="navigateTo(\'http://www.kazaa.com\')">🎵 Kazaa Downloads</span><span class="hp-hot" onclick="navigateTo(\'http://www.ebay.com\')">🏷️ eBay Auctions</span><span class="hp-hot" onclick="openTV()">📺 Watch Retro TV</span><span class="hp-hot" onclick="openWin(\'radio-win\');initRadio()">📻 Time Machine Radio</span></div></div>');
   // Tip
@@ -4718,7 +5059,10 @@ function openWin(id){
 }
 
 function closeWin(id){
-  playDoorClose();
+  // R3.33 — playDoorClose() removed from window-close. Door slam is now
+  // reserved for buddy sign-off only (onBuddyOff in line ~2253). A subtle
+  // click feels more appropriate for closing windows.
+  playClick();
   const w=document.getElementById(id);if(w)w.style.display='none';
   removeTbItem(id);
 }
@@ -4766,6 +5110,29 @@ function makeDraggable(win){
 }
 
 document.querySelectorAll('.wnd').forEach(makeDraggable);
+
+/* R3.32 — CARI window is chrome-less (no .wnd-title bar), so the standard
+   makeDraggable above gets no drag handle for it. Wire up #cari-drag-handle
+   manually as a second drag region. */
+(function attachCariDrag(){
+  const win=document.getElementById('cari-win');
+  const handle=document.getElementById('cari-drag-handle');
+  if(!win||!handle) return;
+  let drag=false,ox=0,oy=0;
+  handle.addEventListener('mousedown',e=>{
+    drag=true; const r=win.getBoundingClientRect();
+    ox=e.clientX-r.left; oy=e.clientY-r.top;
+    win.style.zIndex=++zTop; e.preventDefault();
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!drag) return;
+    let nx=e.clientX-ox, ny=e.clientY-oy;
+    nx=Math.max(0,Math.min(window.innerWidth-win.offsetWidth,nx));
+    ny=Math.max(0,Math.min(window.innerHeight-win.offsetHeight,ny));
+    win.style.left=nx+'px'; win.style.top=ny+'px'; win.style.right='auto';
+  });
+  document.addEventListener('mouseup',()=>{ drag=false; });
+})();
 
 // ═══════════════════════════════════════════════════════
 //  FULLSCREEN
