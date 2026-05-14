@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session, ipcMain, systemPreferences } = require('electron');
+const { app, BrowserWindow, session, ipcMain, systemPreferences, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
@@ -9,8 +9,7 @@ let signonWindow = null;
 let radioWindow = null;
 let tvWindow = null;
 let devServer = null;
-let oauthWindow = null;    // R3.39 — Google consent BrowserWindow
-let oauthServer = null;    // R3.39 — loopback HTTP server catching the redirect
+let oauthServer = null;    // R3.40 — loopback HTTP server catching the redirect (BrowserWindow approach removed in R3.40)
 
 // ── Camera permission — trigger immediately on launch ────
 // This makes macOS show the permission popup and add the app
@@ -286,11 +285,6 @@ function createHistorianWindow() {
 //   7. Tokens returned to renderer; renderer persists to localStorage
 const GMAIL_DESKTOP_CLIENT_ID = '487863450922-8p39nt8er3bf1ksbbbng9mu79rje0bb6.apps.googleusercontent.com';
 const GMAIL_SCOPES = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send';
-// Chrome on macOS user-agent. Stripping the Electron/ token reduces the
-// chance Google flags this as a webview. This is a known-fragile approach
-// (Google may improve their detection over time) — if it stops working
-// we can switch to opening the system browser via shell.openExternal.
-const FAKE_CHROME_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
 function base64url(buf) {
   return Buffer.from(buf).toString('base64')
@@ -303,22 +297,17 @@ function pkcePair() {
   return { verifier, challenge };
 }
 
-function closeOAuthWindow() {
-  try { if (oauthWindow && !oauthWindow.isDestroyed()) oauthWindow.close(); } catch(e){}
-  oauthWindow = null;
-}
 function closeOAuthServer() {
   try { if (oauthServer) oauthServer.close(); } catch(e){}
   oauthServer = null;
 }
 
-/* Open the consent page in a separate BrowserWindow (per user choice) and
-   wait for the loopback server to receive the auth code. Resolves with
-   the raw query params (`code` + possibly `error`) from Google's redirect. */
+/* R3.40 — Open the consent page in the user's default browser (Chrome/Safari/
+   etc) via shell.openExternal, and wait for the loopback server to receive
+   the auth code. Resolves with {code, verifier, redirectUri} or rejects. */
 function startGmailOAuthFlow() {
   return new Promise((resolve, reject) => {
     // Tear down any prior attempt
-    closeOAuthWindow();
     closeOAuthServer();
 
     const { verifier, challenge } = pkcePair();
@@ -335,11 +324,10 @@ function startGmailOAuthFlow() {
 
         // Tiny "all done" page that closes itself
         res.writeHead(200, {'Content-Type':'text/html;charset=utf-8'});
-        res.end(`<!DOCTYPE html><html><body style="font-family:system-ui;background:#000820;color:#92d9ff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;"><div style="text-align:center"><h2>${error ? 'Sign-in cancelled' : 'Gmail connected!'}</h2><p>You can close this window.</p></div><script>setTimeout(()=>window.close(),1500);</script></body></html>`);
+        res.end(`<!DOCTYPE html><html><body style="font-family:system-ui;background:#000820;color:#92d9ff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;"><div style="text-align:center"><h2>${error ? 'Sign-in cancelled' : '✓ Gmail connected!'}</h2><p>You can close this tab and return to WWW.</p></div><script>setTimeout(()=>window.close(),1500);</script></body></html>`);
 
         // Validate state and respond
         setTimeout(() => {
-          closeOAuthWindow();
           closeOAuthServer();
           if (error) return reject(new Error('oauth-error: ' + error));
           if (!code) return reject(new Error('oauth-no-code'));
@@ -348,13 +336,13 @@ function startGmailOAuthFlow() {
         }, 100);
       } catch(e) {
         res.writeHead(500); res.end('error');
-        closeOAuthWindow(); closeOAuthServer();
+        closeOAuthServer();
         reject(e);
       }
     });
 
     oauthServer.on('error', (e) => {
-      closeOAuthWindow(); closeOAuthServer();
+      closeOAuthServer();
       reject(e);
     });
 
@@ -378,53 +366,43 @@ function startGmailOAuthFlow() {
       });
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 
-      // Open consent in a separate BrowserWindow (per user choice)
-      const oauthSession = session.fromPartition('persist:gmail-oauth');
-      // Strip Electron token from session UA. We do this at session level so
-      // ALL requests in this session (including XHR/fetch initiated by Google)
-      // use the fake UA, not just the top-level page load.
-      try { oauthSession.setUserAgent(FAKE_CHROME_UA); } catch(e){}
-
-      oauthWindow = new BrowserWindow({
-        width: 540, height: 720,
-        title: 'Sign in with Google',
-        backgroundColor: '#ffffff',
-        autoHideMenuBar: true,
-        webPreferences: {
-          nodeIntegration: false,
-          contextIsolation: true,
-          partition: 'persist:gmail-oauth',
-          // Also override at webContents level — some Chromium versions
-          // use this instead of the session UA for top-frame navigation
-          // headers, depending on initiator
-        },
+      // R3.40 — Open consent in the user's DEFAULT BROWSER (Chrome/Safari/etc)
+      // via shell.openExternal, NOT in an Electron BrowserWindow.
+      //
+      // Why we changed from in-app: Google's anti-webview detection blocked
+      // the R3.39 BrowserWindow approach with "Couldn't sign you in — This
+      // browser or app may not be secure." Their detection is sophisticated
+      // (UA fingerprinting + navigator.webdriver + plugin shape checks);
+      // overriding only the UA string isn't enough.
+      //
+      // The system browser path:
+      //   1. shell.openExternal opens the consent URL in macOS's default browser
+      //   2. User signs in / consents in real Chrome/Safari (no detection issue)
+      //   3. Google redirects to http://127.0.0.1:<port>/?code=...
+      //   4. Our loopback server is still listening — catches the redirect just
+      //      like before
+      //   5. Server shows "Gmail connected!" page; user can close the tab
+      //   6. Tokens flow back to our renderer via the same IPC path
+      //
+      // The user briefly switches context to their browser but immediately
+      // returns to the app once they click Allow. One-time only — tokens
+      // persist via refresh token for months.
+      console.log('R3.40 opening consent URL in system browser:', authUrl.slice(0, 80) + '...');
+      shell.openExternal(authUrl).catch(e => {
+        console.warn('R3.40 shell.openExternal failed:', e.message);
+        closeOAuthServer();
+        reject(new Error('cannot-open-browser: ' + e.message));
       });
-      try { oauthWindow.webContents.setUserAgent(FAKE_CHROME_UA); } catch(e){}
 
-      oauthWindow.on('closed', () => {
-        // If user closed the window before completing, reject
-        oauthWindow = null;
+      // R3.40 — Safety timeout. If the user never completes sign-in within
+      // 5 minutes, tear down the server so we don't leak the port forever.
+      setTimeout(() => {
         if (oauthServer) {
+          console.log('R3.40 OAuth flow timed out (5 min)');
           closeOAuthServer();
-          reject(new Error('oauth-cancelled'));
+          reject(new Error('oauth-timeout'));
         }
-      });
-
-      // Watch for the redirect — Chromium may try to navigate to 127.0.0.1
-      // and the loopback server handles it, but in some cases the renderer
-      // may show an error before the navigation completes. As a backup we
-      // also intercept will-redirect / will-navigate.
-      oauthWindow.webContents.on('will-redirect', (event, navUrl) => {
-        if (navUrl.startsWith(redirectUri)) {
-          // Let it through — the loopback server will handle it.
-          // No-op here; the server callback already resolves the promise.
-        }
-      });
-
-      console.log('R3.39 opening consent URL in BrowserWindow');
-      oauthWindow.loadURL(authUrl).catch(e => {
-        console.warn('R3.39 oauth window loadURL failed:', e.message);
-      });
+      }, 5 * 60 * 1000);
     });
   });
 }
