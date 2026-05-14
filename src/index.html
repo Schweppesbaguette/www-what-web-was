@@ -392,12 +392,14 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 .mail-pill:hover{filter:brightness(1.08);}
 
 /* ── Time Machine Bar ── */
+/* R3.35 — Lightened the gradient slightly (#1838b8→#2a50d0 mid) so text
+   readability improves across the row without breaking the Y2K blue look. */
 .wb-bar{
-  background:linear-gradient(180deg,#1838b8,#0828a8 50%,#1030b8);
-  border-bottom:2px solid #4878d8;
+  background:linear-gradient(180deg,#2848c8,#1838b8 50%,#2040c0);
+  border-bottom:2px solid #5a8be0;
   padding:4px 10px;display:flex;align-items:center;gap:8px;
   font-size:11px;font-family:Tahoma;flex-shrink:0 !important;
-  box-shadow:inset 0 1px 0 rgba(146,217,255,0.15);
+  box-shadow:inset 0 1px 0 rgba(146,217,255,0.25);
 }
 .wb-bar>span{color:#92d9ff;font-weight:bold;}
 #wb-date,#wb-mode{
@@ -667,8 +669,10 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 #cari-close-btn:active,#cari-min-btn:active{transform:scale(0.95);}
 
 /* Left page overlays. R3.34 — bumped left:13.5%→16% and width:32.5%→29%
-   to clear the painted spine/binding so text doesn't run into it. */
-#cari-left-text{position:absolute;left:16%;top:11%;width:29%;height:42%;display:flex;flex-direction:column;color:#3a2008;font-family:Georgia,serif;padding:4px 6px;overflow:hidden;z-index:3;}
+   to clear the painted spine/binding so text doesn't run into it.
+   R3.35 — text was wrapping awkwardly (4 words per line). Widened to 33%
+   so the body copy can use more of the left page. */
+#cari-left-text{position:absolute;left:16%;top:11%;width:33%;height:42%;display:flex;flex-direction:column;color:#3a2008;font-family:Georgia,serif;padding:4px 6px;overflow:hidden;z-index:3;}
 #cari-era-label{font-size:9px;color:#7c4a18;letter-spacing:2px;font-weight:bold;font-family:Tahoma;border-bottom:1px solid rgba(124,74,24,0.3);padding-bottom:3px;}
 #cari-era-title{font-size:18px;color:#2a1505;font-family:Georgia,serif;font-weight:bold;margin-top:4px;line-height:1.1;}
 #cari-era-rule{height:1px;background:linear-gradient(90deg,transparent,#c8a050,transparent);margin:4px 0 6px;}
@@ -729,14 +733,16 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 
 /* R3.32 — Aesthetic THUMBNAIL strip on the dark bottom band. Each thumb is
    a real extracted image from the aesthetic's CARI page (cached after
-   first extract). Until extraction completes, shows a label placeholder. */
-#cari-chips-strip{position:absolute;left:21%;right:21%;top:68%;height:9%;display:flex;align-items:center;justify-content:center;gap:6px;z-index:5;}
-#cari-chips{flex:1;display:flex;gap:5px;overflow-x:auto;padding:2px 0;scrollbar-width:thin;justify-content:flex-start;align-items:center;height:100%;}
+   first extract). Until extraction completes, shows a label placeholder.
+   R3.35 — strip taller (9%→12%), thumbs bigger (42x32→58x44), label
+   font 7.5→9px. Top stays at 68% so it stays on the painted dark band. */
+#cari-chips-strip{position:absolute;left:20%;right:20%;top:68%;height:12%;display:flex;align-items:center;justify-content:center;gap:6px;z-index:5;}
+#cari-chips{flex:1;display:flex;gap:6px;overflow-x:auto;padding:2px 0;scrollbar-width:thin;justify-content:flex-start;align-items:center;height:100%;}
 #cari-chips::-webkit-scrollbar{height:5px;}
 #cari-chips::-webkit-scrollbar-thumb{background:rgba(200,160,80,0.4);border-radius:3px;}
-.cari-thumb{position:relative;flex-shrink:0;width:42px;height:32px;border:1px solid #8a5a20;border-radius:3px;background:linear-gradient(180deg,rgba(90,55,20,0.85),rgba(50,30,10,0.85));cursor:pointer;overflow:hidden;transition:all 0.15s;}
+.cari-thumb{position:relative;flex-shrink:0;width:58px;height:44px;border:1px solid #8a5a20;border-radius:3px;background:linear-gradient(180deg,rgba(90,55,20,0.85),rgba(50,30,10,0.85));cursor:pointer;overflow:hidden;transition:all 0.15s;}
 .cari-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
-.cari-thumb-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#f0d098;font-size:7.5px;font-family:Tahoma;font-weight:bold;text-align:center;line-height:1;letter-spacing:0.2px;padding:2px;pointer-events:none;text-shadow:0 1px 2px rgba(0,0,0,0.8);}
+.cari-thumb-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#f0d098;font-size:9px;font-family:Tahoma;font-weight:bold;text-align:center;line-height:1.1;letter-spacing:0.2px;padding:3px;pointer-events:none;text-shadow:0 1px 2px rgba(0,0,0,0.8);}
 .cari-thumb:hover{transform:scale(1.08);border-color:#fff0c8;box-shadow:0 0 8px rgba(200,160,80,0.7);z-index:10;}
 .cari-thumb.active{border-color:#fff0c8;box-shadow:0 0 10px rgba(200,160,80,0.9),inset 0 0 0 2px #fff0c8;}
 .cari-thumb.active .cari-thumb-label{color:#fffacd;text-shadow:0 0 4px #c8a050,0 1px 2px #000;}
@@ -1042,7 +1048,7 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
         <circle cx="19" cy="17" r="2.2" fill="url(#fluxGlow)" class="flux-bulb flux-b3"/>
         <circle cx="12" cy="13" r="1.6" fill="#cce8ff" class="flux-center"/>
       </svg>
-      <span style="font-weight:bold;color:#1A3060;">Time Machine:</span>
+      <span style="font-weight:bold;color:#92d9ff;text-shadow:0 0 6px rgba(120,200,255,0.5);">Time Machine:</span>
       <input type="date" id="wb-date" value="2004-07-16"/>
       <select id="wb-mode">
         <option value="wayback">⚡ Time Machine</option>
@@ -4297,10 +4303,16 @@ const TTH_ERAS=[
     themes:'Cultural fusion, spirituality, community, world music, mindful living',
     impact:'Shaped the look of coffeehouses, world music albums, lifestyle brands, and the early internet\'s idealistic global village dream.'},
   {id:'digital',label:'Digital Dawn',years:'1995–Now',icon:'💻',
-    aesthetics:['Y2K Aesthetic','Frutiger Aero','Vaporwave','Skeuomorphism','Flat Design','Brutalism','Indie Web'],
+    aesthetics:['Y2K Aesthetic','Frutiger Aero','Vaporwave','McBling','Frasurbane','Gen X Soft Club','Indie Sleaze','Hipness Purgatory','Corporate Memphis','Utopian Scholastic','Dollar Store Vernacular','Whimsigothic'],
     desc:'The screen became the canvas. From blinking GIFs to liquid chrome interfaces, digital design invented entirely new visual languages at breakneck speed.',
     themes:'Interactivity, nostalgia, utopian futures, corporate vs. indie, glitch as aesthetic',
     impact:'Democratized design, created entirely new aesthetics, and collapsed the distance between designer and audience.'},
+  /* R3.35 — Digital Dawn era's aesthetics list was 7 entries with mixed
+     CARI slug coverage (4 had slugs, 4 didn't → text-only chips). Replaced
+     with 12 entries that ALL have CARI pages, so every thumb gets a real
+     image. The removed entries (Skeuomorphism, Flat Design, Brutalism,
+     Indie Web) weren't CARI-coined; they fit better in a future "Web Eras"
+     era if we want to keep them. */
 ];
 
 let cariCurrentEra=null;
@@ -4574,43 +4586,85 @@ function cariSelectAesthetic(name,btnEl){
     // swap which URL the <img> displays. Still a live link to cari.institute
     // (URLs reference their CDN); we just present one at a time.
     const onReady=()=>{
+      // R3.35 — Two changes from R3.34:
+      // (1) Scroll the page to force lazy-loaded images to mount BEFORE
+      //     harvesting (R3.34 only ever got 1 image because CARI pages
+      //     lazy-load gallery imgs on scroll-into-view).
+      // (2) Relax the size filter — keep images that haven't measured yet
+      //     (naturalWidth=0). Still skip data:, logo/icon/avatar URLs.
+      // (3) Use object-fit:cover so the image fills the cutout with no
+      //     white letterbox bars. Crops a bit; user prefers fill over fit.
       const harvest=`
         (function(){
+          function harvest(){
+            try{
+              var imgs=Array.from(document.querySelectorAll('img'));
+              var urls=[]; var seen={};
+              for(var i=0;i<imgs.length;i++){
+                var im=imgs[i];
+                var src=im.currentSrc||im.src||im.getAttribute('data-src')||im.getAttribute('data-lazy-src')||'';
+                if(!src) continue;
+                if(src.indexOf('data:')===0) continue;
+                if(/logo|icon|sprite|favicon|avatar/i.test(src)) continue;
+                var w=im.naturalWidth||0,h=im.naturalHeight||0;
+                // Only filter out images we know are small. Unmeasured (w=0) stay in.
+                if(w>0&&h>0&&(w<80||h<80)) continue;
+                if(seen[src]) continue; seen[src]=1;
+                urls.push(src);
+              }
+              document.documentElement.innerHTML=
+                '<head><style>'+
+                'html,body{margin:0;padding:0;height:100%;background:#fffaf0;overflow:hidden;}'+
+                '#cari-slide-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#1a0f06;transition:opacity 0.18s ease-out;}'+
+                '#cari-slide-img.swap{opacity:0;}'+
+                '</style></head>'+
+                '<body><img id="cari-slide-img" alt="" /></body>';
+              console.log('CARI_SLIDES::'+JSON.stringify(urls));
+            }catch(e){ console.log('CARI_SLIDES_ERR::'+e.message); }
+          }
           try{
-            var imgs=Array.from(document.querySelectorAll('img'));
-            var urls=[]; var seen={};
-            for(var i=0;i<imgs.length;i++){
-              var im=imgs[i];
-              var src=im.currentSrc||im.src;
-              if(!src) continue;
-              if(src.indexOf('data:')===0) continue;
-              if(/logo|icon|sprite|favicon|avatar/i.test(src)) continue;
-              var w=im.naturalWidth||0,h=im.naturalHeight||0;
-              if(w>0&&h>0&&(w<80||h<80)) continue;
-              if(seen[src]) continue; seen[src]=1;
-              urls.push(src);
-            }
-            // Replace page with a minimal slideshow shell
-            document.documentElement.innerHTML=
-              '<head><style>'+
-              'html,body{margin:0;padding:0;height:100%;background:#fffaf0;overflow:hidden;}'+
-              '#cari-slide-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fffaf0;transition:opacity 0.18s ease-out;}'+
-              '#cari-slide-img.swap{opacity:0;}'+
-              '</style></head>'+
-              '<body><img id="cari-slide-img" alt="" /></body>';
-            console.log('CARI_SLIDES::'+JSON.stringify(urls));
-          }catch(e){ console.log('CARI_SLIDES_ERR::'+e.message); }
+            // Force-load lazy images by scrolling the whole page. CARI uses
+            // IntersectionObserver-style lazy loading; only images that have
+            // entered the viewport actually populate src. Step through the
+            // doc in viewport-sized chunks, then harvest after a settle delay.
+            var docH=Math.max(document.body.scrollHeight,document.documentElement.scrollHeight);
+            var vh=window.innerHeight||600;
+            var steps=Math.min(20,Math.ceil(docH/vh)+1);
+            var i=0;
+            var stepper=setInterval(function(){
+              window.scrollTo(0,i*vh);
+              i++;
+              if(i>=steps){
+                clearInterval(stepper);
+                // Settle delay for images to actually load after scroll-into-view
+                setTimeout(function(){ window.scrollTo(0,0); setTimeout(harvest,300); }, 800);
+              }
+            }, 120);
+          }catch(e){ harvest(); /* fallback: just harvest what's there */ }
         })();
       `;
-      try{ wv.executeJavaScript(harvest); }catch(e){ console.warn('WWW R3.34 slideshow harvest failed',e); if(ld) ld.style.display='none'; }
+      try{ wv.executeJavaScript(harvest); }catch(e){ console.warn('WWW R3.35 slideshow harvest failed',e); if(ld) ld.style.display='none'; }
       wv.removeEventListener('did-finish-load',onReady);
     };
     wv.addEventListener('did-finish-load',onReady);
     // R3.34 — capture console messages once. The handler self-removes after
     // matching the slug to avoid leaking listeners across aesthetic switches.
+    // R3.35 — added 15s safety timeout so spinner doesn't hang if the
+    // scroll-and-harvest sequence never fires its CARI_SLIDES message.
+    let _slideHarvestSafety=setTimeout(()=>{
+      console.warn('WWW R3.35 slideshow harvest timeout for',name);
+      try{ wv.removeEventListener('console-message',onMsg); }catch(e){}
+      if(ld) ld.style.display='none';
+      if(cariCurrentAesthetic===name && ph){
+        ph.style.display='flex';
+        ph.innerHTML='<div style="font-size:42px;opacity:0.5;">⏱️</div><div style="margin-top:8px;font-family:Georgia,serif;color:#6a3a18;font-style:italic;font-size:11px;text-align:center;padding:0 14px;">Loading <b>'+name+'</b> timed out. Try again?</div>';
+        if(wv) wv.style.display='none';
+      }
+    },15000);
     const onMsg=(ev)=>{
       const msg=ev.message||'';
       if(msg.indexOf('CARI_SLIDES::')===0){
+        clearTimeout(_slideHarvestSafety);
         let urls=[];
         try{ urls=JSON.parse(msg.slice('CARI_SLIDES::'.length))||[]; }catch(e){ urls=[]; }
         wv.removeEventListener('console-message',onMsg);
@@ -4631,6 +4685,7 @@ function cariSelectAesthetic(name,btnEl){
         if(cutout) cutout.classList.add('cari-slideshow');
         cariShowSlide(0);
       } else if(msg.indexOf('CARI_SLIDES_ERR::')===0){
+        clearTimeout(_slideHarvestSafety);
         wv.removeEventListener('console-message',onMsg);
         if(ld) ld.style.display='none';
         console.warn('WWW R3.34 slideshow error:',msg);
@@ -5770,12 +5825,16 @@ if(document.readyState === 'loading'){
   document.addEventListener('DOMContentLoaded', _wrapWayback);
 }
 
-// Hide "Wayback" labels in the Time Machine dropdown after page ready
+// R3.35 — Was rewriting the dropdown option label back to "🕰️ Retro Mode"
+// every 2 seconds, fighting against R3.33's "⚡ Time Machine" rebrand. Now
+// keeps the function name for compatibility, but actively SETS the label
+// to "⚡ Time Machine" so any stale rewrites get re-corrected on the
+// 2-second tick. Status text still gets the Wayback→Time scrub.
 function _hideWaybackLabels(){
   const wbMode = document.getElementById('wb-mode');
   if(wbMode){
     Array.from(wbMode.options).forEach(opt=>{
-      if(opt.value === 'wayback') opt.textContent = '🕰️ Retro Mode';
+      if(opt.value === 'wayback') opt.textContent = '⚡ Time Machine';
     });
   }
   // Status text on the time machine bar
