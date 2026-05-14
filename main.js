@@ -8,6 +8,7 @@ let mainWindow = null;
 let signonWindow = null;
 let radioWindow = null;
 let tvWindow = null;
+let emailWindow = null;  // R3.42 — chromeless skinned email window
 let devServer = null;
 let oauthServer = null;    // R3.40 — loopback HTTP server catching the redirect (BrowserWindow approach removed in R3.40)
 
@@ -250,6 +251,26 @@ function createTVWindow() {
   setupPermissions(tvWindow.webContents.session);
   tvWindow.loadFile(path.join(__dirname, 'src', 'tv.html'));
   tvWindow.on('closed', () => { tvWindow = null; });
+}
+
+// ── R3.42 — Email window ──────────────────────────────────
+// Chromeless pop-out window with painted skin (email-skin.png, 1448×1086
+// scaled to 0.62 → 898×673). Follows the radio/tv chromeless pattern.
+// Talks to Gmail through the same OAuth IPC bridge used by index.html.
+function createEmailWindow() {
+  if (emailWindow) { emailWindow.focus(); return; }
+  emailWindow = new BrowserWindow({
+    width: 898, height: 673,
+    resizable: false,
+    ...SKIN_WINDOW_OPTS,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
+    },
+  });
+  emailWindow.loadFile(path.join(__dirname, 'src', 'email.html'));
+  emailWindow.on('closed', () => { emailWindow = null; });
 }
 
 // ── Historian window ─────────────────────────────────────
@@ -512,6 +533,11 @@ ipcMain.on('minimize-tv', () => { if(tvWindow) tvWindow.minimize(); });
 ipcMain.on('open-historian', () => createHistorianWindow());
 ipcMain.on('close-historian', () => { if(historianWindow){historianWindow.close();historianWindow=null;} });
 ipcMain.on('minimize-historian', () => { if(historianWindow) historianWindow.minimize(); });
+
+// R3.42 — Email window IPC (chromeless skinned email window)
+ipcMain.on('open-email', () => createEmailWindow());
+ipcMain.on('close-email', () => { if(emailWindow){emailWindow.close();emailWindow=null;} });
+ipcMain.on('minimize-email', () => { if(emailWindow) emailWindow.minimize(); });
 
 // R3.39 — Gmail OAuth IPC. These are invokable (return Promises to the
 // renderer) since they need to return token data, not just trigger a side

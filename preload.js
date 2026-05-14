@@ -19,6 +19,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   closeHistorian: () => ipcRenderer.send('close-historian'),
   minimizeHistorian: () => ipcRenderer.send('minimize-historian'),
 
+  // R3.42 — Email window (chromeless skinned, separate BrowserWindow)
+  openEmail: () => ipcRenderer.send('open-email'),
+  closeEmail: () => ipcRenderer.send('close-email'),
+  minimizeEmail: () => ipcRenderer.send('minimize-email'),
+
   // KEY FIX: read asset as base64 data URI directly from disk
   // This bypasses the upload-to-JPEG recompression issue entirely.
   // PNG alpha channels are preserved because fs.readFileSync reads raw bytes.
