@@ -1,1 +1,1200 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>WWW Mail</title>
+<!--
+  R3.42 — Chromeless Email Window
+  ================================
 
+  Pop-out Electron window with a painted skin (email-skin.png). Pattern
+  follows radio.html / tv.html / signon.html — chromeless BrowserWindow,
+  the skin IS the window outline, live UI overlays live in their own
+  pixel-positioned divs.
+
+  Skin source: email-skin.png (native 1448 × 1086). Displayed at 0.62
+  scale = 898 × 673 (final window inner size).
+
+  All coordinates expressed at NATIVE size, scaled down via the .skin
+  transform. This keeps the math readable and lets us swap to a different
+  scale just by changing one number.
+
+  Gmail integration: reads tokens from localStorage.www_gmail_tokens
+  (set by index.html on initial OAuth, persists across processes).
+  Talks to Gmail API directly. If access token expired, asks main.js
+  to refresh via window.electronAPI.gmailOAuth.refresh (IPC bridge).
+
+  ARCHITECTURE NOTE: This window is self-contained — it has its own
+  copy of the folder fetch logic, send logic, etc. Communication with
+  index.html happens only via shared localStorage. If index.html updates
+  its folder cache, this window doesn't auto-sync (and vice versa). For
+  Y2K-era pop-out windows, that's appropriate; each one is its own app.
+-->
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: transparent;
+    font-family: Tahoma, Arial, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    color: #fff;
+  }
+
+  /* The skin — 1448x1086 native, scaled to fit the BrowserWindow */
+  .skin {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1448px;
+    height: 1086px;
+    transform: scale(0.62);
+    transform-origin: top left;
+    pointer-events: none; /* the PNG itself doesn't catch clicks */
+  }
+  .skin img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    -webkit-user-drag: none;
+  }
+
+  /* Everything inside .stage lives in NATIVE 1448x1086 coordinates and
+     gets scaled with the skin. This is the same pattern radio.html uses.
+     pointer-events: auto on individual children so they DO catch clicks. */
+  .stage {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1448px;
+    height: 1086px;
+    transform: scale(0.62);
+    transform-origin: top left;
+    pointer-events: none;
+  }
+  .stage > * { pointer-events: auto; }
+
+  /* === Drag handle over the EMAIL nameplate (top-center of skin) === */
+  /* This is what makes the window draggable when the user grabs the top.
+     macOS only registers drag on elements with -webkit-app-region: drag */
+  #drag-handle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1448px;
+    height: 130px;       /* top band that's draggable */
+    -webkit-app-region: drag;
+    /* Subtract the window controls and toolbar buttons regions from drag
+       area via the no-drag children below */
+  }
+  /* The window control buttons sit on top of the drag handle and need to
+     NOT propagate drag (otherwise clicks would start a drag instead) */
+  .win-ctrl, .toolbar-btn, .sidebar-btn, .header-btn {
+    -webkit-app-region: no-drag;
+  }
+
+  /* === Window control buttons (─ □ ✕) === */
+  /* These are TRANSPARENT click overlays positioned over the painted
+     button graphics in the skin. The user sees the painted buttons but
+     clicks our invisible divs. */
+  .win-ctrl {
+    position: absolute;
+    width: 52px;
+    height: 50px;
+    cursor: pointer;
+    /* No background or border — they're invisible. Hover shows a faint
+       highlight so the user gets feedback. */
+    background: transparent;
+    border-radius: 8px;
+    transition: background 0.08s;
+  }
+  .win-ctrl:hover { background: rgba(255,255,255,0.18); }
+  .win-ctrl:active { background: rgba(255,255,255,0.30); }
+  #wc-min   { left: 1230px; top: 38px; }
+  #wc-max   { left: 1287px; top: 38px; }
+  #wc-close { left: 1346px; top: 38px; }
+
+  /* === Toolbar buttons (Compose / Reply / Forward / Delete) === */
+  .toolbar-btn {
+    position: absolute;
+    height: 75px;
+    cursor: pointer;
+    background: transparent;
+    border-radius: 10px;
+    transition: background 0.08s;
+  }
+  .toolbar-btn:hover { background: rgba(255,255,255,0.15); }
+  .toolbar-btn:active { background: rgba(255,255,255,0.25); }
+  .toolbar-btn.disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+  #tb-compose { left: 300px; top: 130px; width: 178px; }
+  #tb-reply   { left: 490px; top: 130px; width: 170px; }
+  #tb-forward { left: 670px; top: 130px; width: 196px; }
+  #tb-delete  { left: 875px; top: 130px; width: 156px; }
+  #tb-sendrecv{ left: 1037px; top: 130px; width: 195px; }
+
+  /* === Sidebar folder buttons === */
+  .sidebar-btn {
+    position: absolute;
+    width: 230px;
+    height: 75px;
+    left: 47px;
+    cursor: pointer;
+    background: transparent;
+    border-radius: 14px;
+    transition: background 0.08s;
+  }
+  .sidebar-btn:hover { background: rgba(255,255,255,0.15); }
+  .sidebar-btn.active { background: transparent; /* painted as active in skin already */ }
+  #sb-inbox    { top: 277px; }
+  #sb-sent     { top: 365px; }
+  #sb-drafts   { top: 451px; }
+  #sb-trash    { top: 537px; }
+  #sb-contacts { top: 623px; }
+
+  /* The "count" badges on Inbox/Drafts — we draw our own bubble over
+     the painted ones, since the painted ones show fixed sample numbers (7, 2).
+     Position is over the painted bubble; we erase the painted number with
+     our own. */
+  .count-badge {
+    position: absolute;
+    pointer-events: none;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 26px;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    /* No background — sits over the painted bubble. The painted gradient
+       provides the visual; we just supply the number. */
+  }
+  .count-badge.green {
+    /* Inbox uses green badge */
+    background: radial-gradient(circle at 30% 30%, #6ee85a 0%, #2d8a1a 60%, #1d6a0e 100%);
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.4), inset 0 -2px 3px rgba(0,0,0,0.3);
+  }
+  .count-badge.blue {
+    background: radial-gradient(circle at 30% 30%, #88b8e8 0%, #2a5a9a 60%, #1a3e7a 100%);
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.4), inset 0 -2px 3px rgba(0,0,0,0.3);
+  }
+  #badge-inbox  { left: 222px; top: 285px; }
+  #badge-drafts { left: 222px; top: 459px; }
+
+  /* === Email list overlay — covers painted sample rows === */
+  /* The painted skin has 6 sample email rows (Jessica Parker, Daniel Carter,
+     etc.) baked in. Our live overlay sits directly on top with an opaque
+     dark blue background that completely hides the painted ones. */
+  #email-list {
+    position: absolute;
+    left: 304px;
+    top: 236px;
+    width: 970px;
+    height: 480px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: linear-gradient(180deg, #0a2a55 0%, #051838 100%);
+    /* Custom scrollbar styling so it doesn't look like a default browser one
+       (the skin already has a painted scrollbar to the right of this area) */
+    scrollbar-width: thin;
+    scrollbar-color: #4a7bbe #0a2a55;
+  }
+  #email-list::-webkit-scrollbar { width: 6px; }
+  #email-list::-webkit-scrollbar-track { background: #0a2a55; }
+  #email-list::-webkit-scrollbar-thumb { background: #4a7bbe; border-radius: 3px; }
+
+  /* Column header */
+  .eh-row {
+    display: grid;
+    grid-template-columns: 30px 56px 1fr 1.4fr 130px;
+    align-items: center;
+    padding: 9px 16px;
+    background: linear-gradient(180deg, #1a4a8a 0%, #0a2a55 100%);
+    border-bottom: 1px solid #2a5a9a;
+    font-size: 22px;
+    font-weight: bold;
+    color: #aacaff;
+    letter-spacing: 1px;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  /* Each email row */
+  .e-row {
+    display: grid;
+    grid-template-columns: 30px 56px 1fr 1.4fr 130px;
+    align-items: center;
+    padding: 11px 16px;
+    border-bottom: 1px solid rgba(40, 90, 160, 0.3);
+    font-size: 24px;
+    color: #d8e8ff;
+    cursor: pointer;
+    transition: background 0.06s;
+  }
+  .e-row:hover { background: rgba(60, 130, 220, 0.25); }
+  .e-row.selected { background: linear-gradient(180deg, #1f5dc0 0%, #154a9c 100%); color: #fff; }
+  .e-row.unread { font-weight: bold; color: #ffffff; }
+  .e-row .e-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #88b8e8 0%, #2a5a9a 70%, #1a3e7a 100%);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.4);
+  }
+  .e-row.unread .e-dot {
+    background: radial-gradient(circle at 30% 30%, #6ee85a 0%, #2d8a1a 70%, #1d6a0e 100%);
+  }
+  .e-row .e-env {
+    font-size: 26px;
+    opacity: 0.8;
+  }
+  .e-row .e-from, .e-row .e-subj, .e-row .e-date {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .e-row .e-date { text-align: right; opacity: 0.85; }
+
+  .e-empty {
+    padding: 60px 20px;
+    text-align: center;
+    color: #88aadd;
+    font-style: italic;
+    font-size: 24px;
+  }
+  .e-loadmore {
+    padding: 18px;
+    text-align: center;
+    background: linear-gradient(180deg, #1a4a8a 0%, #0a2a55 100%);
+    border-top: 1px solid #2a5a9a;
+    color: #aacaff;
+    cursor: pointer;
+    font-size: 24px;
+    font-weight: bold;
+    transition: background 0.08s;
+  }
+  .e-loadmore:hover { background: linear-gradient(180deg, #2a5a9a 0%, #1a4a8a 100%); }
+  .e-loadmore.loading { opacity: 0.6; cursor: wait; }
+
+  /* === Email body preview area === */
+  #email-body {
+    position: absolute;
+    left: 304px;
+    top: 750px;
+    width: 970px;
+    height: 270px;
+    background: linear-gradient(180deg, #d8e8f8 0%, #c8dcef 100%);
+    overflow-y: auto;
+    padding: 14px 24px;
+    color: #1a3a6a;
+    box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: #6a8aaa #d8e8f8;
+  }
+  #email-body::-webkit-scrollbar { width: 6px; }
+  #email-body::-webkit-scrollbar-track { background: #d8e8f8; }
+  #email-body::-webkit-scrollbar-thumb { background: #6a8aaa; border-radius: 3px; }
+  #email-body .b-headers {
+    border-bottom: 1px solid #88aacc;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+    font-size: 20px;
+    line-height: 1.6;
+  }
+  #email-body .b-label { font-weight: bold; color: #1a3a6a; display: inline-block; min-width: 90px; }
+  #email-body .b-body {
+    font-size: 22px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: #1a3a6a;
+  }
+  #email-body .b-empty {
+    text-align: center;
+    color: #6a8aaa;
+    font-style: italic;
+    padding: 40px 0;
+    font-size: 24px;
+  }
+
+  /* === "Connected / Disconnected" status === */
+  /* Painted skin has a green "CONNECTED ●" indicator top-right; we
+     overlay our own dot+text since connection status depends on tokens. */
+  #status-pill {
+    position: absolute;
+    left: 1180px;
+    top: 100px;
+    font-size: 20px;
+    font-family: Arial, sans-serif;
+    color: #3afa3a;
+    font-weight: bold;
+    letter-spacing: 1px;
+    pointer-events: none;
+    text-shadow: 0 0 4px rgba(58,250,58,0.6);
+  }
+  #status-pill.offline { color: #faa03a; text-shadow: 0 0 4px rgba(250,160,58,0.6); }
+
+  /* === Compose modal === */
+  /* When the user clicks Compose / Reply / Forward, a modal slides in over
+     the whole email list + body area. Uses the same color scheme as the
+     skin. */
+  #compose-modal {
+    position: absolute;
+    left: 304px;
+    top: 236px;
+    width: 970px;
+    height: 784px;
+    background: linear-gradient(180deg, #1a3a6a 0%, #0a2348 100%);
+    border: 2px solid #4a7bbe;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    display: none;
+    flex-direction: column;
+    z-index: 10;
+    box-sizing: border-box;
+  }
+  #compose-modal.show { display: flex; }
+  .cm-titlebar {
+    background: linear-gradient(180deg, #2a5a9a 0%, #1a3a6a 100%);
+    padding: 12px 18px;
+    color: #fff;
+    font-size: 26px;
+    font-weight: bold;
+    border-bottom: 1px solid #4a7bbe;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cm-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, #d84a4a 0%, #a02020 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.3), 0 1px 2px rgba(0,0,0,0.3);
+  }
+  .cm-close:hover { background: linear-gradient(180deg, #e85a5a 0%, #b03030 100%); }
+  .cm-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 18px;
+    border-bottom: 1px solid #2a5a9a;
+    gap: 12px;
+  }
+  .cm-label { color: #aacaff; font-size: 22px; font-weight: bold; min-width: 110px; }
+  .cm-input {
+    flex: 1;
+    background: rgba(10, 30, 60, 0.6);
+    border: 1px solid #4a7bbe;
+    color: #fff;
+    padding: 8px 12px;
+    font-size: 22px;
+    border-radius: 4px;
+    font-family: Tahoma, Arial, sans-serif;
+  }
+  .cm-input:focus { outline: 2px solid #88b8e8; }
+  .cm-body {
+    flex: 1;
+    margin: 0 18px 18px 18px;
+    background: rgba(10, 30, 60, 0.6);
+    border: 1px solid #4a7bbe;
+    border-radius: 4px;
+    padding: 12px;
+    color: #fff;
+    font-size: 22px;
+    font-family: Tahoma, Arial, sans-serif;
+    resize: none;
+    overflow-y: auto;
+  }
+  .cm-actions {
+    padding: 14px 18px;
+    border-top: 1px solid #4a7bbe;
+    display: flex;
+    gap: 12px;
+    background: linear-gradient(180deg, #1a3a6a 0%, #0a2348 100%);
+  }
+  .cm-btn {
+    padding: 10px 24px;
+    font-size: 22px;
+    font-weight: bold;
+    font-family: Tahoma, Arial, sans-serif;
+    border: 1px solid #4a7bbe;
+    border-radius: 4px;
+    cursor: pointer;
+    background: linear-gradient(180deg, #2a5a9a 0%, #1a3a6a 100%);
+    color: #fff;
+    transition: background 0.08s;
+  }
+  .cm-btn:hover { background: linear-gradient(180deg, #3a6aaa 0%, #2a4a7a 100%); }
+  .cm-btn.primary {
+    background: linear-gradient(180deg, #3a8a3a 0%, #1d5a1d 100%);
+    border-color: #5fa05f;
+  }
+  .cm-btn.primary:hover { background: linear-gradient(180deg, #4a9a4a 0%, #2d6a2d 100%); }
+  .cm-status {
+    margin: 0 18px 12px 18px;
+    padding: 10px;
+    background: rgba(200, 60, 60, 0.3);
+    border: 1px solid rgba(250, 100, 100, 0.6);
+    border-radius: 4px;
+    color: #ffcaca;
+    font-size: 20px;
+    display: none;
+  }
+  .cm-status.show { display: block; }
+  .cm-status.success {
+    background: rgba(60, 180, 60, 0.3);
+    border-color: rgba(100, 220, 100, 0.6);
+    color: #caffca;
+  }
+
+  /* === Tooltip helper for not-yet-connected state === */
+  #not-connected-overlay {
+    position: absolute;
+    left: 304px;
+    top: 236px;
+    width: 970px;
+    height: 784px;
+    background: rgba(5, 24, 56, 0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    z-index: 5;
+    color: #fff;
+    text-align: center;
+    padding: 40px;
+    box-sizing: border-box;
+  }
+  #not-connected-overlay.hide { display: none; }
+  #not-connected-overlay h1 {
+    font-size: 42px;
+    color: #88b8e8;
+    margin: 0;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+  #not-connected-overlay p {
+    font-size: 22px;
+    color: #aacaff;
+    margin: 0;
+    line-height: 1.5;
+    max-width: 600px;
+  }
+  #connect-btn {
+    margin-top: 20px;
+    padding: 14px 36px;
+    font-size: 24px;
+    font-weight: bold;
+    background: linear-gradient(180deg, #ea4335 0%, #c02020 100%);
+    border: 1px solid #901010;
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    font-family: Tahoma, Arial, sans-serif;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+  }
+  #connect-btn:hover { background: linear-gradient(180deg, #fa5345 0%, #d03030 100%); }
+</style>
+</head>
+<body>
+  <!-- The painted skin sits as the bottom layer -->
+  <div class="skin"><img src="assets/email-skin.png" alt=""></div>
+
+  <!-- All interactive overlays go in this stage layer -->
+  <div class="stage">
+
+    <!-- Drag handle covering the top band (EMAIL nameplate area) -->
+    <div id="drag-handle"></div>
+
+    <!-- Window control buttons (transparent overlays over painted ─ □ ✕) -->
+    <div class="win-ctrl" id="wc-min"   title="Minimize" onclick="winMinimize()"></div>
+    <div class="win-ctrl" id="wc-max"   title="Maximize" onclick="winMaximize()"></div>
+    <div class="win-ctrl" id="wc-close" title="Close"    onclick="winClose()"></div>
+
+    <!-- Toolbar buttons (transparent overlays over painted buttons) -->
+    <div class="toolbar-btn" id="tb-compose" title="Compose new email" onclick="openCompose(null)"></div>
+    <div class="toolbar-btn" id="tb-reply"   title="Reply" onclick="actReply()"></div>
+    <div class="toolbar-btn" id="tb-forward" title="Forward" onclick="actForward()"></div>
+    <div class="toolbar-btn" id="tb-delete"  title="Delete" onclick="actDelete()"></div>
+    <div class="toolbar-btn" id="tb-sendrecv" title="Send / Receive" onclick="actSendRecv()"></div>
+
+    <!-- Connection status (overlay over painted "CONNECTED ●") -->
+    <div id="status-pill" class="offline">DISCONNECTED</div>
+
+    <!-- Sidebar folder buttons (transparent overlays over painted folder list) -->
+    <div class="sidebar-btn active" id="sb-inbox"    title="Inbox"    onclick="switchFolder('inbox')"></div>
+    <div class="sidebar-btn"        id="sb-sent"     title="Sent"     onclick="switchFolder('sent')"></div>
+    <div class="sidebar-btn"        id="sb-drafts"   title="Drafts"   onclick="switchFolder('drafts')"></div>
+    <div class="sidebar-btn"        id="sb-trash"    title="Trash"    onclick="switchFolder('trash')"></div>
+    <div class="sidebar-btn"        id="sb-contacts" title="Contacts" onclick="actContacts()"></div>
+
+    <!-- Live count badges that obscure painted "7" and "2" numbers -->
+    <div class="count-badge green" id="badge-inbox">0</div>
+    <div class="count-badge blue"  id="badge-drafts">0</div>
+
+    <!-- Live email list (covers painted sample rows) -->
+    <div id="email-list">
+      <div class="eh-row">
+        <span></span>
+        <span></span>
+        <span id="col-from">FROM</span>
+        <span>SUBJECT</span>
+        <span>DATE</span>
+      </div>
+      <!-- rows injected here -->
+    </div>
+
+    <!-- Live email body preview (covers painted sample body) -->
+    <div id="email-body">
+      <div class="b-empty">Select a message to read.</div>
+    </div>
+
+    <!-- "Connect Gmail" overlay shown when no tokens are present -->
+    <div id="not-connected-overlay">
+      <div style="font-size: 80px;">📮</div>
+      <h1>Gmail Not Connected</h1>
+      <p>Sign in with your Google account to read your real mail here in retro style.</p>
+      <button id="connect-btn" onclick="connectGmail()">🔐 Sign in with Google</button>
+      <p style="font-size: 18px; color: #88aadd; margin-top: 12px;">
+        Or close this window and use the main WWW browser's mail.
+      </p>
+    </div>
+
+    <!-- Compose modal -->
+    <div id="compose-modal">
+      <div class="cm-titlebar">
+        <span id="cm-title">✏️ New Message</span>
+        <div class="cm-close" onclick="closeCompose()">✕</div>
+      </div>
+      <div class="cm-row">
+        <span class="cm-label">To:</span>
+        <input class="cm-input" id="cm-to" type="text" placeholder="recipient@example.com">
+      </div>
+      <div class="cm-row">
+        <span class="cm-label">Subject:</span>
+        <input class="cm-input" id="cm-subject" type="text" placeholder="(no subject)">
+      </div>
+      <textarea class="cm-body" id="cm-body" placeholder="Write your message..."></textarea>
+      <div class="cm-status" id="cm-status"></div>
+      <div class="cm-actions">
+        <button class="cm-btn primary" onclick="sendCompose()">📤 Send</button>
+        <button class="cm-btn" onclick="closeCompose()">Cancel</button>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+// =============================================================================
+// R3.42 — Email Window — Gmail integration logic
+// =============================================================================
+// This file is loaded as a standalone Electron BrowserWindow (see main.js's
+// createEmailWindow). It talks to Gmail via:
+//   - localStorage.www_gmail_tokens for the auth tokens (set by index.html
+//     when the user first authorized; we share via localStorage which is
+//     scoped per file:// origin — both index.html and email.html see the
+//     same storage when loaded from the same src/ directory)
+//   - window.electronAPI.gmailOAuth.start/refresh for re-auth and renewal
+//     (defined in preload.js, handled in main.js)
+//
+// Folder caching mirrors the R3.41 design in index.html: each of inbox/sent/
+// drafts has its own message array + pageToken. switchFolder() toggles the
+// view. fetchGmailFolder() handles initial load + pagination.
+
+// =============================================================================
+// State
+// =============================================================================
+let gmailToken = null;
+let gmailFolders = {
+  inbox:  { messages: [], pageToken: null, loaded: false },
+  sent:   { messages: [], pageToken: null, loaded: false },
+  drafts: { messages: [], pageToken: null, loaded: false },
+};
+let currentFolder = 'inbox';
+let selectedId = null;
+let myGmailAddress = null;
+let composeMode = null; // null | 'reply' | 'forward'
+
+// =============================================================================
+// Token storage (shared with index.html via localStorage)
+// =============================================================================
+function getTokens() {
+  try { return JSON.parse(localStorage.getItem('www_gmail_tokens') || 'null'); }
+  catch(e) { return null; }
+}
+function setTokens(t) {
+  try { localStorage.setItem('www_gmail_tokens', JSON.stringify(t || {})); } catch(e) {}
+}
+function clearTokens() {
+  try { localStorage.removeItem('www_gmail_tokens'); } catch(e) {}
+  gmailToken = null;
+}
+
+async function getValidAccessToken() {
+  const t = getTokens();
+  if (!t || !t.accessToken) return null;
+  const expSoon = !t.expiresAt || (t.expiresAt - Date.now()) < 60000;
+  if (!expSoon) return t.accessToken;
+  if (!t.refreshToken) { clearTokens(); return null; }
+  if (!window.electronAPI || !window.electronAPI.gmailOAuth) {
+    // Bridge missing — main process out of date — try with possibly-expired token
+    return t.accessToken;
+  }
+  try {
+    const r = await window.electronAPI.gmailOAuth.refresh(t.refreshToken);
+    if (r.error) {
+      if (/invalid_grant|invalid_token/.test(r.error)) clearTokens();
+      return null;
+    }
+    const next = {
+      accessToken: r.accessToken,
+      refreshToken: r.refreshToken || t.refreshToken,
+      expiresAt: r.expiresAt,
+    };
+    setTokens(next);
+    return next.accessToken;
+  } catch(e) {
+    console.warn('R3.42 refresh threw:', e && e.message);
+    return null;
+  }
+}
+
+// =============================================================================
+// Window controls (call main.js via preload IPC)
+// =============================================================================
+function winClose() {
+  if (window.electronAPI && window.electronAPI.closeEmail) {
+    window.electronAPI.closeEmail();
+  }
+}
+function winMinimize() {
+  if (window.electronAPI && window.electronAPI.minimizeEmail) {
+    window.electronAPI.minimizeEmail();
+  }
+}
+function winMaximize() {
+  // Email window is fixed-size (matches the painted skin shape), so maximize
+  // is a no-op for now. Could be wired to a full-screen mode later but the
+  // skin wouldn't scale gracefully.
+}
+
+// =============================================================================
+// Initial boot
+// =============================================================================
+window.addEventListener('DOMContentLoaded', async () => {
+  console.log('R3.42 email window booting');
+  const tokens = getTokens();
+  if (!tokens || !tokens.accessToken) {
+    // No tokens stored — show the "Connect Gmail" overlay
+    setStatus(false);
+    return;
+  }
+  const tok = await getValidAccessToken();
+  if (!tok) {
+    setStatus(false);
+    return;
+  }
+  gmailToken = tok;
+  setStatus(true);
+  document.getElementById('not-connected-overlay').classList.add('hide');
+  // Fetch profile (for From: header on send) + initial inbox
+  fetchProfile();
+  switchFolder('inbox');
+});
+
+function setStatus(connected) {
+  const pill = document.getElementById('status-pill');
+  if (connected) {
+    pill.textContent = 'CONNECTED';
+    pill.classList.remove('offline');
+  } else {
+    pill.textContent = 'DISCONNECTED';
+    pill.classList.add('offline');
+  }
+}
+
+// =============================================================================
+// Gmail OAuth (delegate to main process, get tokens back)
+// =============================================================================
+async function connectGmail() {
+  if (!window.electronAPI || !window.electronAPI.gmailOAuth) {
+    showError('Gmail bridge not available (app needs update).');
+    return;
+  }
+  document.getElementById('connect-btn').textContent = '⏳ Check your browser...';
+  try {
+    const res = await window.electronAPI.gmailOAuth.start();
+    if (res.error) {
+      console.warn('R3.42 OAuth failed:', res.error);
+      let msg = 'Sign-in failed.';
+      if (/missing-credentials/i.test(res.error)) msg = 'App build is missing Gmail credentials.';
+      else if (/cancelled/i.test(res.error)) msg = 'Sign-in cancelled.';
+      else if (/timeout/i.test(res.error)) msg = 'Sign-in timed out.';
+      document.getElementById('connect-btn').textContent = '🔐 Sign in with Google';
+      showError(msg);
+      return;
+    }
+    // Success — persist + boot
+    setTokens({
+      accessToken: res.accessToken,
+      refreshToken: res.refreshToken,
+      expiresAt: res.expiresAt,
+    });
+    gmailToken = res.accessToken;
+    setStatus(true);
+    document.getElementById('not-connected-overlay').classList.add('hide');
+    fetchProfile();
+    switchFolder('inbox');
+  } catch(e) {
+    console.error('R3.42 OAuth threw:', e);
+    document.getElementById('connect-btn').textContent = '🔐 Sign in with Google';
+    showError(e && e.message || 'Sign-in error');
+  }
+}
+
+function showError(msg) {
+  // Lightweight inline error display via the connect overlay
+  const overlay = document.getElementById('not-connected-overlay');
+  let p = overlay.querySelector('.err-p');
+  if (!p) {
+    p = document.createElement('p');
+    p.className = 'err-p';
+    p.style.color = '#ffaaaa';
+    overlay.insertBefore(p, document.getElementById('connect-btn'));
+  }
+  p.textContent = '⚠️ ' + msg;
+}
+
+// =============================================================================
+// Profile (for From: header)
+// =============================================================================
+async function fetchProfile() {
+  const token = await getValidAccessToken();
+  if (!token) return;
+  try {
+    const r = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (!r.ok) return;
+    const data = await r.json();
+    if (data.emailAddress) {
+      myGmailAddress = data.emailAddress;
+      console.log('R3.42 user gmail:', myGmailAddress);
+    }
+  } catch(e) {}
+}
+
+// =============================================================================
+// Folder switching
+// =============================================================================
+async function switchFolder(name) {
+  if (name === 'trash') {
+    // Trash isn't fully integrated yet — let the user know
+    showToast('Trash view coming soon.');
+    return;
+  }
+  if (!gmailFolders[name]) return;
+  if (name === currentFolder && gmailFolders[name].loaded) return;
+  currentFolder = name;
+  selectedId = null;
+  // Update sidebar active state
+  document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+  const sb = document.getElementById('sb-' + name);
+  if (sb) sb.classList.add('active');
+  // Update column header label
+  document.getElementById('col-from').textContent =
+    (name === 'sent' || name === 'drafts') ? 'TO' : 'FROM';
+  // Show whatever is cached, plus an empty/loading state if not loaded yet
+  document.getElementById('email-body').innerHTML = '<div class="b-empty">Select a message to read.</div>';
+  renderList();
+  if (!gmailFolders[name].loaded) {
+    fetchFolder(name, false);
+  }
+}
+
+function actContacts() {
+  showToast('Contacts view coming soon.');
+}
+
+function showToast(msg) {
+  // Lightweight one-off message at the bottom-center
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = `
+      position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+      background: rgba(20, 50, 100, 0.95); color: #fff; padding: 12px 24px;
+      border-radius: 6px; font-size: 18px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      border: 1px solid #4a7bbe; pointer-events: none;`;
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.5s'; }, 2500);
+}
+
+// =============================================================================
+// Folder fetching with pagination
+// =============================================================================
+async function fetchFolder(folder, append) {
+  if (!gmailFolders[folder]) return;
+  let token = await getValidAccessToken();
+  if (!token) { setStatus(false); return; }
+  gmailToken = token;
+
+  const QUERIES = { inbox: 'in:inbox', sent: 'in:sent', drafts: 'in:drafts' };
+  const q = QUERIES[folder] || 'in:inbox';
+  const PAGE_SIZE = 25;
+  const params = new URLSearchParams({ maxResults: String(PAGE_SIZE), q });
+  if (append && gmailFolders[folder].pageToken) {
+    params.set('pageToken', gmailFolders[folder].pageToken);
+  }
+  const url = 'https://gmail.googleapis.com/gmail/v1/users/me/messages?' + params.toString();
+
+  try {
+    let res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+    if (res.status === 401) {
+      const t = getTokens(); if (t) { t.expiresAt = 0; setTokens(t); }
+      token = await getValidAccessToken();
+      if (!token) { setStatus(false); return; }
+      gmailToken = token;
+      res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+    }
+    if (!res.ok) {
+      console.warn('R3.42 list fetch failed:', res.status);
+      return;
+    }
+    const data = await res.json();
+    gmailFolders[folder].pageToken = data.nextPageToken || null;
+    gmailFolders[folder].loaded = true;
+
+    if (!data.messages || data.messages.length === 0) {
+      if (currentFolder === folder) renderList();
+      return;
+    }
+
+    const newMsgs = [];
+    for (const m of data.messages) {
+      if (gmailFolders[folder].messages.find(e => e.gmailId === m.id)) continue;
+      const mr = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/' + m.id +
+        '?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Subject&metadataHeaders=Date',
+        { headers: { Authorization: 'Bearer ' + token } });
+      const msg = await mr.json();
+      const headers = (msg.payload && msg.payload.headers) || [];
+      const getH = n => (headers.find(h => h.name === n) || {}).value || '';
+
+      let displayName;
+      if (folder === 'sent' || folder === 'drafts') {
+        const toFull = getH('To');
+        displayName = toFull.replace(/<.*>/, '').trim() || toFull || '(no recipient)';
+      } else {
+        const fromFull = getH('From');
+        displayName = fromFull.replace(/<.*>/, '').trim() || fromFull;
+      }
+
+      const dateStr = getH('Date');
+      const dateShort = dateStr ?
+        new Date(dateStr).toLocaleDateString('en-US', {month:'numeric', day:'numeric', year:'2-digit'}) : '';
+
+      let body = '(loading body)';
+      try {
+        const fr = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/' + m.id + '?format=full',
+          { headers: { Authorization: 'Bearer ' + token } });
+        const full = await fr.json();
+        body = extractBody(full.payload) || body;
+      } catch(e) {}
+
+      newMsgs.push({
+        id: Date.now() + Math.random(),
+        gmailId: m.id,
+        from: displayName,
+        subj: getH('Subject') || '(no subject)',
+        date: dateShort,
+        unread: (msg.labelIds || []).includes('UNREAD'),
+        body
+      });
+    }
+
+    if (newMsgs.length > 0) {
+      if (append) {
+        gmailFolders[folder].messages = [...gmailFolders[folder].messages, ...newMsgs];
+      } else {
+        gmailFolders[folder].messages = gmailFolders[folder].messages.length === 0
+          ? newMsgs
+          : [...newMsgs.filter(n => !gmailFolders[folder].messages.find(e => e.gmailId === n.gmailId)),
+             ...gmailFolders[folder].messages];
+      }
+    }
+    if (currentFolder === folder) renderList();
+    updateBadges();
+  } catch(e) {
+    console.error('R3.42 fetchFolder error:', e);
+  }
+}
+
+function extractBody(payload) {
+  if (!payload) return '';
+  if (payload.body && payload.body.data) {
+    try { return atob(payload.body.data.replace(/-/g, '+').replace(/_/g, '/')); } catch(e) {}
+  }
+  if (payload.parts) {
+    for (const p of payload.parts) {
+      if (p.mimeType === 'text/plain' && p.body && p.body.data) {
+        try { return atob(p.body.data.replace(/-/g, '+').replace(/_/g, '/')); } catch(e) {}
+      }
+    }
+    for (const p of payload.parts) {
+      const r = extractBody(p);
+      if (r) return r;
+    }
+  }
+  return '';
+}
+
+// =============================================================================
+// Render the email list
+// =============================================================================
+function renderList() {
+  const list = document.getElementById('email-list');
+  const msgs = gmailFolders[currentFolder] ? gmailFolders[currentFolder].messages : [];
+
+  // Wipe everything below the column header, then rebuild
+  list.innerHTML = `<div class="eh-row">
+    <span></span>
+    <span></span>
+    <span id="col-from">${(currentFolder === 'sent' || currentFolder === 'drafts') ? 'TO' : 'FROM'}</span>
+    <span>SUBJECT</span>
+    <span>DATE</span>
+  </div>`;
+
+  if (msgs.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'e-empty';
+    if (gmailFolders[currentFolder] && gmailFolders[currentFolder].loaded) {
+      empty.textContent = 'No messages in ' + currentFolder + '.';
+    } else {
+      empty.textContent = 'Loading ' + currentFolder + '…';
+    }
+    list.appendChild(empty);
+    return;
+  }
+
+  msgs.forEach(m => {
+    const row = document.createElement('div');
+    row.className = 'e-row' + (m.unread ? ' unread' : '') + (selectedId === m.id ? ' selected' : '');
+    row.innerHTML = `
+      <div class="e-dot"></div>
+      <div class="e-env">✉️</div>
+      <div class="e-from">${escapeHtml(m.from)}</div>
+      <div class="e-subj">${escapeHtml(m.subj)}</div>
+      <div class="e-date">${escapeHtml(m.date)}</div>`;
+    row.onclick = () => {
+      selectedId = m.id;
+      m.unread = false;
+      renderList();
+      updateBadges();
+      renderBody(m);
+    };
+    list.appendChild(row);
+  });
+
+  // "Load more" row if there's pagination available
+  if (gmailFolders[currentFolder] && gmailFolders[currentFolder].pageToken) {
+    const more = document.createElement('div');
+    more.className = 'e-loadmore';
+    more.textContent = '⬇ Load more messages';
+    more.onclick = async () => {
+      if (more.classList.contains('loading')) return;
+      more.classList.add('loading');
+      more.textContent = '⌛ Loading…';
+      try { await fetchFolder(currentFolder, true); } catch(e) { console.error(e); }
+    };
+    list.appendChild(more);
+  }
+}
+
+function renderBody(m) {
+  const b = document.getElementById('email-body');
+  b.innerHTML = `
+    <div class="b-headers">
+      <div><span class="b-label">From:</span> ${escapeHtml(m.from)}</div>
+      <div><span class="b-label">Subject:</span> ${escapeHtml(m.subj)}</div>
+      <div><span class="b-label">Date:</span> ${escapeHtml(m.date)}</div>
+    </div>
+    <div class="b-body">${escapeHtml(m.body)}</div>`;
+  b.scrollTop = 0;
+}
+
+function updateBadges() {
+  const inboxUnread = gmailFolders.inbox.messages.filter(m => m.unread).length;
+  const draftsCount = gmailFolders.drafts.messages.length;
+  document.getElementById('badge-inbox').textContent = inboxUnread || 0;
+  document.getElementById('badge-drafts').textContent = draftsCount || 0;
+  document.getElementById('badge-inbox').style.display = inboxUnread > 0 ? 'flex' : 'flex';
+  document.getElementById('badge-drafts').style.display = draftsCount > 0 ? 'flex' : 'flex';
+}
+
+function escapeHtml(s) {
+  if (typeof s !== 'string') s = String(s == null ? '' : s);
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// =============================================================================
+// Toolbar actions
+// =============================================================================
+function getSelected() {
+  if (!selectedId) return null;
+  return gmailFolders[currentFolder].messages.find(m => m.id === selectedId);
+}
+
+function actReply() {
+  const m = getSelected();
+  if (!m) { showToast('Select a message first.'); return; }
+  openCompose({ to: m.from, subj: 'Re: ' + m.subj, body: '\n\n--- Original ---\n' + m.body });
+}
+
+function actForward() {
+  const m = getSelected();
+  if (!m) { showToast('Select a message first.'); return; }
+  openCompose({ to: '', subj: 'Fwd: ' + m.subj, body: '\n\n--- Forwarded ---\n' + m.body });
+}
+
+function actDelete() {
+  const m = getSelected();
+  if (!m) { showToast('Select a message first.'); return; }
+  // Local-only delete (does not actually trash on Gmail server)
+  gmailFolders[currentFolder].messages = gmailFolders[currentFolder].messages.filter(x => x.id !== m.id);
+  selectedId = null;
+  document.getElementById('email-body').innerHTML = '<div class="b-empty">Message removed from view.</div>';
+  renderList();
+  updateBadges();
+}
+
+function actSendRecv() {
+  // Refresh the current folder
+  if (gmailFolders[currentFolder]) {
+    gmailFolders[currentFolder].messages = [];
+    gmailFolders[currentFolder].pageToken = null;
+    gmailFolders[currentFolder].loaded = false;
+  }
+  selectedId = null;
+  document.getElementById('email-body').innerHTML = '<div class="b-empty">Select a message to read.</div>';
+  renderList();
+  fetchFolder(currentFolder, false);
+  showToast('Refreshing ' + currentFolder + '…');
+}
+
+// =============================================================================
+// Compose
+// =============================================================================
+function openCompose(prefill) {
+  document.getElementById('cm-to').value = (prefill && prefill.to) || '';
+  document.getElementById('cm-subject').value = (prefill && prefill.subj) || '';
+  document.getElementById('cm-body').value = (prefill && prefill.body) || '';
+  document.getElementById('cm-title').textContent = prefill
+    ? (prefill.subj && prefill.subj.startsWith('Re:') ? '↩️ Reply' : (prefill.subj && prefill.subj.startsWith('Fwd:') ? '↪️ Forward' : '✏️ New Message'))
+    : '✏️ New Message';
+  document.getElementById('cm-status').classList.remove('show', 'success');
+  document.getElementById('compose-modal').classList.add('show');
+  setTimeout(() => document.getElementById('cm-to').focus(), 100);
+}
+
+function closeCompose() {
+  document.getElementById('compose-modal').classList.remove('show');
+}
+
+async function sendCompose() {
+  const to = document.getElementById('cm-to').value.trim();
+  const subj = document.getElementById('cm-subject').value || '(no subject)';
+  const body = document.getElementById('cm-body').value;
+  const status = document.getElementById('cm-status');
+
+  if (!to) { showStatus(status, 'Enter a recipient.', false); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+    showStatus(status, 'Recipient must look like name@example.com.', false);
+    return;
+  }
+
+  const token = await getValidAccessToken();
+  if (!token) { showStatus(status, 'Gmail session expired. Click 📮 to reconnect.', false); return; }
+  gmailToken = token;
+
+  if (!myGmailAddress) await fetchProfile();
+  if (!myGmailAddress) {
+    showStatus(status, 'Couldn\'t determine your Gmail address.', false);
+    return;
+  }
+
+  const CRLF = '\r\n';
+  const raw = [
+    'From: ' + myGmailAddress,
+    'To: ' + to,
+    'Subject: ' + subj,
+    'Content-Type: text/plain; charset=utf-8',
+    'MIME-Version: 1.0',
+    '',
+    body
+  ].join(CRLF);
+  const encoded = btoa(unescape(encodeURIComponent(raw)))
+    .replace(/\+/g, '-').replace(/\//g, '_');
+
+  try {
+    const r = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ raw: encoded })
+    });
+    if (!r.ok) {
+      const errBody = await r.json().catch(() => ({}));
+      const msg = (errBody.error && errBody.error.message) || ('HTTP ' + r.status);
+      showStatus(status, '❌ ' + msg, false);
+      return;
+    }
+    showStatus(status, '✅ Sent!', true);
+    // Invalidate Sent cache so it refreshes next visit
+    gmailFolders.sent.messages = [];
+    gmailFolders.sent.pageToken = null;
+    gmailFolders.sent.loaded = false;
+    setTimeout(() => closeCompose(), 1200);
+  } catch(e) {
+    showStatus(status, '❌ ' + (e && e.message || 'unknown error'), false);
+  }
+}
+
+function showStatus(el, msg, success) {
+  el.textContent = msg;
+  el.classList.add('show');
+  if (success) el.classList.add('success');
+  else el.classList.remove('success');
+}
+
+// Esc closes compose modal
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (document.getElementById('compose-modal').classList.contains('show')) {
+      closeCompose();
+    }
+  }
+});
+</script>
+</body>
+</html>
