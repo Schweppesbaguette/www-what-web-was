@@ -1796,6 +1796,14 @@ setInterval(updateClock,1000);updateClock();
 //  INIT
 // ═══════════════════════════════════════════════════════
 window.addEventListener('load',()=>{
+  // R3.37.1 — Diagnostic logging. If the user reports the main window
+  // is blank, ask them for the console output of these lines.
+  console.log('R3.37.1 index window.load fired');
+  try {
+    const _peek = localStorage.getItem('www_cfg');
+    const _c = _peek ? JSON.parse(_peek) : null;
+    console.log('R3.37.1 CFG status:', _c ? {screenName: _c.screenName, hasAbly: !!_c.ablyKey, isGuest: _c.isGuest} : 'no CFG');
+  } catch(e) { console.warn('R3.37.1 CFG parse err:', e.message); }
   loadAssets();
   // Set logo/signin images
   const setupLogo=document.getElementById('setup-logo');
@@ -1811,11 +1819,13 @@ window.addEventListener('load',()=>{
   // Build mascot pickers
   buildMascotRows();
   if(CFG.screenName&&CFG.ablyKey){
+    console.log('R3.37.1 boot path: conn-screen (have CFG)');
     document.getElementById('setup-screen').style.display='none';
     // Show connecting screen with dialup sound then boot
     const connScr=document.getElementById('conn-screen');
     if(connScr){
       connScr.style.display='flex';
+      console.log('R3.37.1 conn-screen shown, will call bootDesktop in 15s');
       const cm=document.getElementById('conn-mascot');
       // Assets may not be loaded yet - wait for them then set mascot
       setTimeout(()=>{
@@ -1832,9 +1842,11 @@ window.addEventListener('load',()=>{
       },d));
       setTimeout(bootDesktop,15000);
     } else {
+      console.log('R3.37.1 boot path: no conn-screen elem, immediate bootDesktop');
       setTimeout(bootDesktop,500);
     }
   } else {
+    console.log('R3.37.1 boot path: showSetup (CFG missing keys)');
     showSetup();
   }
 });
@@ -1975,6 +1987,7 @@ function cancelConnect(){
 }
 
 function bootDesktop(){
+  console.log('R3.37.1 bootDesktop called');
   document.getElementById('conn-screen').style.display='none';
   const bw=document.getElementById('browser-win');
   bw.classList.add('active');
