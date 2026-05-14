@@ -3340,9 +3340,13 @@ function showEmailMain(){
   renderEmailList();
 }
 
-// Built-in WWW app Google OAuth client ID
-// Users just click Sign In - no client ID needed
-const WWW_GOOGLE_CLIENT_ID = '234470124470-utn6re9unl2fksdt19ohajopogbgehtd.apps.googleusercontent.com';
+// R3.38 — Updated to the new "WWW Web" OAuth client created under the
+// what-web-was Firebase/Cloud project. The old client (234470...) was
+// in the AOL BROWSER project which is what caused the 400 invalid_request
+// error in the earlier screenshots. New flow: same GIS Web SDK approach,
+// just pointed at the right client. Test users (your Gmail) added in
+// the OAuth consent screen → Audience page.
+const WWW_GOOGLE_CLIENT_ID = '487863450922-5r2qsu8bvgutl4ccrs9q7dg6pkb67ruu.apps.googleusercontent.com';
 
 function connectGmail(){
   // Skip the modal - go straight to auth with built-in client ID
