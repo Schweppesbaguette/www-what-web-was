@@ -123,15 +123,17 @@ input, button, label, canvas, .nodrag {
 
 /* R3.37 — Sign-up panel: a dark overlay that COVERS the painted "Screen Name"/
    "Password" labels on the skin and presents a fresh form with its own labels.
-   Sits right over the same input area so the visual real estate is reused. */
+   Sits right over the same input area so the visual real estate is reused.
+   R3.37.2 — Auto-height (was 410px fixed → too tall, overlapped sign-on
+   button area). Also tighter spacing in rows so it doesn't waste space. */
 #signup-panel {
   position: absolute;
   top: 400px; left: 150px;
-  width: 480px; height: 410px;
+  width: 480px;
   background: linear-gradient(180deg, rgba(8,20,60,0.96), rgba(2,8,32,0.97));
   border: 2px solid rgba(146,217,255,0.4);
   border-radius: 12px;
-  padding: 22px 26px;
+  padding: 18px 26px;
   z-index: 3;
   box-shadow: 0 10px 40px rgba(0,0,40,0.7), inset 0 1px 0 rgba(146,217,255,0.2);
   display: none;
@@ -152,11 +154,11 @@ input, button, label, canvas, .nodrag {
   font-size: 11px;
   font-family: Tahoma, Arial, sans-serif;
   text-align: center;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
   position: static;
 }
 .signup-row {
-  margin-bottom: 9px;
+  margin-bottom: 7px;
   position: static;
 }
 .signup-row label {
@@ -164,15 +166,15 @@ input, button, label, canvas, .nodrag {
   color: #92d9ff;
   font-size: 11px;
   font-family: Tahoma, Arial, sans-serif;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
   position: static;
 }
 .signup-row .field {
   position: static;
   display: block;
   width: 100%;
-  padding: 8px 12px;
-  font-size: 14px;
+  padding: 7px 12px;
+  font-size: 13px;
 }
 .signup-row .hint {
   color: #5878a8;
@@ -186,13 +188,13 @@ input, button, label, canvas, .nodrag {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 14px;
+  margin-top: 10px;
   position: static;
 }
 .signup-footer .btn {
   position: static;
   flex: 1;
-  padding: 10px 8px;
+  padding: 9px 8px;
 }
 
 /* R3.37 — Forgot Password mini-panel — similar overlay style, smaller */
