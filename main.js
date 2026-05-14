@@ -284,6 +284,50 @@ function createHistorianWindow() {
 //      at https://oauth2.googleapis.com/token
 //   7. Tokens returned to renderer; renderer persists to localStorage
 const GMAIL_DESKTOP_CLIENT_ID = '487863450922-8p39nt8er3bf1ksbbbng9mu79rje0bb6.apps.googleusercontent.com';
+// R3.40.3 — Credentials loaded from a gitignored file at runtime instead
+// of being hardcoded. Google's secret scanner caught the literal client_secret
+// when we tried to push, and rightly so: even though Desktop OAuth secrets
+// can't truly be kept confidential (they ship in the .app binary), checking
+// them into a public repo crosses a different line — they become trivially
+// scrapable from GitHub by bots. The credentials.json file lives in
+// src/gmail-credentials.json, is .gitignored, and is generated either:
+//   - locally by the developer (you), once, after creating the OAuth client
+//   - by GitHub Actions during the build, from a repo secret
+// The actual file format:
+//   { "client_id": "...", "client_secret": "GOCSPX-..." }
+// Schema is intentionally identical to what Google's "Download JSON" produces
+// from the OAuth console (well, the relevant fields — they wrap it in
+// {"installed": {...}} but we accept either shape).
+let GMAIL_DESKTOP_CLIENT_SECRET = null;
+function loadGmailCredentials() {
+  try {
+    const credPath = path.join(__dirname, 'src', 'gmail-credentials.json');
+    if (!fs.existsSync(credPath)) {
+      console.warn('R3.40.3 gmail-credentials.json not found at', credPath, '— Gmail OAuth will be disabled');
+      return false;
+    }
+    const raw = JSON.parse(fs.readFileSync(credPath, 'utf8'));
+    // Accept either the unwrapped form { client_id, client_secret } or
+    // Google's "Download JSON" wrapped form { installed: { client_id, client_secret } }
+    const cfg = raw.installed || raw.web || raw;
+    if (!cfg.client_secret) {
+      console.warn('R3.40.3 gmail-credentials.json missing client_secret');
+      return false;
+    }
+    GMAIL_DESKTOP_CLIENT_SECRET = cfg.client_secret;
+    // Sanity-check the client_id matches (helpful if developer accidentally
+    // dropped credentials for a different OAuth client into the file)
+    if (cfg.client_id && cfg.client_id !== GMAIL_DESKTOP_CLIENT_ID) {
+      console.warn('R3.40.3 client_id in credentials file (' + cfg.client_id.slice(0,30) + '...) doesn\'t match constant — using file value');
+    }
+    console.log('R3.40.3 Gmail credentials loaded OK');
+    return true;
+  } catch(e) {
+    console.warn('R3.40.3 failed to load gmail-credentials.json:', e.message);
+    return false;
+  }
+}
+loadGmailCredentials();
 const GMAIL_SCOPES = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send';
 
 function base64url(buf) {
@@ -307,6 +351,10 @@ function closeOAuthServer() {
    the auth code. Resolves with {code, verifier, redirectUri} or rejects. */
 function startGmailOAuthFlow() {
   return new Promise((resolve, reject) => {
+    // R3.40.3 — bail early if credentials file is missing
+    if (!GMAIL_DESKTOP_CLIENT_SECRET) {
+      return reject(new Error('missing-credentials: src/gmail-credentials.json not found or invalid. See README for setup.'));
+    }
     // Tear down any prior attempt
     closeOAuthServer();
 
@@ -412,6 +460,7 @@ function startGmailOAuthFlow() {
 async function exchangeGmailCode(code, verifier, redirectUri) {
   const body = new URLSearchParams({
     client_id: GMAIL_DESKTOP_CLIENT_ID,
+    client_secret: GMAIL_DESKTOP_CLIENT_SECRET,  // R3.40.2 — required by Google
     code: code,
     code_verifier: verifier,
     grant_type: 'authorization_code',
@@ -430,6 +479,7 @@ async function exchangeGmailCode(code, verifier, redirectUri) {
 async function refreshGmailAccessToken(refreshToken) {
   const body = new URLSearchParams({
     client_id: GMAIL_DESKTOP_CLIENT_ID,
+    client_secret: GMAIL_DESKTOP_CLIENT_SECRET,  // R3.40.2 — required by Google
     refresh_token: refreshToken,
     grant_type: 'refresh_token',
   });
