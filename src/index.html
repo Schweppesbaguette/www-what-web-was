@@ -2009,8 +2009,28 @@ function bootDesktop(){
   // Load buddy list
   try{const b=localStorage.getItem('www_buddies');if(b)myBuddyList=JSON.parse(b);}catch(e){}
   renderBuddyList();
-  // Load gmail if configured
-  if(CFG.googleClientId) loadGoogleLib();
+  // R3.39 — Auto-restore Gmail if user previously connected. Tokens are
+  // persisted in localStorage; getValidGmailAccessToken handles refresh.
+  // Note: previously this called loadGoogleLib() (the GIS Web SDK approach
+  // from R3.38 and earlier), which is now removed.
+  (async () => {
+    const tokens = getGmailTokens();
+    if (tokens && tokens.accessToken) {
+      console.log('R3.39 found persisted Gmail tokens, auto-restoring');
+      const tok = await getValidGmailAccessToken();
+      if (tok) {
+        gmailToken = tok;
+        mailMode = 'gmail';
+        const badge = document.getElementById('gmail-badge'); if (badge) badge.style.display = '';
+        const btn = document.getElementById('gmail-btn'); if (btn) btn.textContent = '📮 Gmail ✓';
+        const who = document.getElementById('email-who'); if (who) who.textContent = CFG.screenName + ' (Gmail)';
+        // Silent fetch so we don't toast on every boot
+        fetchGmailMessages(true);
+      } else {
+        console.log('R3.39 Gmail token refresh failed; user will need to reconnect');
+      }
+    }
+  })();
   // Init Ably
   initAbly();
   // Homepage
@@ -3340,94 +3360,157 @@ function showEmailMain(){
   renderEmailList();
 }
 
-// R3.38 — Updated to the new "WWW Web" OAuth client created under the
-// what-web-was Firebase/Cloud project. The old client (234470...) was
-// in the AOL BROWSER project which is what caused the 400 invalid_request
-// error in the earlier screenshots. New flow: same GIS Web SDK approach,
-// just pointed at the right client. Test users (your Gmail) added in
-// the OAuth consent screen → Audience page.
-const WWW_GOOGLE_CLIENT_ID = '487863450922-5r2qsu8bvgutl4ccrs9q7dg6pkb67ruu.apps.googleusercontent.com';
+// R3.39 — Gmail OAuth completely rewritten.
+// The R3.38 attempt used the Google Identity Services (GIS) Web SDK, which
+// requires a "Web application" OAuth client. Google rejected our origin
+// (file://) with "Error 400: invalid_request" — they explicitly disallow
+// file:// for Web app clients per the OAuth 2.0 policy.
+//
+// New approach (R3.39):
+// - Use a "Desktop app" OAuth client + RFC 8252 loopback redirect flow
+// - All Google API talk happens via main.js (see gmailOAuth in main.js)
+// - Renderer just calls window.electronAPI.gmailOAuth.start() / .refresh()
+// - Tokens persisted to localStorage.www_gmail_tokens
+// - 401 from Gmail API auto-triggers refresh via refresh_token
+
+/* Read/write the token bundle. Shape:
+   { accessToken, refreshToken, expiresAt }  — expiresAt is ms-since-epoch */
+function getGmailTokens(){
+  try { return JSON.parse(localStorage.getItem('www_gmail_tokens')||'null'); }
+  catch(e){ return null; }
+}
+function setGmailTokens(t){
+  try { localStorage.setItem('www_gmail_tokens', JSON.stringify(t||{})); } catch(e){}
+}
+function clearGmailTokens(){
+  try { localStorage.removeItem('www_gmail_tokens'); } catch(e){}
+  gmailToken = null;
+}
+
+/* Return the current access token, refreshing if it's within 60s of expiry.
+   Returns null if no tokens or refresh fails. */
+async function getValidGmailAccessToken(){
+  const t = getGmailTokens();
+  if (!t || !t.accessToken) return null;
+  const now = Date.now();
+  const expSoon = !t.expiresAt || (t.expiresAt - now) < 60000;
+  if (!expSoon) return t.accessToken;
+  // Need to refresh
+  if (!t.refreshToken) {
+    console.warn('R3.39 access token expired, no refresh token — need to re-connect');
+    clearGmailTokens();
+    return null;
+  }
+  if (!window.electronAPI || !window.electronAPI.gmailOAuth) {
+    console.warn('R3.39 gmailOAuth bridge missing (preload.js out of date?)');
+    return t.accessToken; // try with the (expired) token as fallback
+  }
+  try {
+    const r = await window.electronAPI.gmailOAuth.refresh(t.refreshToken);
+    if (r.error) {
+      console.warn('R3.39 refresh failed:', r.error);
+      // If the refresh token is revoked, clear everything so user can re-auth
+      if (/invalid_grant|invalid_token/.test(r.error)) clearGmailTokens();
+      return null;
+    }
+    const next = {
+      accessToken: r.accessToken,
+      refreshToken: r.refreshToken || t.refreshToken,
+      expiresAt: r.expiresAt,
+    };
+    setGmailTokens(next);
+    gmailToken = next.accessToken;
+    return next.accessToken;
+  } catch(e) {
+    console.warn('R3.39 refresh threw:', e && e.message);
+    return null;
+  }
+}
 
 function connectGmail(){
-  // Skip the modal - go straight to auth with built-in client ID
+  // Show the "connecting…" modal (existing UI elements)
   document.getElementById('gm-step1') && (document.getElementById('gm-step1').style.display='none');
   document.getElementById('gm-step2') && (document.getElementById('gm-step2').style.display='block');
   document.getElementById('gmail-modal').style.display='flex';
-  if(typeof google==='undefined'){loadGoogleLib(()=>doGmailAuth(WWW_GOOGLE_CLIENT_ID));}
-  else doGmailAuth(WWW_GOOGLE_CLIENT_ID);
+
+  if (!window.electronAPI || !window.electronAPI.gmailOAuth) {
+    closeModal('gmail-modal');
+    showToast('⚠️ Update the app to use Gmail (preload.js out of date).', '');
+    return;
+  }
+
+  // Kick off the OAuth flow via main.js. This opens a new BrowserWindow
+  // with Google's consent page (UA stripped of "Electron/29.x" to dodge
+  // Google's anti-webview detection).
+  window.electronAPI.gmailOAuth.start().then(res => {
+    closeModal('gmail-modal');
+    if (res.error) {
+      console.warn('R3.39 oauth start failed:', res.error);
+      // Map common errors to friendly messages
+      let msg = 'Gmail sign-in failed.';
+      if (/disallowed_useragent/i.test(res.error)) {
+        msg = '⚠️ Google blocked the embedded sign-in. Try again later or contact support.';
+      } else if (/cancelled/i.test(res.error)) {
+        msg = 'Gmail sign-in cancelled.';
+      } else if (/network/i.test(res.error) || /ENOTFOUND/i.test(res.error)) {
+        msg = '⚠️ Network error during Gmail sign-in.';
+      } else {
+        msg = '⚠️ Gmail: ' + res.error;
+      }
+      showToast(msg, '');
+      return;
+    }
+    // Success — persist tokens, update UI, fetch messages
+    setGmailTokens({
+      accessToken: res.accessToken,
+      refreshToken: res.refreshToken,
+      expiresAt: res.expiresAt,
+    });
+    gmailToken = res.accessToken;
+    mailMode = 'gmail';
+    document.getElementById('gmail-badge').style.display = '';
+    document.getElementById('gmail-btn').textContent = '📮 Gmail ✓';
+    document.getElementById('email-who').textContent = CFG.screenName + ' (Gmail)';
+    playYGM();
+    showToast('📮 Gmail connected!', 'email');
+    fetchGmailMessages(false);
+    showEmailMain();
+  }).catch(e => {
+    closeModal('gmail-modal');
+    console.error('R3.39 oauth start threw:', e);
+    showToast('⚠️ Gmail sign-in error: ' + (e && e.message || 'unknown'), '');
+  });
 }
 function closeModal(id){document.getElementById(id).style.display='none';}
 
-function startGmailAuth(){
-  // Legacy - just use built-in ID
-  const cid=document.getElementById('gclient-id')?.value?.trim()||WWW_GOOGLE_CLIENT_ID;
-  document.getElementById('gm-step1') && (document.getElementById('gm-step1').style.display='none');
-  document.getElementById('gm-step2') && (document.getElementById('gm-step2').style.display='block');
-  if(typeof google==='undefined'){loadGoogleLib(()=>doGmailAuth(cid));}
-  else doGmailAuth(cid);
-}
-
-function loadGoogleLib(cb){
-  // Gmail requires valid OAuth setup - skip silently if not configured
-  if(!WWW_GOOGLE_CLIENT_ID||WWW_GOOGLE_CLIENT_ID.length<20){return;}
-  if(document.querySelector('script[src*="accounts.google.com"]')){
-    // Already loaded - wait for it
-    const wait=setInterval(()=>{if(typeof google!=='undefined'){clearInterval(wait);if(cb)cb();}},200);
-    return;
-  }
-  const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;
-  s.onload=()=>{
-    const s2=document.createElement('script');s2.src='https://apis.google.com/js/api.js';
-    s2.onload=()=>gapi.load('client',()=>gapi.client.init({}).then(()=>{if(cb)cb();}));
-    document.head.appendChild(s2);
-  };
-  s.onerror=()=>console.warn('Google API failed to load');
-  document.head.appendChild(s);
-}
-
-function doGmailAuth(cid){
-  setTimeout(()=>{
-    try{
-      const tc=google.accounts.oauth2.initTokenClient({
-        client_id:cid,
-        scope:'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send',
-        callback:(resp)=>{
-          if(resp.error){
-            console.error('Gmail error:',resp.error);
-            showToast('Gmail error: '+resp.error,'');
-            closeModal('gmail-modal');
-            return;
-          }
-          gmailToken=resp.access_token;mailMode='gmail';
-          closeModal('gmail-modal');
-          document.getElementById('gm-step2') && (document.getElementById('gm-step2').style.display='none');
-          document.getElementById('gm-step1') && (document.getElementById('gm-step1').style.display='block');
-          document.getElementById('gmail-badge').style.display='';
-          document.getElementById('gmail-btn').textContent='📮 Gmail ✓';
-          document.getElementById('email-who').textContent=CFG.screenName+' (Gmail)';
-          playYGM();showToast('📮 Gmail connected!','email');
-          fetchGmailMessages(false);showEmailMain();
-        }
-      });
-      tc.requestAccessToken({prompt:'select_account'});
-    }catch(e){
-      console.error('Gmail OAuth Error:',e);
-      closeModal('gmail-modal');
-      showToast('⚠️ Gmail sign-in failed. Check your internet connection.','');
-    }
-  },800);
-}
+/* Legacy entry point kept for any inline onclicks that call it. */
+function startGmailAuth(){ connectGmail(); }
 
 async function fetchGmailMessages(silent){
-  if(!gmailToken)return;
+  // R3.39 — Use getValidGmailAccessToken so an expired access token gets
+  // refreshed automatically before we hit Gmail's API. Also retries the
+  // initial messages-list call once on 401 with a fresh refresh attempt.
+  let token = await getValidGmailAccessToken();
+  if(!token){ gmailToken = null; return; }
+  gmailToken = token;
   try{
-    const res=await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=25&q=in:inbox',{headers:{Authorization:'Bearer '+gmailToken}});
+    let res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=25&q=in:inbox',{headers:{Authorization:'Bearer '+token}});
+    // R3.39 — if access token rejected, force a refresh and retry once
+    if (res.status === 401) {
+      console.log('R3.39 Gmail returned 401, refreshing token and retrying');
+      // Force expiry by clearing expiresAt
+      const t = getGmailTokens(); if (t) { t.expiresAt = 0; setGmailTokens(t); }
+      token = await getValidGmailAccessToken();
+      if (!token) { gmailToken = null; return; }
+      gmailToken = token;
+      res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=25&q=in:inbox',{headers:{Authorization:'Bearer '+token}});
+    }
     const data=await res.json();
     if(!data.messages)return;
     const newMsgs=[];
     for(const m of data.messages.slice(0,15)){
       if(allEmails.find(e=>e.gmailId===m.id))continue;
-      const mr=await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/'+m.id+'?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date',{headers:{Authorization:'Bearer '+gmailToken}});
+      const mr=await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/'+m.id+'?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date',{headers:{Authorization:'Bearer '+token}});
       const msg=await mr.json();
       const headers=msg.payload.headers;
       const getH=n=>headers.find(h=>h.name===n)?.value||'';
@@ -3436,7 +3519,7 @@ async function fetchGmailMessages(silent){
       const dateStr=getH('Date');
       const dateShort=dateStr?new Date(dateStr).toLocaleDateString('en-US',{month:'numeric',day:'numeric',year:'2-digit'}):'';
       let body='(Loading body...)';
-      try{const fr=await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/'+m.id+'?format=full',{headers:{Authorization:'Bearer '+gmailToken}});const full=await fr.json();body=extractBody(full.payload)||body;}catch(e){}
+      try{const fr=await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/'+m.id+'?format=full',{headers:{Authorization:'Bearer '+token}});const full=await fr.json();body=extractBody(full.payload)||body;}catch(e){}
       newMsgs.push({id:Date.now()+Math.random(),gmailId:m.id,from:fromName,subj:getH('Subject')||'(no subject)',date:dateShort,unread:(msg.labelIds||[]).includes('UNREAD'),body});
     }
     if(newMsgs.length>0){
