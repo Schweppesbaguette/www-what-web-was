@@ -1475,8 +1475,9 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
           </div>
         </div>
         <div id="gm-step2" style="display:none;text-align:center;padding:16px;">
-          <div style="font-size:26px;margin-bottom:8px;">⏳</div>
-          <p style="font-size:11px;font-family:Tahoma;">Opening Google sign-in...</p>
+          <div style="font-size:26px;margin-bottom:8px;">🌐</div>
+          <p style="font-size:11px;font-family:Tahoma;"><b>Check your browser to finish signing in.</b></p>
+          <p style="font-size:10px;font-family:Tahoma;color:#445588;margin-top:6px;">A new browser tab opened with Google's sign-in page.<br/>After you click <b>Allow</b>, come back here.</p>
           <button class="btn-xp" style="margin-top:10px;" onclick="closeModal('gmail-modal');document.getElementById('gm-step2').style.display='none';document.getElementById('gm-step1').style.display='block';">Cancel</button>
         </div>
       </div>
@@ -3441,19 +3442,24 @@ function connectGmail(){
 
   // Kick off the OAuth flow via main.js. This opens a new BrowserWindow
   // with Google's consent page (UA stripped of "Electron/29.x" to dodge
-  // Google's anti-webview detection).
+  // R3.40 — system browser flow. Kicks off the loopback OAuth in main.js,
+  // which opens the consent URL via shell.openExternal (Chrome/Safari/etc).
   window.electronAPI.gmailOAuth.start().then(res => {
     closeModal('gmail-modal');
     if (res.error) {
-      console.warn('R3.39 oauth start failed:', res.error);
+      console.warn('R3.40 oauth start failed:', res.error);
       // Map common errors to friendly messages
       let msg = 'Gmail sign-in failed.';
-      if (/disallowed_useragent/i.test(res.error)) {
-        msg = '⚠️ Google blocked the embedded sign-in. Try again later or contact support.';
-      } else if (/cancelled/i.test(res.error)) {
+      if (/cancelled/i.test(res.error)) {
         msg = 'Gmail sign-in cancelled.';
-      } else if (/network/i.test(res.error) || /ENOTFOUND/i.test(res.error)) {
+      } else if (/timeout/i.test(res.error)) {
+        msg = '⌛ Gmail sign-in timed out. Click 📮 Gmail to try again.';
+      } else if (/cannot-open-browser/i.test(res.error)) {
+        msg = '⚠️ Couldn\'t open your default browser. Set one in macOS Settings → Desktop & Dock.';
+      } else if (/network|ENOTFOUND/i.test(res.error)) {
         msg = '⚠️ Network error during Gmail sign-in.';
+      } else if (/disallowed_useragent/i.test(res.error)) {
+        msg = '⚠️ Google blocked sign-in (unusual — should not happen with system browser).';
       } else {
         msg = '⚠️ Gmail: ' + res.error;
       }
