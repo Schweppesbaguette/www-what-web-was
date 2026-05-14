@@ -1854,6 +1854,11 @@ function saveSetup(){
   if(!name||!ably){document.getElementById('setup-err').style.display='block';playError();return;}
   CFG={screenName:name,password:pass,ablyKey:ably,googleClientId:google,mascot:myMascot};
   localStorage.setItem('www_cfg',JSON.stringify(CFG));
+  /* R3.37 — One-shot flag tells signon.html "this user just completed
+     setup, auto-open the Create Account panel". The flag is cleared in
+     signon.html after it's read so subsequent app starts don't re-open
+     it for existing users who already finished setup. */
+  try{ localStorage.setItem('www_just_completed_setup','1'); }catch(e){}
   document.getElementById('setup-screen').style.display='none';
   if(window.electronAPI){
     // Open the skinned signon window
@@ -5622,6 +5627,13 @@ function signOff(){
   if(presenceCh)try{presenceCh.presence.leave();}catch(e){}
   if(ablyClient)try{ablyClient.close();}catch(e){}
   if(vidStream)vidStream.getTracks().forEach(t=>t.stop());
+  /* R3.37 — Clear the "remember me" credential so the signon page's
+     auto-resume gate fails on next load. Firebase's own session may
+     still be persisted (the SDK stores it in IndexedDB), but the
+     auto-resume in signon.html checks www_pass before silently
+     signing the user back in. Without this clear, clicking Sign Off
+     would just bounce them back into the app. */
+  try{ localStorage.removeItem('www_pass'); }catch(e){}
   if(window.electronAPI){
     window.electronAPI.signOff(); // closes this window, opens signon
   } else {
