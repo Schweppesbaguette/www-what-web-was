@@ -23,4 +23,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // This bypasses the upload-to-JPEG recompression issue entirely.
   // PNG alpha channels are preserved because fs.readFileSync reads raw bytes.
   readAssetBase64: (filename) => ipcRenderer.invoke('read-asset-base64', filename),
+
+  // R3.39 — Gmail OAuth (Desktop client + loopback PKCE flow).
+  // start() opens the consent window and resolves with
+  // {accessToken, refreshToken, expiresAt} or {error}.
+  // refresh(refreshToken) returns new tokens or {error}.
+  gmailOAuth: {
+    start: () => ipcRenderer.invoke('gmail-oauth-start'),
+    refresh: (refreshToken) => ipcRenderer.invoke('gmail-oauth-refresh', refreshToken),
+  },
 });
