@@ -3396,9 +3396,23 @@ const BUILTIN_EMAILS=[
 ];
 
 function openEmail(){
-  openWin('email-win');
-  if(mailMode==='none'){document.getElementById('gmail-panel').style.display='flex';document.getElementById('email-main').style.display='none';}
-  else showEmailMain();
+  // R3.42 — Mail now opens in the chromeless skinned pop-out window
+  // (email.html, opened by main.js via IPC). The old in-app email-win is
+  // kept for backward-compat (it'll never be shown anymore, but the .wnd
+  // is still in DOM in case any legacy code references it).
+  if (window.electronAPI && window.electronAPI.openEmail) {
+    window.electronAPI.openEmail();
+    playClick();
+  } else {
+    // Fallback for cases where preload bridge is missing (e.g. legacy build)
+    openWin('email-win');
+    if(mailMode==='none'){
+      document.getElementById('gmail-panel').style.display='flex';
+      document.getElementById('email-main').style.display='none';
+    } else {
+      showEmailMain();
+    }
+  }
 }
 
 function useBuiltinMail(){
