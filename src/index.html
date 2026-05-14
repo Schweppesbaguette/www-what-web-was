@@ -3429,6 +3429,7 @@ async function getValidGmailAccessToken(){
 }
 
 function connectGmail(){
+  console.log('R3.40.1 connectGmail() called');
   // Show the "connecting…" modal (existing UI elements)
   document.getElementById('gm-step1') && (document.getElementById('gm-step1').style.display='none');
   document.getElementById('gm-step2') && (document.getElementById('gm-step2').style.display='block');
@@ -3440,17 +3441,22 @@ function connectGmail(){
     return;
   }
 
-  // Kick off the OAuth flow via main.js. This opens a new BrowserWindow
-  // with Google's consent page (UA stripped of "Electron/29.x" to dodge
   // R3.40 — system browser flow. Kicks off the loopback OAuth in main.js,
   // which opens the consent URL via shell.openExternal (Chrome/Safari/etc).
   window.electronAPI.gmailOAuth.start().then(res => {
     closeModal('gmail-modal');
+    console.log('R3.40.1 gmailOAuth.start returned:', res ? (res.error ? 'error:'+res.error : 'success, has accessToken:'+!!res.accessToken) : 'NULL RESULT');
+    if (!res) {
+      showToast('⚠️ Gmail: no response from auth flow', '');
+      return;
+    }
     if (res.error) {
       console.warn('R3.40 oauth start failed:', res.error);
       // Map common errors to friendly messages
       let msg = 'Gmail sign-in failed.';
-      if (/cancelled/i.test(res.error)) {
+      if (/missing-credentials/i.test(res.error)) {
+        msg = '⚠️ Gmail not configured for this build. (Developer: set up src/gmail-credentials.json — see README)';
+      } else if (/cancelled/i.test(res.error)) {
         msg = 'Gmail sign-in cancelled.';
       } else if (/timeout/i.test(res.error)) {
         msg = '⌛ Gmail sign-in timed out. Click 📮 Gmail to try again.';
@@ -3466,24 +3472,63 @@ function connectGmail(){
       showToast(msg, '');
       return;
     }
-    // Success — persist tokens, update UI, fetch messages
-    setGmailTokens({
-      accessToken: res.accessToken,
-      refreshToken: res.refreshToken,
-      expiresAt: res.expiresAt,
-    });
-    gmailToken = res.accessToken;
-    mailMode = 'gmail';
-    document.getElementById('gmail-badge').style.display = '';
-    document.getElementById('gmail-btn').textContent = '📮 Gmail ✓';
-    document.getElementById('email-who').textContent = CFG.screenName + ' (Gmail)';
-    playYGM();
-    showToast('📮 Gmail connected!', 'email');
-    fetchGmailMessages(false);
-    showEmailMain();
+
+    // R3.40.1 — Defensive success path. Each step in its own try/catch so a
+    // failure in any single DOM update or side-effect can't prevent the rest
+    // from running. The MOST important steps (persist tokens + switch to
+    // inbox view) come first; cosmetic stuff is last.
+
+    // (1) Persist tokens — must succeed for anything else to be useful
+    try {
+      setGmailTokens({
+        accessToken: res.accessToken,
+        refreshToken: res.refreshToken,
+        expiresAt: res.expiresAt,
+      });
+      gmailToken = res.accessToken;
+      mailMode = 'gmail';
+      console.log('R3.40.1 tokens persisted, gmailToken set');
+    } catch(e) {
+      console.error('R3.40.1 token persist failed:', e);
+      showToast('⚠️ Gmail tokens received but couldn\'t save them: ' + e.message, '');
+      return;
+    }
+
+    // (2) Switch the email window from the Connect screen to the inbox.
+    // This is what the user SEES — must happen even if everything else
+    // breaks. Hide gmail-panel + show email-main directly here (don't rely
+    // on showEmailMain() which could throw).
+    try {
+      const gp = document.getElementById('gmail-panel');
+      if (gp) gp.style.display = 'none';
+      const em = document.getElementById('email-main');
+      if (em) em.style.display = 'flex';
+      console.log('R3.40.1 switched to email-main view');
+    } catch(e) { console.error('R3.40.1 panel switch failed:', e); }
+
+    // (3) Update header chrome (badge, button label, who)
+    try {
+      const badge = document.getElementById('gmail-badge'); if (badge) badge.style.display = '';
+      const btn = document.getElementById('gmail-btn'); if (btn) btn.textContent = '📮 Gmail ✓';
+      const who = document.getElementById('email-who');
+      if (who && CFG && CFG.screenName) who.textContent = CFG.screenName + ' (Gmail)';
+    } catch(e) { console.warn('R3.40.1 header update failed:', e); }
+
+    // (4) Feedback (sound + toast). Non-critical, but nice.
+    try { if (typeof playYGM === 'function') playYGM(); } catch(e) {}
+    try { if (typeof showToast === 'function') showToast('📮 Gmail connected!', 'email'); } catch(e) {}
+
+    // (5) Fetch messages. Runs async; if it fails, the user sees the inbox
+    // view (with whatever was there before — usually empty) instead of mail.
+    try {
+      fetchGmailMessages(false);
+    } catch(e) {
+      console.error('R3.40.1 fetchGmailMessages threw:', e);
+      try { showToast('⚠️ Connected but couldn\'t fetch mail: ' + e.message, ''); } catch(_){}
+    }
   }).catch(e => {
     closeModal('gmail-modal');
-    console.error('R3.39 oauth start threw:', e);
+    console.error('R3.40.1 oauth start threw:', e);
     showToast('⚠️ Gmail sign-in error: ' + (e && e.message || 'unknown'), '');
   });
 }
