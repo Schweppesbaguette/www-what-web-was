@@ -588,6 +588,18 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 /* Email */
 #email-win{width:570px;height:430px;top:50px;left:60px;}
 .email-tb{background:linear-gradient(180deg,#d8eeff,#c0d8f8);padding:3px 6px;display:flex;gap:4px;border-bottom:1px solid #4878c8;flex-shrink:0;}
+
+/* R3.41 — Folder tabs (Inbox / Sent / Drafts). Sit between toolbar
+   and email list. Active tab is highlighted; inactive tabs have a
+   muted retro-Outlook-Express look. */
+#email-tabs{display:none;background:linear-gradient(180deg,#eaf2ff,#d8e8f8);border-bottom:1px solid #a0c0e0;padding:0 6px;flex-shrink:0;gap:2px;}
+#email-tabs.show{display:flex;}
+.etab{padding:4px 12px;font-family:Tahoma;font-size:11px;color:#1040A0;cursor:pointer;border:1px solid transparent;border-bottom:none;border-radius:4px 4px 0 0;margin-top:3px;background:transparent;display:flex;align-items:center;gap:4px;}
+.etab:hover{background:#c8deff;}
+.etab.active{background:white;border-color:#a0c0e0;color:#001050;font-weight:bold;position:relative;top:1px;padding-bottom:5px;}
+.etab .ct{background:#4878c8;color:white;font-size:9px;padding:0 4px;border-radius:6px;font-weight:bold;}
+.etab.active .ct{background:#EA4335;}
+
 #email-list{height:135px;overflow-y:auto;background:white;border-bottom:1px solid #a0c0e0;flex-shrink:0;}
 .erow{display:grid;grid-template-columns:20px 130px 1fr 75px;padding:2px 6px;cursor:pointer;border-bottom:1px solid #eef4ff;align-items:center;gap:4px;font-family:Tahoma;font-size:11px;}
 .erow:hover{background:#c8deff;}
@@ -595,6 +607,14 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
 .erow.esel{background:#3878d0;color:white;}
 .erow.ehdr{background:linear-gradient(180deg,#d8eeff,#c0d8f0);font-weight:bold;cursor:default;font-size:10px;color:#001050;border-bottom:2px solid #90b8e0;}
 .erow.ehdr:hover{background:linear-gradient(180deg,#d8eeff,#c0d8f0);color:#001050;}
+
+/* R3.41 — "Load more" row at the bottom of the email list. Different
+   shape from regular rows so it's obviously a button. */
+.erow-loadmore{padding:6px;text-align:center;font-family:Tahoma;font-size:11px;color:#1040A0;background:linear-gradient(180deg,#eef5ff,#dde8f8);border-top:1px solid #a0c0e0;cursor:pointer;font-weight:bold;}
+.erow-loadmore:hover{background:linear-gradient(180deg,#dde8ff,#c8deff);}
+.erow-loadmore.loading{cursor:wait;opacity:0.6;color:#666;}
+.erow-empty{padding:20px;text-align:center;font-family:Tahoma;font-size:11px;color:#888;font-style:italic;}
+
 #email-body{flex:1;background:white;padding:10px;font-family:Tahoma;font-size:12px;overflow-y:auto;}
 #gmail-panel{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;background:white;gap:12px;padding:20px;}
 
@@ -1200,6 +1220,13 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
       <button class="btn-xp" onclick="useBuiltinMail()" style="font-size:10px;">Use Built-in WWW Mail</button>
     </div>
     <div id="email-main" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+      <!-- R3.41 — Folder tabs. Only shown when in Gmail mode (set in
+           cariSelectAesthetic-style activation when Gmail connects). -->
+      <div id="email-tabs">
+        <div class="etab active" data-folder="inbox" onclick="switchFolder('inbox')">📥 Inbox <span class="ct" id="ct-inbox" style="display:none;">0</span></div>
+        <div class="etab" data-folder="sent" onclick="switchFolder('sent')">📤 Sent</div>
+        <div class="etab" data-folder="drafts" onclick="switchFolder('drafts')">📝 Drafts</div>
+      </div>
       <div id="email-list"><div class="erow ehdr"><span></span><span>From</span><span>Subject</span><span>Date</span></div></div>
       <div id="email-body" style="flex:1;background:white;padding:10px;font-family:Tahoma;font-size:12px;overflow-y:auto;">Select a message.</div>
     </div>
@@ -1775,6 +1802,19 @@ let currentRoom='Lobby 1';
 let zTop=200;
 let waybackDate='20040717';
 let gmailToken=null, allEmails=[], selectedEmailId=null, mailMode='none';
+// R3.41 — Per-folder caches for Gmail. Each folder has its own messages
+// array + pageToken for "Load more" pagination. allEmails (above) is the
+// view of the CURRENTLY SELECTED folder — kept in sync via switchFolder().
+let gmailFolders = {
+  inbox:   { messages: [], pageToken: null, loaded: false },
+  sent:    { messages: [], pageToken: null, loaded: false },
+  drafts:  { messages: [], pageToken: null, loaded: false },
+};
+let currentFolder = 'inbox';
+// R3.41 — Cached user's real Gmail address. Fetched from gmail.googleapis.com
+// /users/me/profile when OAuth completes. Needed for the From: header
+// of outgoing mail (Gmail's API rejects "From: me" with 400).
+let myGmailAddress = null;
 let myBuddyList=[], awayMsg='';
 let toastTarget='', tipIndex=0, bubbleClosed=false;
 let vidStream=null, peerConn=null, vidCallPartner='';
@@ -2025,8 +2065,18 @@ function bootDesktop(){
         const badge = document.getElementById('gmail-badge'); if (badge) badge.style.display = '';
         const btn = document.getElementById('gmail-btn'); if (btn) btn.textContent = '📮 Gmail ✓';
         const who = document.getElementById('email-who'); if (who) who.textContent = CFG.screenName + ' (Gmail)';
-        // Silent fetch so we don't toast on every boot
-        fetchGmailMessages(true);
+        // R3.41 — Show folder tabs and fetch profile (for Send) on boot too
+        const tabs = document.getElementById('email-tabs');
+        if (tabs) tabs.classList.add('show');
+        currentFolder = 'inbox';
+        try {
+          document.querySelectorAll('.etab').forEach(t => {
+            t.classList.toggle('active', t.dataset.folder === 'inbox');
+          });
+        } catch(e) {}
+        fetchGmailProfile();
+        // Silent fetch of inbox
+        fetchGmailFolder('inbox', false);
       } else {
         console.log('R3.39 Gmail token refresh failed; user will need to reconnect');
       }
@@ -3352,7 +3402,12 @@ function openEmail(){
 }
 
 function useBuiltinMail(){
-  mailMode='builtin';allEmails=[...BUILTIN_EMAILS];showEmailMain();
+  mailMode='builtin';
+  allEmails=[...BUILTIN_EMAILS];
+  // R3.41 — Built-in mode doesn't have Sent/Drafts folders, hide the tabs
+  const tabs = document.getElementById('email-tabs');
+  if (tabs) tabs.classList.remove('show');
+  showEmailMain();
 }
 
 function showEmailMain(){
@@ -3518,12 +3573,30 @@ function connectGmail(){
     try { if (typeof playYGM === 'function') playYGM(); } catch(e) {}
     try { if (typeof showToast === 'function') showToast('📮 Gmail connected!', 'email'); } catch(e) {}
 
-    // (5) Fetch messages. Runs async; if it fails, the user sees the inbox
-    // view (with whatever was there before — usually empty) instead of mail.
+    // R3.41 — Show folder tabs (only relevant in Gmail mode; in built-in
+    // mode there's no Sent/Drafts to speak of). Reset currentFolder to
+    // inbox so the active tab UI matches the data we're about to load.
     try {
-      fetchGmailMessages(false);
+      const tabs = document.getElementById('email-tabs');
+      if (tabs) tabs.classList.add('show');
+      currentFolder = 'inbox';
+      // Reflect active tab in the UI
+      document.querySelectorAll('.etab').forEach(t => {
+        t.classList.toggle('active', t.dataset.folder === 'inbox');
+      });
+    } catch(e) { console.warn('R3.41 tab init failed:', e); }
+
+    // R3.41 — Fetch user's real Gmail address so we can put it in the
+    // From: header when sending mail. Runs in background; sending mail
+    // before this resolves shows a friendly error.
+    fetchGmailProfile();
+
+    // (5) Fetch inbox messages. Runs async; if it fails, the user sees the
+    // inbox view (empty) instead of mail.
+    try {
+      fetchGmailFolder('inbox', false);
     } catch(e) {
-      console.error('R3.40.1 fetchGmailMessages threw:', e);
+      console.error('R3.41 fetchGmailFolder threw:', e);
       try { showToast('⚠️ Connected but couldn\'t fetch mail: ' + e.message, ''); } catch(_){}
     }
   }).catch(e => {
@@ -3537,48 +3610,187 @@ function closeModal(id){document.getElementById(id).style.display='none';}
 /* Legacy entry point kept for any inline onclicks that call it. */
 function startGmailAuth(){ connectGmail(); }
 
-async function fetchGmailMessages(silent){
-  // R3.39 — Use getValidGmailAccessToken so an expired access token gets
-  // refreshed automatically before we hit Gmail's API. Also retries the
-  // initial messages-list call once on 401 with a fresh refresh attempt.
+/* R3.41 — Fetch the user's Gmail address (for the From: header on send).
+   Cached in myGmailAddress. Fails silently — if not available when the
+   user tries to send, the send function shows a friendly error. */
+async function fetchGmailProfile() {
+  const token = await getValidGmailAccessToken();
+  if (!token) return;
+  try {
+    const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (!res.ok) {
+      console.warn('R3.41 profile fetch failed:', res.status);
+      return;
+    }
+    const data = await res.json();
+    if (data.emailAddress) {
+      myGmailAddress = data.emailAddress;
+      console.log('R3.41 user Gmail address cached:', myGmailAddress);
+    }
+  } catch(e) {
+    console.warn('R3.41 profile fetch threw:', e && e.message);
+  }
+}
+
+/* R3.41 — Switch between Inbox / Sent / Drafts tabs. Updates currentFolder,
+   syncs allEmails to that folder's cache, refreshes the rendered list, and
+   triggers a fetch on first view of any tab. */
+async function switchFolder(name) {
+  if (!gmailFolders[name]) return;
+  if (name === currentFolder && gmailFolders[name].loaded) {
+    // Already on this tab and loaded; do nothing (avoid re-fetch on tab spam)
+    return;
+  }
+  playClick();
+  currentFolder = name;
+  // Update tab UI
+  document.querySelectorAll('.etab').forEach(t => {
+    t.classList.toggle('active', t.dataset.folder === name);
+  });
+  // Sync the view to this folder's cache
+  allEmails = gmailFolders[name].messages;
+  selectedEmailId = null;
+  const b = document.getElementById('email-body');
+  if (b) b.innerHTML = 'Select a message.';
+  renderEmailList();
+  // First time visiting this tab? Fetch it.
+  if (!gmailFolders[name].loaded) {
+    fetchGmailFolder(name, false);
+  }
+}
+
+/* R3.41 — Generic Gmail folder fetcher with pagination support.
+   Replaces the old fetchGmailMessages (inbox-only, capped at 15). Handles:
+   - Folder selection via `q=` parameter (in:inbox / in:sent / in:drafts)
+   - First page vs "load more" (pageToken from prior response)
+   - 401 token expiry → automatic refresh + retry
+   - Newest-first ordering (Gmail API returns this naturally)
+   - Per-folder cache update on success */
+async function fetchGmailFolder(folder, append) {
+  if (!gmailFolders[folder]) { console.warn('R3.41 unknown folder:', folder); return; }
   let token = await getValidGmailAccessToken();
-  if(!token){ gmailToken = null; return; }
+  if (!token) { gmailToken = null; return; }
   gmailToken = token;
-  try{
-    let res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=25&q=in:inbox',{headers:{Authorization:'Bearer '+token}});
-    // R3.39 — if access token rejected, force a refresh and retry once
+
+  // Folder → Gmail search query mapping. Gmail's "label:" filters match
+  // system labels exactly; "in:sent" / "in:drafts" are the canonical ones.
+  const QUERIES = { inbox: 'in:inbox', sent: 'in:sent', drafts: 'in:drafts' };
+  const q = QUERIES[folder] || 'in:inbox';
+
+  // Build URL — use pageToken if loading "more" (otherwise first page)
+  const PAGE_SIZE = 25;
+  const params = new URLSearchParams({ maxResults: String(PAGE_SIZE), q: q });
+  if (append && gmailFolders[folder].pageToken) {
+    params.set('pageToken', gmailFolders[folder].pageToken);
+  }
+  const listUrl = 'https://gmail.googleapis.com/gmail/v1/users/me/messages?' + params.toString();
+
+  try {
+    let res = await fetch(listUrl, { headers: { Authorization: 'Bearer ' + token } });
     if (res.status === 401) {
-      console.log('R3.39 Gmail returned 401, refreshing token and retrying');
-      // Force expiry by clearing expiresAt
+      console.log('R3.41 Gmail returned 401 on list, refreshing token');
       const t = getGmailTokens(); if (t) { t.expiresAt = 0; setGmailTokens(t); }
       token = await getValidGmailAccessToken();
       if (!token) { gmailToken = null; return; }
       gmailToken = token;
-      res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=25&q=in:inbox',{headers:{Authorization:'Bearer '+token}});
+      res = await fetch(listUrl, { headers: { Authorization: 'Bearer ' + token } });
     }
-    const data=await res.json();
-    if(!data.messages)return;
-    const newMsgs=[];
-    for(const m of data.messages.slice(0,15)){
-      if(allEmails.find(e=>e.gmailId===m.id))continue;
-      const mr=await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/'+m.id+'?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date',{headers:{Authorization:'Bearer '+token}});
-      const msg=await mr.json();
-      const headers=msg.payload.headers;
-      const getH=n=>headers.find(h=>h.name===n)?.value||'';
-      const fromFull=getH('From');
-      const fromName=fromFull.replace(/<.*>/,'').trim()||fromFull;
-      const dateStr=getH('Date');
-      const dateShort=dateStr?new Date(dateStr).toLocaleDateString('en-US',{month:'numeric',day:'numeric',year:'2-digit'}):'';
-      let body='(Loading body...)';
-      try{const fr=await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/'+m.id+'?format=full',{headers:{Authorization:'Bearer '+token}});const full=await fr.json();body=extractBody(full.payload)||body;}catch(e){}
-      newMsgs.push({id:Date.now()+Math.random(),gmailId:m.id,from:fromName,subj:getH('Subject')||'(no subject)',date:dateShort,unread:(msg.labelIds||[]).includes('UNREAD'),body});
+    if (!res.ok) {
+      console.warn('R3.41 list fetch failed:', res.status);
+      return;
     }
-    if(newMsgs.length>0){
-      allEmails=[...newMsgs,...allEmails];renderEmailList();updateMailPill();
-      if(!silent){playYGM();showToast('📧 '+newMsgs.length+' new Gmail message'+(newMsgs.length>1?'s':'')+'!','email');}
-      else{const unread=newMsgs.filter(m=>m.unread).length;if(unread>0){playYGM();showToast('📧 You\'ve Got Mail! ('+unread+' new)','email');}}
+    const data = await res.json();
+    // Track next-page token (null when there are no more pages)
+    gmailFolders[folder].pageToken = data.nextPageToken || null;
+    gmailFolders[folder].loaded = true;
+
+    if (!data.messages || data.messages.length === 0) {
+      // Folder is empty — make sure UI shows that if it's the current view
+      if (currentFolder === folder) {
+        allEmails = gmailFolders[folder].messages;
+        renderEmailList();
+      }
+      return;
     }
-  }catch(e){console.error('Gmail:',e);}
+
+    const newMsgs = [];
+    for (const m of data.messages) {
+      // Dedupe against current folder's cache
+      if (gmailFolders[folder].messages.find(e => e.gmailId === m.id)) continue;
+      // Metadata fetch — From / Subject / Date
+      const mr = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/' + m.id + '?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Subject&metadataHeaders=Date', {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      const msg = await mr.json();
+      const headers = (msg.payload && msg.payload.headers) || [];
+      const getH = n => (headers.find(h => h.name === n) || {}).value || '';
+      // For Sent/Drafts, what the user cares about is the recipient, not the
+      // sender (which is them). Display the To: field instead in those folders.
+      let displayName;
+      if (folder === 'sent' || folder === 'drafts') {
+        const toFull = getH('To');
+        displayName = toFull.replace(/<.*>/, '').trim() || toFull || '(no recipient)';
+      } else {
+        const fromFull = getH('From');
+        displayName = fromFull.replace(/<.*>/, '').trim() || fromFull;
+      }
+      const dateStr = getH('Date');
+      const dateShort = dateStr ? new Date(dateStr).toLocaleDateString('en-US', {month:'numeric', day:'numeric', year:'2-digit'}) : '';
+      // Full body — same approach as before
+      let body = '(Loading body...)';
+      try {
+        const fr = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/' + m.id + '?format=full', {
+          headers: { Authorization: 'Bearer ' + token }
+        });
+        const full = await fr.json();
+        body = extractBody(full.payload) || body;
+      } catch(e) {}
+      newMsgs.push({
+        id: Date.now() + Math.random(),
+        gmailId: m.id,
+        from: displayName,
+        subj: getH('Subject') || '(no subject)',
+        date: dateShort,
+        unread: (msg.labelIds || []).includes('UNREAD'),
+        body
+      });
+    }
+
+    if (newMsgs.length > 0) {
+      if (append) {
+        // Pagination: append to existing
+        gmailFolders[folder].messages = [...gmailFolders[folder].messages, ...newMsgs];
+      } else {
+        // Initial load OR refresh: prepend new (since Gmail returns newest-first
+        // and we don't want to disturb scroll position on existing items)
+        // But on first load, the existing array is empty so just assign.
+        gmailFolders[folder].messages = newMsgs.length && gmailFolders[folder].messages.length === 0
+          ? newMsgs
+          : [...newMsgs.filter(n => !gmailFolders[folder].messages.find(e => e.gmailId === n.gmailId)), ...gmailFolders[folder].messages];
+      }
+      // If this is the current view, sync allEmails + rerender
+      if (currentFolder === folder) {
+        allEmails = gmailFolders[folder].messages;
+        renderEmailList();
+      }
+      updateMailPill();
+    } else if (currentFolder === folder) {
+      // Even if no new messages, rerender so empty state / pageToken changes show
+      renderEmailList();
+    }
+  } catch(e) {
+    console.error('R3.41 fetchGmailFolder error:', e);
+  }
+}
+
+/* R3.41 — Legacy alias. Some old code paths may still call this name. */
+async function fetchGmailMessages(silent) {
+  // Refresh just the inbox (acts like the old function's behavior).
+  // The "silent" param used to suppress the "You've got mail!" toast on boot;
+  // we no longer toast on automatic fetches, so silent is unused now.
+  return fetchGmailFolder('inbox', false);
 }
 
 function extractBody(payload){
@@ -3589,7 +3801,23 @@ function extractBody(payload){
   return'';
 }
 
-function fetchMail(){playClick();if(gmailToken)fetchGmailMessages(false);else showToast('📥 Checking...','');}
+function fetchMail(){
+  playClick();
+  if(gmailToken){
+    // R3.41 — Refresh whatever folder is currently open. Reset the cache for
+    // that folder so we get newest-first paginated fresh data.
+    if (gmailFolders[currentFolder]) {
+      gmailFolders[currentFolder].messages = [];
+      gmailFolders[currentFolder].pageToken = null;
+      gmailFolders[currentFolder].loaded = false;
+    }
+    allEmails = [];
+    renderEmailList();
+    fetchGmailFolder(currentFolder, false);
+  } else {
+    showToast('📥 Checking...','');
+  }
+}
 
 function updateMailPill(){
   const unread=allEmails.filter(e=>e.unread).length;
@@ -3598,7 +3826,20 @@ function updateMailPill(){
 
 function renderEmailList(){
   const list=document.getElementById('email-list');if(!list)return;
-  list.innerHTML='<div class="erow ehdr"><span></span><span>From</span><span>Subject</span><span>Date</span></div>';
+  list.innerHTML='<div class="erow ehdr"><span></span><span>'+(currentFolder==='sent'||currentFolder==='drafts'?'To':'From')+'</span><span>Subject</span><span>Date</span></div>';
+  // R3.41 — Empty-state row for Gmail folders that have no messages
+  if (mailMode === 'gmail' && allEmails.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'erow-empty';
+    if (gmailFolders[currentFolder] && gmailFolders[currentFolder].loaded) {
+      empty.textContent = 'No messages in ' + currentFolder + '.';
+    } else {
+      empty.textContent = 'Loading ' + currentFolder + '…';
+    }
+    list.appendChild(empty);
+    updateMailPill();
+    return;
+  }
   allEmails.forEach(e=>{
     const row=document.createElement('div');
     row.className='erow'+(e.unread?' unread':'')+(selectedEmailId===e.id?' esel':'');
@@ -3606,6 +3847,26 @@ function renderEmailList(){
     row.onclick=()=>{selectedEmailId=e.id;e.unread=false;renderEmailList();updateMailPill();showEmailBody(e);};
     list.appendChild(row);
   });
+  // R3.41 — "Load more" row at the bottom if Gmail has a next-page token
+  if (mailMode === 'gmail' && gmailFolders[currentFolder] && gmailFolders[currentFolder].pageToken) {
+    const more = document.createElement('div');
+    more.className = 'erow-loadmore';
+    more.id = 'erow-loadmore-btn';
+    more.textContent = '⬇ Load more messages';
+    more.onclick = async () => {
+      if (more.classList.contains('loading')) return;
+      more.classList.add('loading');
+      more.textContent = '⌛ Loading…';
+      try {
+        await fetchGmailFolder(currentFolder, true);
+      } catch(e) {
+        console.error('R3.41 Load more failed:', e);
+      }
+      // renderEmailList will be called inside fetchGmailFolder on success,
+      // which will recreate this button (with new pageToken or removed).
+    };
+    list.appendChild(more);
+  }
   updateMailPill();
 }
 
@@ -3616,7 +3877,18 @@ function showEmailBody(e){
 
 function replyEmail(){if(!selectedEmailId){playError();return;}const e=allEmails.find(x=>x.id===selectedEmailId);openCompose({to:e.from,subj:'Re: '+e.subj,body:'\n\n--- Original ---\n'+e.body});}
 function fwdEmail(){if(!selectedEmailId){playError();return;}const e=allEmails.find(x=>x.id===selectedEmailId);openCompose({to:'',subj:'Fwd: '+e.subj,body:'\n\n--- Forwarded ---\n'+e.body});}
-function deleteEmail(){if(!selectedEmailId){playError();return;}allEmails=allEmails.filter(x=>x.id!==selectedEmailId);selectedEmailId=null;const b=document.getElementById('email-body');if(b)b.innerHTML='<div style="color:#888;font-style:italic;font-family:Tahoma;">Deleted.</div>';renderEmailList();playClick();}
+function deleteEmail(){
+  if(!selectedEmailId){playError();return;}
+  // R3.41 — Local-only delete (doesn't actually delete from Gmail server). Update
+  // both the visible list and the folder cache so it doesn't reappear on tab switch.
+  allEmails=allEmails.filter(x=>x.id!==selectedEmailId);
+  if (mailMode === 'gmail' && gmailFolders[currentFolder]) {
+    gmailFolders[currentFolder].messages = allEmails;
+  }
+  selectedEmailId=null;
+  const b=document.getElementById('email-body');if(b)b.innerHTML='<div style="color:#888;font-style:italic;font-family:Tahoma;">Deleted.</div>';
+  renderEmailList();playClick();
+}
 
 function openCompose(pre){
   document.getElementById('cto').value=(pre&&pre.to)||'';
@@ -3627,16 +3899,105 @@ function openCompose(pre){
 }
 
 async function sendEmail(){
-  const to=document.getElementById('cto').value.trim();if(!to){playError();alert('Enter a recipient!');return;}
+  const toRaw=document.getElementById('cto').value.trim();
+  if(!toRaw){playError();alert('Enter a recipient!');return;}
+  // R3.41 — Validate recipient looks like an email (very loose check).
+  // Gmail's send endpoint will reject malformed addresses with 400 anyway,
+  // but catching it client-side gives a clearer message.
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toRaw)) {
+    playError();
+    alert('That doesn\'t look like an email address.\nFormat: name@example.com');
+    return;
+  }
   const subj=document.getElementById('csubject').value||'(no subject)';
   const body=document.getElementById('compose-body-txt').value;
-  if(gmailToken){
-    const raw=['From: me','To: '+to,'Subject: '+subj,'Content-Type: text/plain; charset=utf-8','',''+body].join('\n');
-    const encoded=btoa(unescape(encodeURIComponent(raw))).replace(/\+/g,'-').replace(/\//g,'_');
-    try{await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',{method:'POST',headers:{Authorization:'Bearer '+gmailToken,'Content-Type':'application/json'},body:JSON.stringify({raw:encoded})});playIMSend();showToast('✅ Sent via Gmail!','');}
-    catch(e){alert('Failed: '+e.message);}
-  } else {playIMSend();alert('✅ Sent!\n\nTo: '+to+'\nSubject: '+subj);}
-  closeWin('compose-win');
+
+  if(!gmailToken){
+    // Built-in mode (no Gmail) — same fake-success behavior as before
+    playIMSend();
+    alert('✅ Sent!\n\nTo: '+toRaw+'\nSubject: '+subj);
+    closeWin('compose-win');
+    return;
+  }
+
+  // R3.41 — Refresh token if needed before sending
+  const token = await getValidGmailAccessToken();
+  if (!token) {
+    playError();
+    alert('Gmail session expired. Click 📮 Gmail to sign in again.');
+    return;
+  }
+  gmailToken = token;
+
+  // R3.41 — We need a real From: address. If profile fetch hasn't completed
+  // yet, try once more now (probably just a race on first connect).
+  if (!myGmailAddress) {
+    await fetchGmailProfile();
+  }
+  if (!myGmailAddress) {
+    playError();
+    alert('Couldn\'t determine your Gmail address. Try clicking 📮 Gmail to reconnect.');
+    return;
+  }
+
+  // R3.41 — Build RFC 2822 message with proper CRLF line endings.
+  // Gmail's API requires \r\n between headers, NOT \n. Using \n leads to
+  // either 400 errors or messages that arrive with garbled headers.
+  const CRLF = '\r\n';
+  const raw = [
+    'From: ' + myGmailAddress,
+    'To: ' + toRaw,
+    'Subject: ' + subj,
+    'Content-Type: text/plain; charset=utf-8',
+    'MIME-Version: 1.0',
+    '',                  // blank line separates headers from body
+    body
+  ].join(CRLF);
+
+  // base64url encode (Gmail's spec — standard base64 with - and _ instead of + and /)
+  const encoded = btoa(unescape(encodeURIComponent(raw)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+
+  try {
+    const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ raw: encoded })
+    });
+
+    // R3.41 — Actually CHECK the response, don't just assume success.
+    // The old code (R3.40 and earlier) showed "✅ Sent!" toast regardless
+    // of whether Gmail accepted the message, leading to silent failures.
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      const msg = (errBody.error && errBody.error.message) || ('HTTP ' + res.status);
+      console.error('R3.41 send failed:', msg, errBody);
+      playError();
+      alert('❌ Send failed: ' + msg);
+      return;
+    }
+
+    // Real success
+    playIMSend();
+    showToast('✅ Sent via Gmail!', 'email');
+    closeWin('compose-win');
+
+    // R3.41 — Invalidate the Sent folder cache so it'll refresh next time the
+    // user opens that tab (the newly-sent message should appear there)
+    if (gmailFolders.sent) {
+      gmailFolders.sent.loaded = false;
+      gmailFolders.sent.pageToken = null;
+      gmailFolders.sent.messages = [];
+    }
+  } catch(e) {
+    console.error('R3.41 send threw:', e);
+    playError();
+    alert('❌ Send failed: ' + (e && e.message || 'unknown error'));
+  }
 }
 
 // ═══════════════════════════════════════════════════════
