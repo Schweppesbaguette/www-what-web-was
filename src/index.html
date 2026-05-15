@@ -500,6 +500,161 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
   display:flex;flex-direction:column;position:relative;
   min-width:0;min-height:0;
 }
+
+/* ── R3.44 — Tab strip ──
+   Visual-only implementation (Path B). The strip renders, the "+" button
+   opens a fresh tab visually, X closes the rendered tab, hover/active
+   states behave correctly — but the underlying content surface is still
+   the singleton iframe/html-view from earlier rounds. So switching tabs
+   doesn't switch pages yet; that's the R3.45 plumbing pass.
+   This deliberate seam lets us iterate on the visual without touching
+   the navigation guts, which would risk breaking 7000+ lines of existing
+   browser logic. Once you confirm the look feels right, we wire it up.
+
+   Chrome aesthetic: matches the .browser-toolbar blue gradient family
+   (#78b8f0 → #1848c0) with the chrome's signature neon-green accent
+   (#81ff28) marking the active tab. Chunky beveled Y2K shape: 4px outer
+   border radius on top only, gradient body, inset highlight on top edge,
+   drop shadow under inactive tabs.
+*/
+.tab-strip {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 6px 8px 0;
+  background: linear-gradient(180deg, #4878b8 0%, #2858a0 100%);
+  border-bottom: 2px solid #1848c0;
+  min-height: 32px;
+  position: relative;
+}
+.tab-strip::after {
+  /* the green neon "shelf line" that runs across the bottom — but the
+     active tab punches through it via z-index + negative margin, so it
+     visually attaches to the content area below */
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -2px;
+  height: 2px;
+  background: #81ff28;
+  box-shadow: 0 0 8px rgba(129, 255, 40, 0.6);
+  pointer-events: none;
+  z-index: 0;
+}
+.tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 100px;
+  max-width: 220px;
+  padding: 5px 10px 7px;
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 11px;
+  font-weight: bold;
+  color: #001050;
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid #1848c0;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  background: linear-gradient(180deg, #6098d8 0%, #3878c8 60%, #2868b8 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.4),
+    0 -2px 4px rgba(0,0,30,0.25);
+  transition: background 0.1s, transform 0.05s, box-shadow 0.1s;
+  z-index: 1;
+}
+.tab:hover {
+  background: linear-gradient(180deg, #88b8ec 0%, #5090e0 60%, #3878c8 100%);
+}
+.tab.active {
+  /* Active tab matches the body color below (light blue #d8e8ff) and
+     "punches through" the green shelf line via z-index + 1px overlap. */
+  background: linear-gradient(180deg, #ffffff 0%, #e8f0fc 30%, #d8e8ff 100%);
+  color: #001050;
+  z-index: 3;
+  margin-bottom: -2px;
+  padding-bottom: 9px;  /* +2 to swallow the shelf */
+  border-color: #81ff28;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    0 0 8px rgba(129,255,40,0.5),
+    0 -3px 6px rgba(0,0,30,0.3);
+}
+.tab.active::before {
+  /* extra inner glow on the active tab so it pops */
+  content: '';
+  position: absolute;
+  inset: 1px 1px auto 1px;
+  height: 3px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.6), transparent);
+  border-radius: 5px 5px 0 0;
+  pointer-events: none;
+}
+.tab .tab-favicon {
+  width: 14px; height: 14px;
+  flex-shrink: 0;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 1px 1px rgba(0,0,30,0.3));
+}
+.tab .tab-title {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+}
+.tab .tab-close {
+  width: 16px; height: 16px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: bold;
+  color: #001050;
+  background: transparent;
+  transition: background 0.08s, color 0.08s;
+  line-height: 1;
+}
+.tab .tab-close:hover {
+  background: #d83838;
+  color: #fff;
+  box-shadow: 0 0 4px rgba(255,80,80,0.6);
+}
+.tab-new {
+  flex-shrink: 0;
+  width: 28px; height: 26px;
+  margin-bottom: 0;
+  margin-left: 2px;
+  border: 1px solid #1848c0;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  background: linear-gradient(180deg, #6098d8 0%, #3878c8 100%);
+  color: #001050;
+  font-size: 18px;
+  font-weight: bold;
+  font-family: Tahoma, Arial;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+  user-select: none;
+  z-index: 1;
+}
+.tab-new:hover {
+  background: linear-gradient(180deg, #88b8ec 0%, #5090e0 100%);
+}
+.tab-new:active {
+  transform: translateY(1px);
+}
 #site-frame{width:100%;height:100%;border:none;display:none;flex:1;min-height:0;}
 /* R3.20 — Page container. Simple scroll: html-view scrolls vertically when content
    exceeds. NO flex layout here — that was causing the homepage flex children
@@ -1111,6 +1266,16 @@ body{font-family:Tahoma,Arial,sans-serif;background:#00082a;overflow:hidden;font
         <div class="sb-it" onclick="signOff()">🚪 Sign Off</div>
       </div>
       <div id="content-area">
+        <!-- R3.44 — Tab strip (visual-only this round; plumbing in R3.45).
+             Tabs are rendered from window.__tabs and refreshed by renderTabs().
+             Clicking a tab calls switchToTab() which currently only toggles
+             the .active class — it does NOT swap page content yet (that
+             requires per-tab state plumbing in the next round). Hover/close/
+             new-tab interactions are all live. -->
+        <div class="tab-strip" id="tab-strip">
+          <!-- tabs injected by renderTabs() -->
+          <div class="tab-new" id="tab-new" onclick="newTab()" title="New tab">+</div>
+        </div>
         <iframe id="site-frame" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"></iframe>
         <div id="html-view"></div>
       </div>
@@ -3417,6 +3582,172 @@ function openEmail(){
       showEmailMain();
     }
   }
+}
+
+// =============================================================================
+// R3.44 — Browser tabs (Path B: visual-only this round; plumbing in R3.45)
+//
+// What's wired now:
+//   - The tab strip renders from window.__tabs and refreshes whenever
+//     anything in that array mutates.
+//   - Clicking a tab body marks it .active visually (other tabs lose .active)
+//     and copies its stored URL string into the address bar — so the chrome
+//     LOOKS like it switched. The actual page content does NOT swap. The
+//     iframe/webview keeps showing whatever was last loaded.
+//   - Clicking + opens a new tab visually, sets it active, focuses the
+//     address bar (where typing+Enter still routes through the existing
+//     navigateTo() — which is fine; that updates the singleton content).
+//   - Clicking × closes a tab visually. Last tab can't be closed. If the
+//     closed tab was active, the previous-index tab becomes active.
+//   - As the address bar is used (existing navigateTo()), we update the
+//     CURRENT active tab's stored URL + title via a hook.
+//
+// What's NOT wired (next round):
+//   - Per-tab back/forward history (histStack/histPos)
+//   - Per-tab Wayback mode + date (wb-mode/waybackDate)
+//   - Per-tab content surface (each tab needs its own webview/html-view)
+//   - Keyboard shortcuts (Cmd+T/W/1..9/Shift+[/])
+//   - Drag-to-reorder
+//
+// State shape per tab:
+//   { id: number, title: string, url: string, favicon: emoji string }
+//
+// We use emoji favicons until we wire up real favicon extraction — they're
+// readable at 14px and match the rest of the Y2K aesthetic.
+// =============================================================================
+
+window.__tabs = [
+  { id: 1, title: 'WWW Home', url: 'www://home', favicon: '🌐' }
+];
+window.__activeTabId = 1;
+window.__nextTabId = 2;
+
+function renderTabs() {
+  const strip = document.getElementById('tab-strip');
+  if (!strip) return;
+  const newBtn = document.getElementById('tab-new');
+  // Wipe existing tab elements (keep the + button)
+  Array.from(strip.querySelectorAll('.tab')).forEach(el => el.remove());
+  // Re-render in order, inserting before the + button
+  window.__tabs.forEach(t => {
+    const el = document.createElement('div');
+    el.className = 'tab' + (t.id === window.__activeTabId ? ' active' : '');
+    el.dataset.tabId = String(t.id);
+    el.title = t.title + ' — ' + t.url;
+    el.innerHTML =
+      '<span class="tab-favicon">' + (t.favicon || '🌐') + '</span>' +
+      '<span class="tab-title"></span>' +
+      '<span class="tab-close" title="Close tab">×</span>';
+    // Use textContent for title to avoid HTML injection
+    el.querySelector('.tab-title').textContent = t.title;
+    el.addEventListener('click', (e) => {
+      // Ignore clicks that landed on the × — closeTab handles those
+      if (e.target.classList.contains('tab-close')) return;
+      switchToTab(t.id);
+    });
+    el.querySelector('.tab-close').addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeTab(t.id);
+    });
+    strip.insertBefore(el, newBtn);
+  });
+}
+
+function switchToTab(id) {
+  const t = window.__tabs.find(x => x.id === id);
+  if (!t) return;
+  window.__activeTabId = id;
+  // Reflect the tab's stored URL in the address bar.
+  const addr = document.getElementById('addr-bar');
+  if (addr) addr.value = t.url;
+  // NOTE: We deliberately do NOT call navigateTo(t.url) here. In Path B the
+  // content surface is still a singleton; calling navigateTo would re-fetch
+  // the page every click which is wasteful and would break the user's place
+  // on the current page. R3.45 will route this through the real per-tab
+  // content-swap.
+  renderTabs();
+  if (typeof playClick === 'function') playClick();
+}
+
+function newTab() {
+  const tab = {
+    id: window.__nextTabId++,
+    title: 'New Tab',
+    url: 'www://home',
+    favicon: '✨',
+  };
+  window.__tabs.push(tab);
+  window.__activeTabId = tab.id;
+  renderTabs();
+  // Focus the address bar so the user can immediately type a URL.
+  const addr = document.getElementById('addr-bar');
+  if (addr) { addr.value = ''; addr.focus(); }
+  if (typeof playClick === 'function') playClick();
+}
+
+function closeTab(id) {
+  if (window.__tabs.length === 1) {
+    // Don't allow closing the last tab — replace it with a fresh home tab instead
+    window.__tabs[0] = { id: window.__nextTabId++, title: 'WWW Home', url: 'www://home', favicon: '🌐' };
+    window.__activeTabId = window.__tabs[0].id;
+    renderTabs();
+    return;
+  }
+  const idx = window.__tabs.findIndex(x => x.id === id);
+  if (idx < 0) return;
+  const wasActive = window.__activeTabId === id;
+  window.__tabs.splice(idx, 1);
+  if (wasActive) {
+    // Activate the tab that was to the left of the closed one (or 0 if we closed leftmost)
+    const newActive = window.__tabs[Math.max(0, idx - 1)];
+    window.__activeTabId = newActive.id;
+  }
+  renderTabs();
+}
+
+// Hook into navigateTo: whenever a URL gets navigated to, update the active
+// tab's stored URL and title. We monkey-patch navigateTo rather than editing
+// it directly so the original logic stays single-source-of-truth.
+(function hookNavigation() {
+  if (typeof window.navigateTo !== 'function') {
+    // navigateTo isn't defined yet at this point in the file. Retry on load.
+    document.addEventListener('DOMContentLoaded', hookNavigation, { once: true });
+    return;
+  }
+  const _origNavigateTo = window.navigateTo;
+  window.navigateTo = function(url) {
+    const result = _origNavigateTo.apply(this, arguments);
+    // After navigation, update the active tab's URL + title
+    const t = window.__tabs.find(x => x.id === window.__activeTabId);
+    if (t) {
+      t.url = (typeof url === 'string' ? url : t.url);
+      // Title heuristic: pull the page name from www://name or use the URL host
+      let title = 'Page';
+      if (typeof url === 'string') {
+        if (url.startsWith('www://') || url.startsWith('aol://')) {
+          const page = url.replace(/^(www|aol):\/\//, '') || 'home';
+          title = page === 'home' ? 'WWW Home' : page.charAt(0).toUpperCase() + page.slice(1);
+        } else {
+          try {
+            const u = new URL(url.startsWith('http') ? url : 'http://' + url);
+            title = u.hostname.replace(/^www\./, '');
+          } catch(e) {
+            title = url.slice(0, 40);
+          }
+        }
+      }
+      t.title = title;
+      renderTabs();
+    }
+    return result;
+  };
+})();
+
+// Initial render — call after the DOM is ready so tab-strip exists.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', renderTabs, { once: true });
+} else {
+  renderTabs();
 }
 
 // R3.42.2 — Gmail unread polling
