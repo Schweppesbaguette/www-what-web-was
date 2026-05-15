@@ -164,37 +164,46 @@
      the painted ones, since the painted ones show fixed sample numbers (7, 2).
      Position is over the painted bubble; we erase the painted number with
      our own. R3.42.3 — shrunk to 40px (was 52px) per user feedback; the
-     painted bubbles were small and our 52px was visually dominant. */
+     painted bubbles were small and our 52px was visually dominant.
+     R3.42.5 — Switched to per-badge ellipse sizing because the painted
+     Inbox disk (66×41 oval) wasn't fully covered by a 40px round badge —
+     green sliver showed on the bottom-right corner. Each badge now matches
+     the painted bubble's aspect ratio + a 4px margin so it fully erases. */
   .count-badge {
     position: absolute;
     pointer-events: none;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
-    font-size: 16px;
+    font-size: 18px;
     color: #fff;
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
     z-index: 3;
   }
   .count-badge.green {
-    background: radial-gradient(circle at 30% 30%, #7ef868 0%, #2d8a1a 55%, #135509 100%);
+    background: radial-gradient(ellipse at 30% 30%, #7ef868 0%, #2d8a1a 55%, #135509 100%);
     box-shadow: inset 0 1px 3px rgba(255,255,255,0.5), inset 0 -3px 4px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.3);
   }
   .count-badge.blue {
-    background: radial-gradient(circle at 30% 30%, #a8d4ff 0%, #2a5a9a 55%, #0e2a55 100%);
+    background: radial-gradient(ellipse at 30% 30%, #a8d4ff 0%, #2a5a9a 55%, #0e2a55 100%);
     box-shadow: inset 0 1px 3px rgba(255,255,255,0.5), inset 0 -3px 4px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.3);
   }
   /* Centers (measured): Inbox painted "7" disk center = (243, 334),
      Drafts painted "2" disk center = (244, 525).
-     With 40px badge, top-left = center - 20.
-     R3.42.4 — Inbox shifted down 4px because painted bubble extended
-     slightly below my badge in R3.42.3. Drafts unchanged (was correct). */
-  #badge-inbox  { left: 223px; top: 318px; }
-  #badge-drafts { left: 224px; top: 505px; }
+     R3.42.5 — Inbox = 74×48 ellipse centered (243, 334) → top-left (206, 310);
+     Drafts = 60×40 ellipse centered (244, 525) → top-left (214, 505). Each is
+     sized to fully envelope its painted bubble + 4px margin on each side. */
+  #badge-inbox  {
+    left: 206px; top: 310px;
+    width: 74px; height: 48px;
+    border-radius: 50%;
+  }
+  #badge-drafts {
+    left: 214px; top: 505px;
+    width: 60px; height: 40px;
+    border-radius: 50%;
+  }
 
   /* === Email list overlay — covers painted sample rows === */
   /* The painted skin has 6 sample email rows (Jessica Parker, Daniel Carter,
@@ -226,7 +235,7 @@
   /* Column header */
   .eh-row {
     display: grid;
-    grid-template-columns: 30px 56px 1fr 1.4fr 130px;
+    grid-template-columns: 24px 44px 1fr 1.4fr 110px 32px;
     align-items: center;
     padding: 9px 16px;
     background: linear-gradient(180deg, #1a4a8a 0%, #0a2a55 100%);
@@ -240,10 +249,13 @@
     z-index: 2;
   }
 
-  /* Each email row */
+  /* Each email row.
+     R3.42.5 — Added paperclip column (last) for per-message attachment indicator.
+     Slimmed status-dot column from 30→24 and envelope from 56→44 to make room
+     without widening the list. */
   .e-row {
     display: grid;
-    grid-template-columns: 30px 56px 1fr 1.4fr 130px;
+    grid-template-columns: 24px 44px 1fr 1.4fr 110px 32px;
     align-items: center;
     padding: 11px 16px;
     border-bottom: 1px solid rgba(40, 90, 160, 0.3);
@@ -275,6 +287,14 @@
     text-overflow: ellipsis;
   }
   .e-row .e-date { text-align: right; opacity: 0.85; }
+  /* R3.42.5 — per-row paperclip indicator. Only visible when row has
+     attachments. Dimmed gray when none so the column doesn't look empty. */
+  .e-row .e-clip {
+    text-align: center;
+    font-size: 22px;
+    opacity: 0.5;
+  }
+  .e-row.has-attach .e-clip { opacity: 1; color: #ffd060; }
 
   .e-empty {
     padding: 60px 20px;
@@ -297,22 +317,132 @@
   .e-loadmore:hover { background: linear-gradient(180deg, #2a5a9a 0%, #1a4a8a 100%); }
   .e-loadmore.loading { opacity: 0.6; cursor: wait; }
 
-  /* === Email body preview area === */
+  /* === R3.42.5 — Live clock overlay ===
+     Painted skin has a clock graphic at top-right of the body area, but it
+     was static (just art). This overlay covers the painted clock with a
+     live, ticking digital clock matching the painted style: gray sans-serif
+     text on a light-blue background that blends with the chrome behind it.
+     User asked: "should be practical not just painted." Position is
+     measured against the painted clock position in the skin. */
+  #live-clock {
+    position: absolute;
+    /* Painted clock sits at approx native x=1265-1410 y=595-635 (where
+       "10:24 AM" rendered in shot_3). Live overlay covers that zone with
+       a transparent background so the chrome behind shows, plus our own
+       ticking text on top. */
+    left: 1265px;
+    top: 595px;
+    width: 150px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Tahoma', Arial, sans-serif;
+    font-size: 22px;
+    font-weight: bold;
+    color: #3a5a8a;
+    background: linear-gradient(180deg, #d8e8f8 0%, #c8dcef 100%);
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 4;
+    letter-spacing: 0.5px;
+  }
+
+  /* === R3.42.5 — Right column overlay (covers painted paperclip,
+       exclamation, and scrollbar to the right of the email list) ===
+     The painted skin has three column-header-like graphics on the right
+     edge of the list area: a paperclip filter, an exclamation filter, and
+     a scrollbar with up/down arrows. User asked to remove them and use
+     ours. We overlay an opaque chrome-blue strip covering all three with
+     our own live scroll arrows. */
+  #list-right-overlay {
+    position: absolute;
+    /* Painted column sits roughly native x=1275-1410 y=236-575 (right of
+       list which ends at x=1275). Adjust by feel — these are best-guess. */
+    left: 1275px;
+    top: 236px;
+    width: 135px;
+    height: 339px;
+    background: linear-gradient(180deg, #1a3a6a 0%, #0e2348 100%);
+    border-left: 1px solid #2a5a9a;
+    display: flex;
+    flex-direction: column;
+    z-index: 4;
+  }
+  /* The up/down arrows match the painted scrollbar style: shiny blue circles
+     with a centered triangle. Both are positioned to overlay the painted
+     arrow positions exactly. */
+  .lr-arrow {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #88b8e8 0%, #2a5a9a 60%, #0e2348 100%);
+    box-shadow: inset 0 2px 4px rgba(255,255,255,0.4),
+                inset 0 -3px 5px rgba(0,0,0,0.3),
+                0 2px 4px rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 32px;
+    cursor: pointer;
+    transition: transform 0.05s;
+    user-select: none;
+  }
+  .lr-arrow:hover { filter: brightness(1.15); }
+  .lr-arrow:active { transform: translateX(-50%) scale(0.95); }
+  #lr-up   { top: 12px; }
+  #lr-down { bottom: 12px; }
+  /* Thumb (decorative — auto-positions based on scroll). The chrome scrollbar
+     between the two arrows. */
+  .lr-track {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 100px;
+    bottom: 100px;
+    width: 18px;
+    background: linear-gradient(180deg, #0a2348 0%, #1a3a6a 50%, #0a2348 100%);
+    border-radius: 9px;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+  }
+  #lr-thumb {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: linear-gradient(180deg, #88b8e8 0%, #2a5a9a 50%, #1a3a6a 100%);
+    border-radius: 9px;
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.4),
+                inset 0 -2px 3px rgba(0,0,0,0.3);
+    transition: top 0.06s;
+  }
   /* R3.42.3 — Bounds y=600-945 covering BOTH the painted "FROM:/TO:/SUBJECT:"
      labels area AND the body content area. The splitter bar at y=575-600
      (with the green-dot grip handle) stays visible above us.
-     R3.42.4 — Scrollbar hidden (painted scrollbar is decorative). */
+     R3.42.4 — Scrollbar hidden (painted scrollbar is decorative).
+     R3.42.5 — Body is a flex column so the Rich HTML iframe can flex to
+     fill remaining vertical space (was capped at 240px before).
+     R3.42.5 — Body top shifted down 30px (to 630) and height reduced 30px
+     (to 315) so there's a live clock zone above. Body right edge shifted
+     IN by 60px (width 910, was 970) so the painted scrollbar+EQ+clock zone
+     to the right of the body is not covered and can host live overlays. */
   #email-body {
     position: absolute;
     left: 305px;
-    top: 600px;
-    width: 970px;
-    height: 345px;
+    top: 630px;
+    width: 910px;
+    height: 315px;
     background: linear-gradient(180deg, #d8e8f8 0%, #c8dcef 100%);
     overflow-y: auto;
     padding: 14px 24px;
     color: #1a3a6a;
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
     scrollbar-width: none;
     -ms-overflow-style: none;
   }
@@ -589,6 +719,17 @@
       </div>
       <!-- rows injected here -->
     </div>
+
+    <!-- R3.42.5 — Right-of-list overlay column. Covers painted paperclip /
+         exclamation / scrollbar column with live scroll arrows. -->
+    <div id="list-right-overlay">
+      <div class="lr-arrow" id="lr-up"   onclick="listScrollBy(-180)">▲</div>
+      <div class="lr-track"><div id="lr-thumb"></div></div>
+      <div class="lr-arrow" id="lr-down" onclick="listScrollBy( 180)">▼</div>
+    </div>
+
+    <!-- R3.42.5 — Live ticking clock overlay (covers painted clock) -->
+    <div id="live-clock">--:-- --</div>
 
     <!-- Live email body preview (covers painted sample body) -->
     <div id="email-body">
@@ -946,6 +1087,7 @@ async function fetchFolder(folder, append) {
 
       let body = '(loading body)';
       let bodyHtml = '';
+      let hasAttachment = false;
       try {
         const fr = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/' + m.id + '?format=full',
           { headers: { Authorization: 'Bearer ' + token } });
@@ -955,6 +1097,12 @@ async function fetchFolder(folder, append) {
         // can toggle to a "rich" view that shows images and styling. The
         // text version stays the default for retro aesthetic + readability.
         bodyHtml = extractHtml(full.payload) || '';
+        // R3.42.5 — Walk the payload tree for any part with a non-empty
+        // filename — that means an actual attachment. Inline image parts
+        // typically have no filename (or have inline-disposition headers
+        // we can detect too). We treat ANY named part as an attachment for
+        // the indicator. Used to show 📎 in the list row.
+        hasAttachment = detectAttachment(full.payload);
       } catch(e) {}
 
       newMsgs.push({
@@ -965,7 +1113,8 @@ async function fetchFolder(folder, append) {
         date: dateShort,
         unread: (msg.labelIds || []).includes('UNREAD'),
         body,
-        bodyHtml
+        bodyHtml,
+        hasAttachment
       });
     }
 
@@ -1072,6 +1221,29 @@ function extractHtml(payload) {
   return '';
 }
 
+// R3.42.5 — Walk a Gmail payload tree and return true if any part has a
+// non-empty filename (= a real attachment) OR a Content-Disposition header
+// of "attachment". Used to flag rows with the paperclip indicator. We
+// intentionally treat inline images with empty filenames as NOT attachments,
+// since those are usually embedded marketing graphics, not user files.
+function detectAttachment(payload) {
+  if (!payload) return false;
+  if (payload.filename && payload.filename.length > 0) return true;
+  const headers = payload.headers || [];
+  for (const h of headers) {
+    if (h.name && h.name.toLowerCase() === 'content-disposition'
+        && /attachment/i.test(h.value || '')) {
+      return true;
+    }
+  }
+  if (payload.parts) {
+    for (const p of payload.parts) {
+      if (detectAttachment(p)) return true;
+    }
+  }
+  return false;
+}
+
 // Convert an HTML email body to a plain-text-ish version suitable for the
 // retro skin. Strategy:
 //   1. Strip <script> and <style> blocks entirely (their content is noise)
@@ -1127,13 +1299,16 @@ function renderList() {
   const list = document.getElementById('email-list');
   const msgs = gmailFolders[currentFolder] ? gmailFolders[currentFolder].messages : [];
 
-  // Wipe everything below the column header, then rebuild
+  // Wipe everything below the column header, then rebuild.
+  // R3.42.5 — added paperclip column (📎) at end. Header shows the icon dim;
+  // per-row shows it bright/gold if msg has attachments, dim otherwise.
   list.innerHTML = `<div class="eh-row">
     <span></span>
     <span></span>
     <span id="col-from">${(currentFolder === 'sent' || currentFolder === 'drafts') ? 'TO' : 'FROM'}</span>
     <span>SUBJECT</span>
     <span>DATE</span>
+    <span style="text-align:center; opacity:0.5;">📎</span>
   </div>`;
 
   if (msgs.length === 0) {
@@ -1150,13 +1325,17 @@ function renderList() {
 
   msgs.forEach(m => {
     const row = document.createElement('div');
-    row.className = 'e-row' + (m.unread ? ' unread' : '') + (selectedId === m.id ? ' selected' : '');
+    // R3.42.5 — has-attach class drives the paperclip indicator's color
+    row.className = 'e-row' + (m.unread ? ' unread' : '')
+      + (selectedId === m.id ? ' selected' : '')
+      + (m.hasAttachment ? ' has-attach' : '');
     row.innerHTML = `
       <div class="e-dot"></div>
       <div class="e-env">✉️</div>
       <div class="e-from">${escapeHtml(m.from)}</div>
       <div class="e-subj">${escapeHtml(m.subj)}</div>
-      <div class="e-date">${escapeHtml(m.date)}</div>`;
+      <div class="e-date">${escapeHtml(m.date)}</div>
+      <div class="e-clip">${m.hasAttachment ? '📎' : ''}</div>`;
     row.onclick = () => {
       selectedId = m.id;
       m.unread = false;
@@ -1180,17 +1359,18 @@ function renderList() {
     };
     list.appendChild(more);
   }
+
+  // R3.42.5 — Re-sync the live scrollbar thumb after row content changes
+  if (typeof updateThumb === 'function') setTimeout(updateThumb, 0);
 }
 
 function renderBody(m) {
   const b = document.getElementById('email-body');
-  // R3.42.4 — If the message has an HTML body, show a toggle button so
-  // the user can switch between the clean plain-text view (default) and
-  // the full rich HTML view inside a sandboxed iframe. The iframe loads
-  // via srcdoc + sandbox attributes that block scripts and same-origin
-  // access, so even malicious HTML can't escape into our app. Images CAN
-  // load (allow-images is implied by absence of CSP) so marketing emails
-  // look right.
+  // R3.42.4 — toggle between plain and rich HTML.
+  // R3.42.5 — DEFAULT TO RICH HTML when the message has an HTML body.
+  // Marketing emails (Amazon, eBay, Pardot, etc.) are image-only and look
+  // like a wall of tracking URLs in plain-text mode — the user wants images.
+  // Plain Text is still available via toggle for text-only viewing.
   const hasHtml = !!(m.bodyHtml && m.bodyHtml.length > 50);
   const headerHtml = `
     <div class="b-headers">
@@ -1198,16 +1378,27 @@ function renderBody(m) {
       <div><span class="b-label">Subject:</span> ${escapeHtml(m.subj)}</div>
       <div><span class="b-label">Date:</span> ${escapeHtml(m.date)}</div>
       ${hasHtml ? `<div style="margin-top:6px;">
-        <button class="b-mode-btn" data-mode="text" onclick="setBodyMode('text','${m.id}')">📄 Plain</button>
         <button class="b-mode-btn" data-mode="html" onclick="setBodyMode('html','${m.id}')">🖼️ Rich HTML</button>
+        <button class="b-mode-btn" data-mode="text" onclick="setBodyMode('text','${m.id}')">📄 Plain</button>
       </div>` : ''}
     </div>`;
-  // Default to plain-text view (cleaner for retro aesthetic, faster, safe)
-  b.innerHTML = headerHtml + `<div class="b-body" id="b-body-content">${escapeHtml(m.body)}</div>`;
+  if (hasHtml) {
+    // R3.42.5 — Default = Rich HTML. Defensively strip <script> and on*
+    // handlers even though sandbox blocks them (defense in depth).
+    let safe = m.bodyHtml
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/\son\w+="[^"]*"/gi, '')
+      .replace(/\son\w+='[^']*'/gi, '');
+    b.innerHTML = headerHtml + `<iframe id="b-body-content" sandbox="allow-popups"
+      style="width:100%; flex:1 1 auto; min-height:200px; border:none; background:#fff; border-radius:4px;"
+      srcdoc="${escapeHtmlAttr(safe)}"></iframe>`;
+    const htmlBtn = b.querySelector('.b-mode-btn[data-mode="html"]');
+    if (htmlBtn) htmlBtn.classList.add('active');
+  } else {
+    // No HTML body — render plain text as before
+    b.innerHTML = headerHtml + `<div class="b-body" id="b-body-content">${escapeHtml(m.body)}</div>`;
+  }
   b.scrollTop = 0;
-  // Default the toggle button highlight
-  const plainBtn = b.querySelector('.b-mode-btn[data-mode="text"]');
-  if (plainBtn) plainBtn.classList.add('active');
 }
 
 // R3.42.4 — Toggle the body content between plain-text and rich HTML view.
@@ -1215,6 +1406,8 @@ function renderBody(m) {
 // HTML mode: the original HTML inside a sandboxed iframe (no scripts, no
 // same-origin, no top navigation; images allowed). Both modes share the
 // same headers + toggle bar.
+// R3.42.5 — iframe uses flex/min-height so it fills the body area rather
+// than being capped at 240px (which was cutting marketing emails off).
 function setBodyMode(mode, msgId) {
   const m = (gmailFolders[currentFolder].messages || []).find(x => String(x.id) === String(msgId));
   if (!m) return;
@@ -1232,7 +1425,7 @@ function setBodyMode(mode, msgId) {
     // no forms, no popups). "allow-popups" lets clicking links open in
     // the default browser via target=_blank.
     contentEl.outerHTML = `<iframe id="b-body-content" sandbox="allow-popups"
-      style="width:100%; height:240px; border:none; background:#fff; border-radius:4px;"
+      style="width:100%; flex:1 1 auto; min-height:200px; border:none; background:#fff; border-radius:4px;"
       srcdoc="${escapeHtmlAttr(safe)}"></iframe>`;
   } else {
     contentEl.outerHTML = `<div class="b-body" id="b-body-content">${escapeHtml(m.body)}</div>`;
@@ -1406,6 +1599,52 @@ document.addEventListener('keydown', (e) => {
       closeCompose();
     }
   }
+});
+
+// =============================================================================
+// R3.42.5 — Live clock overlay (replaces painted-only clock graphic)
+// =============================================================================
+function tickClock() {
+  const el = document.getElementById('live-clock');
+  if (!el) return;
+  const d = new Date();
+  let h = d.getHours();
+  const m = d.getMinutes();
+  const ap = h >= 12 ? 'PM' : 'AM';
+  h = h % 12; if (h === 0) h = 12;
+  el.textContent = h + ':' + (m < 10 ? '0' : '') + m + ' ' + ap;
+}
+tickClock();
+setInterval(tickClock, 15 * 1000);   // refresh every 15s (resolution is 1min)
+
+// =============================================================================
+// R3.42.5 — Live list scroll arrows (replaces painted scrollbar)
+//   listScrollBy: bound to the up/down arrow click handlers
+//   updateThumb:  positions the decorative thumb based on scroll progress
+// =============================================================================
+function listScrollBy(dy) {
+  const list = document.getElementById('email-list');
+  if (!list) return;
+  list.scrollBy({ top: dy, behavior: 'smooth' });
+}
+function updateThumb() {
+  const list = document.getElementById('email-list');
+  const thumb = document.getElementById('lr-thumb');
+  if (!list || !thumb) return;
+  const max = list.scrollHeight - list.clientHeight;
+  if (max <= 0) { thumb.style.top = '0'; return; }
+  const frac = list.scrollTop / max;
+  // Track is bounded by arrows (top:100px bottom:100px in 339px height):
+  // track-height = 339 - 200 = 139, thumb is 40 tall, so room = 99.
+  const trackH = 139;
+  const thumbH = 40;
+  const top = Math.round(frac * (trackH - thumbH));
+  thumb.style.top = top + 'px';
+}
+window.addEventListener('load', () => {
+  const list = document.getElementById('email-list');
+  if (list) list.addEventListener('scroll', updateThumb);
+  setTimeout(updateThumb, 200);
 });
 </script>
 </body>
