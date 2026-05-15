@@ -3427,18 +3427,30 @@ function openEmail(){
 //   3. Play "You've Got Mail" sound when count INCREASES (not on initial load)
 // Since both windows share localStorage (same file:// origin), polling works
 // across the process boundary without IPC.
+//
+// R3.42.3 — Also runs background Gmail fetches on boot + every 60s. This
+// makes the unread count + sound work even when the email window is never
+// opened. Uses the Gmail labels API for efficiency (one API call returns
+// the unread count for INBOX without fetching each message).
 let _lastUnreadCount = null;
 let _gmailPollStarted = false;
 function startGmailUnreadPolling() {
   if (_gmailPollStarted) return;
   _gmailPollStarted = true;
-  // First read — set baseline without playing sound
+  // First read of localStorage — set baseline without playing sound
   try {
     const raw = localStorage.getItem('www_gmail_unread');
     if (raw != null) _lastUnreadCount = parseInt(raw, 10) || 0;
   } catch(e) {}
   applyGmailUnread(_lastUnreadCount || 0, /*playSound=*/false);
-  // Poll every 2 seconds (lightweight, just a localStorage read + DOM update)
+
+  // R3.42.3 — Kick off a background fetch now (populates count without
+  // user opening email window) and re-fetch every 60s to catch new mail.
+  bgFetchGmailUnread();
+  setInterval(bgFetchGmailUnread, 60000);
+
+  // Poll localStorage every 2 seconds (cross-window sync — picks up
+  // changes made by email.html pop-out when user does interactive things)
   setInterval(() => {
     try {
       const raw = localStorage.getItem('www_gmail_unread');
@@ -3448,6 +3460,57 @@ function startGmailUnreadPolling() {
       applyGmailUnread(n, increased);
     } catch(e) {}
   }, 2000);
+}
+
+// R3.42.3 — Background Gmail unread fetcher
+// Queries the Gmail labels API for the INBOX label. That endpoint returns
+// the unread message count directly (`messagesUnread` field) without us
+// needing to fetch every message. ~50ms request, very cheap. If access
+// token expired, refreshes it via the IPC bridge using the stored refresh
+// token. Writes the resulting count to localStorage, where it gets picked
+// up by the polling loop above (so we don't duplicate the badge/sound logic).
+async function bgFetchGmailUnread() {
+  let tokens;
+  try { tokens = JSON.parse(localStorage.getItem('www_gmail_tokens') || 'null'); }
+  catch(e) { tokens = null; }
+  if (!tokens || !tokens.accessToken) return;
+
+  // Refresh if access token is expired or close to expiring
+  let access = tokens.accessToken;
+  const expSoon = !tokens.expiresAt || (tokens.expiresAt - Date.now()) < 60000;
+  if (expSoon && tokens.refreshToken && window.electronAPI && window.electronAPI.gmailOAuth) {
+    try {
+      const r = await window.electronAPI.gmailOAuth.refresh(tokens.refreshToken);
+      if (r && !r.error && r.accessToken) {
+        access = r.accessToken;
+        const next = {
+          accessToken: r.accessToken,
+          refreshToken: r.refreshToken || tokens.refreshToken,
+          expiresAt: r.expiresAt,
+        };
+        localStorage.setItem('www_gmail_tokens', JSON.stringify(next));
+      } else if (r && /invalid_grant|invalid_token/.test(r.error || '')) {
+        // Tokens permanently dead — user will need to re-auth in email window
+        localStorage.removeItem('www_gmail_tokens');
+        return;
+      }
+    } catch(e) { return; }
+  }
+
+  // Query INBOX label
+  try {
+    const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/labels/INBOX', {
+      headers: { Authorization: 'Bearer ' + access }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const count = (data && typeof data.messagesUnread === 'number') ? data.messagesUnread : 0;
+    // Write to localStorage; the 2-second poll loop will pick it up,
+    // update the UI, and trigger the gotmail sound if count went up.
+    localStorage.setItem('www_gmail_unread', String(count));
+  } catch(e) {
+    // Network blip; we'll try again in 60s
+  }
 }
 
 function applyGmailUnread(count, shouldPlay) {

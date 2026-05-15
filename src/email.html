@@ -103,8 +103,8 @@
      measurement from skin PNG; previous values were too high+left. */
   .win-ctrl {
     position: absolute;
-    width: 42px;
-    height: 38px;
+    width: 45px;
+    height: 36px;
     cursor: pointer;
     background: transparent;
     border-radius: 8px;
@@ -112,9 +112,11 @@
   }
   .win-ctrl:hover { background: rgba(255,255,255,0.18); }
   .win-ctrl:active { background: rgba(255,255,255,0.30); }
-  #wc-min   { left: 1213px; top: 60px; }
-  #wc-max   { left: 1275px; top: 60px; }
-  #wc-close { left: 1337px; top: 60px; }
+  /* R3.42.3 — Re-measured from skin: buttons centered around y=80, with
+     minimize ~(1202-1247), maximize ~(1260-1303), close ~(1323-1370). */
+  #wc-min   { left: 1202px; top: 63px; }
+  #wc-max   { left: 1260px; top: 63px; }
+  #wc-close { left: 1323px; top: 63px; }
 
   /* === Toolbar buttons (Compose / Reply / Forward / Delete) === */
   /* R3.42.2 — Coordinates measured pixel-perfect from skin PNG. Hitboxes
@@ -135,7 +137,9 @@
   #tb-reply    { left: 514px;  top: 143px; width: 170px; }
   #tb-forward  { left: 694px;  top: 143px; width: 182px; }
   #tb-delete   { left: 888px;  top: 143px; width: 170px; }
-  #tb-sendrecv { left: 1085px; top: 143px; width: 165px; }
+  /* Send/Receive button is wider — spans to where the dropdown arrow starts.
+     Painted bounds approx x=1075 to x=1280 native. */
+  #tb-sendrecv { left: 1080px; top: 143px; width: 200px; }
 
   /* === Sidebar folder buttons === */
   .sidebar-btn {
@@ -159,19 +163,19 @@
   /* The "count" badges on Inbox/Drafts — we draw our own bubble over
      the painted ones, since the painted ones show fixed sample numbers (7, 2).
      Position is over the painted bubble; we erase the painted number with
-     our own. R3.42.2 — reduced from 72px to 52px to match the size of the
-     painted bubbles (user reported they were too big). */
+     our own. R3.42.3 — shrunk to 40px (was 52px) per user feedback; the
+     painted bubbles were small and our 52px was visually dominant. */
   .count-badge {
     position: absolute;
     pointer-events: none;
-    width: 52px;
-    height: 52px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
-    font-size: 22px;
+    font-size: 16px;
     color: #fff;
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
     z-index: 3;
@@ -184,22 +188,25 @@
     background: radial-gradient(circle at 30% 30%, #a8d4ff 0%, #2a5a9a 55%, #0e2a55 100%);
     box-shadow: inset 0 1px 3px rgba(255,255,255,0.5), inset 0 -3px 4px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.3);
   }
-  /* Centers (measured): Inbox "7" at (249,331), Drafts "2" at (244,525).
-     With 52px badge, top-left = center - 26. */
-  #badge-inbox  { left: 223px; top: 305px; }
-  #badge-drafts { left: 218px; top: 499px; }
+  /* Centers (measured): Inbox painted "7" disk center = (243, 334),
+     Drafts painted "2" disk center = (244, 525).
+     With 40px badge, top-left = center - 20. */
+  #badge-inbox  { left: 223px; top: 314px; }
+  #badge-drafts { left: 224px; top: 505px; }
 
   /* === Email list overlay — covers painted sample rows === */
   /* The painted skin has 6 sample email rows (Jessica Parker, Daniel Carter,
      etc.) baked in. Our live overlay sits directly on top with an opaque
      dark blue background that completely hides the painted ones.
-     R3.42.2 — measured exact bounds: y=236 to y=686, x=305 to x=1275. */
+     R3.42.3 — corrected bounds: y=236 to y=575 (height 339, was 450 which
+     overflowed into the splitter+body area). The splitter bar with green
+     grip handle at y=580-600 stays visible. */
   #email-list {
     position: absolute;
     left: 305px;
     top: 236px;
     width: 970px;
-    height: 450px;
+    height: 339px;
     overflow-y: auto;
     overflow-x: hidden;
     background: linear-gradient(180deg, #0a2a55 0%, #051838 100%);
@@ -285,15 +292,15 @@
   .e-loadmore.loading { opacity: 0.6; cursor: wait; }
 
   /* === Email body preview area === */
-  /* R3.42.2 — Measured exact bounds from skin: y=710 to y=945, x=305-1275.
-     Previous values had body too low + too tall, overlapping the painted
-     bottom dashboard. */
+  /* R3.42.3 — Bounds y=600-945 covering BOTH the painted "FROM:/TO:/SUBJECT:"
+     labels area AND the body content area. The splitter bar at y=575-600
+     (with the green-dot grip handle) stays visible above us. */
   #email-body {
     position: absolute;
     left: 305px;
-    top: 710px;
+    top: 600px;
     width: 970px;
-    height: 235px;
+    height: 345px;
     background: linear-gradient(180deg, #d8e8f8 0%, #c8dcef 100%);
     overflow-y: auto;
     padding: 14px 24px;
@@ -945,23 +952,107 @@ async function fetchFolder(folder, append) {
   }
 }
 
+// R3.42.3 — Body extraction now handles BOTH text/plain (preferred) AND
+// text/html (fallback). For HTML emails, we convert to readable plain text
+// by stripping tags, decoding entities, and preserving paragraph breaks.
+// This was a big issue in earlier rounds: marketing emails (eBay, USPS,
+// Cheap Old Houses, etc.) are HTML-only, and we were showing raw markup.
 function extractBody(payload) {
   if (!payload) return '';
+
+  // Direct body data on the payload itself (rare but possible)
   if (payload.body && payload.body.data) {
-    try { return atob(payload.body.data.replace(/-/g, '+').replace(/_/g, '/')); } catch(e) {}
+    const decoded = decodeB64(payload.body.data);
+    if (decoded) {
+      return /^<|<html|<body|<div|<table|<p\s|<meta/i.test(decoded.slice(0, 200))
+        ? htmlToText(decoded) : decoded;
+    }
   }
+
   if (payload.parts) {
+    // Prefer text/plain
     for (const p of payload.parts) {
       if (p.mimeType === 'text/plain' && p.body && p.body.data) {
-        try { return atob(p.body.data.replace(/-/g, '+').replace(/_/g, '/')); } catch(e) {}
+        const d = decodeB64(p.body.data);
+        if (d) return d;
       }
     }
+    // Fall back to text/html, converted to readable text
+    for (const p of payload.parts) {
+      if (p.mimeType === 'text/html' && p.body && p.body.data) {
+        const d = decodeB64(p.body.data);
+        if (d) return htmlToText(d);
+      }
+    }
+    // Recurse into nested multiparts
     for (const p of payload.parts) {
       const r = extractBody(p);
       if (r) return r;
     }
   }
   return '';
+}
+
+function decodeB64(data) {
+  try {
+    // Gmail uses URL-safe base64. Replace - and _ to make it standard base64.
+    const normal = data.replace(/-/g, '+').replace(/_/g, '/');
+    // atob() returns raw bytes — for UTF-8 content we need to decode as UTF-8
+    const binary = atob(normal);
+    // Decode UTF-8 from binary string
+    try {
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return new TextDecoder('utf-8').decode(bytes);
+    } catch (e) {
+      return binary;
+    }
+  } catch(e) { return ''; }
+}
+
+// Convert an HTML email body to a plain-text-ish version suitable for the
+// retro skin. Strategy:
+//   1. Strip <script> and <style> blocks entirely (their content is noise)
+//   2. Convert <br>, </p>, </div>, </h*>, </li>, </tr> to newlines
+//   3. Strip all remaining tags
+//   4. Decode HTML entities
+//   5. Collapse whitespace, dedupe blank lines
+//   6. Trim
+// This produces readable text even from heavily-styled marketing emails.
+function htmlToText(html) {
+  if (!html) return '';
+  // Strip script + style blocks (CSS and JS as raw text is what was leaking)
+  let text = html
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<head\b[^>]*>[\s\S]*?<\/head>/gi, '');
+  // Block-level closing tags → newline
+  text = text
+    .replace(/<\/(p|div|h[1-6]|li|tr|article|section|header|footer|blockquote)>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<hr\s*\/?>/gi, '\n---\n');
+  // Strip all remaining tags
+  text = text.replace(/<[^>]+>/g, '');
+  // Decode entities (basic set, covers 99% of real emails)
+  const entityMap = {
+    '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'",
+    '&nbsp;': ' ', '&apos;': "'", '&hellip;': '…', '&mdash;': '—', '&ndash;': '–',
+    '&lsquo;': '\u2018', '&rsquo;': '\u2019', '&ldquo;': '\u201C', '&rdquo;': '\u201D',
+    '&copy;': '©', '&reg;': '®', '&trade;': '™', '&deg;': '°',
+    '&middot;': '·', '&bull;': '•',
+  };
+  text = text.replace(/&(amp|lt|gt|quot|#39|nbsp|apos|hellip|mdash|ndash|lsquo|rsquo|ldquo|rdquo|copy|reg|trade|deg|middot|bull);/g,
+    m => entityMap[m] || m);
+  // Numeric entities (&#1234; or &#xAB;)
+  text = text.replace(/&#(\d+);/g, (m, n) => String.fromCharCode(parseInt(n, 10)));
+  text = text.replace(/&#x([0-9a-f]+);/gi, (m, n) => String.fromCharCode(parseInt(n, 16)));
+  // Whitespace cleanup
+  text = text.replace(/[ \t]+/g, ' ');       // collapse runs of spaces/tabs
+  text = text.replace(/\n[ \t]+/g, '\n');    // strip leading whitespace on lines
+  text = text.replace(/[ \t]+\n/g, '\n');    // strip trailing whitespace on lines
+  text = text.replace(/\n{3,}/g, '\n\n');    // max two consecutive newlines
+  return text.trim();
 }
 
 // =============================================================================

@@ -268,15 +268,14 @@ input, button, label, canvas, .nodrag {
   <span class="link-txt" onclick="openSignup()" style="margin-left:6px;">Create one</span>
 </div>
 
-<!-- R3.42.2 — Adjusted: shifted down by 35px and left by 40px based on user
-     feedback that the overlay was up-and-right of the painted button. -->
+<!-- R3.42.3 — Shifted UP 20px (user reported R3.42.2 was too low). -->
 <style>
   #create-acct-overlay:hover { background: rgba(146,255,40,0.18) !important; }
   #create-acct-overlay:active { background: rgba(146,255,40,0.32) !important; }
 </style>
 <div id="create-acct-overlay" class="nodrag" onclick="openSignup()"
   title="Create Account"
-  style="position:absolute; top:890px; left:600px; width:280px; height:55px;
+  style="position:absolute; top:870px; left:600px; width:280px; height:55px;
          cursor:pointer; z-index:3; background:transparent; border-radius:30px;
          -webkit-app-region:no-drag;">
 </div>
