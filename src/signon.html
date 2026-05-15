@@ -268,20 +268,15 @@ input, button, label, canvas, .nodrag {
   <span class="link-txt" onclick="openSignup()" style="margin-left:6px;">Create one</span>
 </div>
 
-<!-- R3.42.1 — Transparent overlay over the painted "Create Account ▶" button
-     in the bottom dashboard of the skin. Coordinates are best-guess from the
-     screenshot; user will confirm and we'll adjust if misaligned. The painted
-     button visually appears around native (680, 862) to (903, 902). I'm using
-     a slightly larger hitbox (640, 855) to (920, 910) so the click area is
-     forgiving even if the painted graphic shifted between skin versions.
-     A faint hover highlight helps confirm alignment during testing. -->
+<!-- R3.42.2 — Adjusted: shifted down by 35px and left by 40px based on user
+     feedback that the overlay was up-and-right of the painted button. -->
 <style>
   #create-acct-overlay:hover { background: rgba(146,255,40,0.18) !important; }
   #create-acct-overlay:active { background: rgba(146,255,40,0.32) !important; }
 </style>
 <div id="create-acct-overlay" class="nodrag" onclick="openSignup()"
   title="Create Account"
-  style="position:absolute; top:855px; left:640px; width:280px; height:55px;
+  style="position:absolute; top:890px; left:600px; width:280px; height:55px;
          cursor:pointer; z-index:3; background:transparent; border-radius:30px;
          -webkit-app-region:no-drag;">
 </div>

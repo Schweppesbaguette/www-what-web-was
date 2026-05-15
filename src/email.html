@@ -99,28 +99,30 @@
   /* === Window control buttons (─ □ ✕) === */
   /* These are TRANSPARENT click overlays positioned over the painted
      button graphics in the skin. The user sees the painted buttons but
-     clicks our invisible divs. */
+     clicks our invisible divs. R3.42.2 — coords adjusted based on direct
+     measurement from skin PNG; previous values were too high+left. */
   .win-ctrl {
     position: absolute;
-    width: 52px;
-    height: 50px;
+    width: 42px;
+    height: 38px;
     cursor: pointer;
-    /* No background or border — they're invisible. Hover shows a faint
-       highlight so the user gets feedback. */
     background: transparent;
     border-radius: 8px;
     transition: background 0.08s;
   }
   .win-ctrl:hover { background: rgba(255,255,255,0.18); }
   .win-ctrl:active { background: rgba(255,255,255,0.30); }
-  #wc-min   { left: 1230px; top: 38px; }
-  #wc-max   { left: 1287px; top: 38px; }
-  #wc-close { left: 1346px; top: 38px; }
+  #wc-min   { left: 1213px; top: 60px; }
+  #wc-max   { left: 1275px; top: 60px; }
+  #wc-close { left: 1337px; top: 60px; }
 
   /* === Toolbar buttons (Compose / Reply / Forward / Delete) === */
+  /* R3.42.2 — Coordinates measured pixel-perfect from skin PNG. Hitboxes
+     fit snugly inside the painted button outlines so hover highlight only
+     shows when actually over the painted button. */
   .toolbar-btn {
     position: absolute;
-    height: 75px;
+    height: 65px;
     cursor: pointer;
     background: transparent;
     border-radius: 10px;
@@ -129,11 +131,11 @@
   .toolbar-btn:hover { background: rgba(255,255,255,0.15); }
   .toolbar-btn:active { background: rgba(255,255,255,0.25); }
   .toolbar-btn.disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
-  #tb-compose { left: 300px; top: 130px; width: 178px; }
-  #tb-reply   { left: 490px; top: 130px; width: 170px; }
-  #tb-forward { left: 670px; top: 130px; width: 196px; }
-  #tb-delete  { left: 875px; top: 130px; width: 156px; }
-  #tb-sendrecv{ left: 1037px; top: 130px; width: 195px; }
+  #tb-compose  { left: 318px;  top: 143px; width: 172px; }
+  #tb-reply    { left: 514px;  top: 143px; width: 170px; }
+  #tb-forward  { left: 694px;  top: 143px; width: 182px; }
+  #tb-delete   { left: 888px;  top: 143px; width: 170px; }
+  #tb-sendrecv { left: 1085px; top: 143px; width: 165px; }
 
   /* === Sidebar folder buttons === */
   .sidebar-btn {
@@ -157,25 +159,24 @@
   /* The "count" badges on Inbox/Drafts — we draw our own bubble over
      the painted ones, since the painted ones show fixed sample numbers (7, 2).
      Position is over the painted bubble; we erase the painted number with
-     our own. R3.42.1 — bumped size + made fully opaque + repositioned to
-     completely cover the painted "7" on Inbox and "2" on Drafts. */
+     our own. R3.42.2 — reduced from 72px to 52px to match the size of the
+     painted bubbles (user reported they were too big). */
   .count-badge {
     position: absolute;
     pointer-events: none;
-    width: 72px;
-    height: 72px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
-    font-size: 32px;
+    font-size: 22px;
     color: #fff;
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
     z-index: 3;
   }
   .count-badge.green {
-    /* Inbox uses green badge — must fully obscure the painted "7" */
     background: radial-gradient(circle at 30% 30%, #7ef868 0%, #2d8a1a 55%, #135509 100%);
     box-shadow: inset 0 1px 3px rgba(255,255,255,0.5), inset 0 -3px 4px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.3);
   }
@@ -183,29 +184,25 @@
     background: radial-gradient(circle at 30% 30%, #a8d4ff 0%, #2a5a9a 55%, #0e2a55 100%);
     box-shadow: inset 0 1px 3px rgba(255,255,255,0.5), inset 0 -3px 4px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.3);
   }
-  /* Positioned so the badge center sits over the painted number center.
-     Measured pixel-perfect from the skin PNG:
-       Inbox painted "7" bubble center  = (249, 331) native
-       Drafts painted "2" bubble center = (244, 525) native
-     With 72px badge width, top-left = center - 36. */
-  #badge-inbox  { left: 213px; top: 295px; }
-  #badge-drafts { left: 208px; top: 489px; }
+  /* Centers (measured): Inbox "7" at (249,331), Drafts "2" at (244,525).
+     With 52px badge, top-left = center - 26. */
+  #badge-inbox  { left: 223px; top: 305px; }
+  #badge-drafts { left: 218px; top: 499px; }
 
   /* === Email list overlay — covers painted sample rows === */
   /* The painted skin has 6 sample email rows (Jessica Parker, Daniel Carter,
      etc.) baked in. Our live overlay sits directly on top with an opaque
-     dark blue background that completely hides the painted ones. */
+     dark blue background that completely hides the painted ones.
+     R3.42.2 — measured exact bounds: y=236 to y=686, x=305 to x=1275. */
   #email-list {
     position: absolute;
-    left: 304px;
+    left: 305px;
     top: 236px;
     width: 970px;
-    height: 480px;
+    height: 450px;
     overflow-y: auto;
     overflow-x: hidden;
     background: linear-gradient(180deg, #0a2a55 0%, #051838 100%);
-    /* Custom scrollbar styling so it doesn't look like a default browser one
-       (the skin already has a painted scrollbar to the right of this area) */
     scrollbar-width: thin;
     scrollbar-color: #4a7bbe #0a2a55;
   }
@@ -288,15 +285,15 @@
   .e-loadmore.loading { opacity: 0.6; cursor: wait; }
 
   /* === Email body preview area === */
-  /* R3.42.1 — reduced height to stop before painted bottom dashboard
-     (which has the EQ animation, waveform, ONLINE indicator). Painted
-     body slot ends around y=960; below that is the chrome footer. */
+  /* R3.42.2 — Measured exact bounds from skin: y=710 to y=945, x=305-1275.
+     Previous values had body too low + too tall, overlapping the painted
+     bottom dashboard. */
   #email-body {
     position: absolute;
-    left: 304px;
-    top: 750px;
+    left: 305px;
+    top: 710px;
     width: 970px;
-    height: 215px;
+    height: 235px;
     background: linear-gradient(180deg, #d8e8f8 0%, #c8dcef 100%);
     overflow-y: auto;
     padding: 14px 24px;
@@ -347,10 +344,10 @@
      skin. */
   #compose-modal {
     position: absolute;
-    left: 304px;
+    left: 305px;
     top: 236px;
     width: 970px;
-    height: 784px;
+    height: 709px;
     background: linear-gradient(180deg, #1a3a6a 0%, #0a2348 100%);
     border: 2px solid #4a7bbe;
     border-radius: 8px;
@@ -464,10 +461,10 @@
   /* === Tooltip helper for not-yet-connected state === */
   #not-connected-overlay {
     position: absolute;
-    left: 304px;
+    left: 305px;
     top: 236px;
     width: 970px;
-    height: 784px;
+    height: 709px;
     background: rgba(5, 24, 56, 0.95);
     display: flex;
     flex-direction: column;
@@ -1048,6 +1045,10 @@ function updateBadges() {
   document.getElementById('badge-drafts').textContent = draftsCount || 0;
   document.getElementById('badge-inbox').style.display = inboxUnread > 0 ? 'flex' : 'flex';
   document.getElementById('badge-drafts').style.display = draftsCount > 0 ? 'flex' : 'flex';
+  // R3.42.2 — Share unread count with main WWW window via localStorage.
+  // index.html polls this every 2 seconds and triggers the "ygm" sound +
+  // toolbar badge when the count increases.
+  try { localStorage.setItem('www_gmail_unread', String(inboxUnread)); } catch(e) {}
 }
 
 function escapeHtml(s) {
