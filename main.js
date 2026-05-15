@@ -9,7 +9,6 @@ let signonWindow = null;
 let radioWindow = null;
 let tvWindow = null;
 let emailWindow = null;  // R3.42 — chromeless skinned email window
-let storageWindow = null; // R3.43 — chromeless StorageBased widget
 let devServer = null;
 let oauthServer = null;    // R3.40 — loopback HTTP server catching the redirect (BrowserWindow approach removed in R3.40)
 
@@ -274,28 +273,6 @@ function createEmailWindow() {
   emailWindow.on('closed', () => { emailWindow = null; });
 }
 
-// ── R3.43 — StorageBased widget window ───────────────────────────
-// Chromeless pop-out window with painted skin (storage-skin.png, 1448×1086
-// scaled to 0.78 → 1129×847). Pure HTML/CSS — no webview/iframe of their
-// site. Hotspots fire shell.openExternal (via the 'open-external' IPC
-// below) to open product pages in the user's default browser. Same
-// chromeless-skinned-window pattern as radio/tv/email/cari.
-function createStorageWindow() {
-  if (storageWindow) { storageWindow.focus(); return; }
-  storageWindow = new BrowserWindow({
-    width: 1129, height: 847,
-    resizable: false,
-    ...SKIN_WINDOW_OPTS,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js'),
-    },
-  });
-  storageWindow.loadFile(path.join(__dirname, 'src', 'storage.html'));
-  storageWindow.on('closed', () => { storageWindow = null; });
-}
-
 // ── Historian window ─────────────────────────────────────
 let historianWindow = null;
 function createHistorianWindow() {
@@ -500,26 +477,6 @@ ipcMain.on('minimize-historian', () => { if(historianWindow) historianWindow.min
 ipcMain.on('open-email', () => createEmailWindow());
 ipcMain.on('close-email', () => { if(emailWindow){emailWindow.close();emailWindow=null;} });
 ipcMain.on('minimize-email', () => { if(emailWindow) emailWindow.minimize(); });
-
-// R3.43 — StorageBased widget IPC
-ipcMain.on('open-storage',     () => createStorageWindow());
-ipcMain.on('close-storage',    () => { if(storageWindow){storageWindow.close();storageWindow=null;} });
-ipcMain.on('minimize-storage', () => { if(storageWindow) storageWindow.minimize(); });
-
-// R3.43 — Generic open-external handler. storage.html (and any future
-// widget) calls window.electronAPI.openExternal(url) to open a link in
-// the user's default browser. We allow only http(s) URLs to prevent
-// arbitrary command execution via file:// / javascript: schemes.
-ipcMain.on('open-external', (event, url) => {
-  if (typeof url !== 'string') return;
-  if (!/^https?:\/\//i.test(url)) {
-    console.warn('R3.43 open-external blocked non-http URL:', url.slice(0, 80));
-    return;
-  }
-  shell.openExternal(url).catch(e => {
-    console.warn('R3.43 open-external failed:', e && e.message);
-  });
-});
 
 ipcMain.handle('gmail-oauth-start', async () => {
   try {
