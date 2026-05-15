@@ -24,6 +24,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   closeEmail: () => ipcRenderer.send('close-email'),
   minimizeEmail: () => ipcRenderer.send('minimize-email'),
 
+  // R3.43 — StorageBased widget (chromeless skinned popup; curated front-door
+  // to storagebased.store). Same shape as the email window IPC. The
+  // openExternal bridge is generic — used by storage.html's hotspots to
+  // open product URLs in the user's default browser via shell.openExternal.
+  // It's validated in main.js to accept http(s) only.
+  openStorage: () => ipcRenderer.send('open-storage'),
+  closeStorage: () => ipcRenderer.send('close-storage'),
+  minimizeStorage: () => ipcRenderer.send('minimize-storage'),
+  openExternal: (url) => ipcRenderer.send('open-external', url),
+
   // KEY FIX: read asset as base64 data URI directly from disk
   // This bypasses the upload-to-JPEG recompression issue entirely.
   // PNG alpha channels are preserved because fs.readFileSync reads raw bytes.
