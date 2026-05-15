@@ -349,7 +349,15 @@ function loadGmailCredentials() {
   }
 }
 loadGmailCredentials();
-const GMAIL_SCOPES = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send';
+// R3.42.8.2 — Switched from gmail.readonly + gmail.send to gmail.modify.
+// modify is a strict superset of both (read, send, label changes, trash,
+// untrash) and is required for actDelete/untrashMessage to work. Trying
+// to call users.messages.trash with only readonly/send returns 403
+// "Request had insufficient authentication scopes". After this change,
+// existing refresh tokens issued under the narrower scope KEEP WORKING
+// for read+send but still 403 on trash; user must disconnect + reconnect
+// Gmail in the app to consent to the broader scope.
+const GMAIL_SCOPES = 'https://www.googleapis.com/auth/gmail.modify';
 
 function base64url(buf) {
   return Buffer.from(buf).toString('base64')
