@@ -96,6 +96,38 @@
     -webkit-app-region: no-drag;
   }
 
+  /* === R3.42.7 — Debug overlay outlines ===
+     Toggle with Ctrl+Shift+D. Draws hot-pink dashed borders on every
+     transparent clickable overlay so the user can screenshot the exact
+     positions of our live buttons relative to the painted chrome — without
+     this it's nearly impossible to tell which painted button is misaligned
+     with which live overlay. Default off. */
+  body.debug-overlays .win-ctrl,
+  body.debug-overlays .toolbar-btn,
+  body.debug-overlays .sidebar-btn,
+  body.debug-overlays .header-btn,
+  body.debug-overlays .count-badge,
+  body.debug-overlays #email-list,
+  body.debug-overlays #email-body,
+  body.debug-overlays #list-right-overlay,
+  body.debug-overlays #live-clock {
+    outline: 2px dashed #ff00aa !important;
+    outline-offset: -1px;
+  }
+  body.debug-overlays .win-ctrl::after,
+  body.debug-overlays .toolbar-btn::after,
+  body.debug-overlays .sidebar-btn::after {
+    content: attr(id);
+    position: absolute;
+    top: 2px; left: 2px;
+    font: bold 10px monospace;
+    color: #ff00aa;
+    background: rgba(255,255,255,0.85);
+    padding: 1px 3px;
+    border-radius: 2px;
+    pointer-events: none;
+  }
+
   /* === Window control buttons (─ □ ✕) === */
   /* These are TRANSPARENT click overlays positioned over the painted
      button graphics in the skin. The user sees the painted buttons but
@@ -192,11 +224,13 @@
   /* Centers (measured): Inbox painted "7" disk center = (243, 334),
      Drafts painted "2" disk center = (244, 525).
      R3.42.5 — Inbox = 74×48 ellipse centered (243, 334) → top-left (206, 310);
-     Drafts = 60×40 ellipse centered (244, 525) → top-left (214, 505). Each is
-     sized to fully envelope its painted bubble + 4px margin on each side. */
+     Drafts = 60×40 ellipse centered (244, 525) → top-left (214, 505).
+     R3.42.7 — User screenshot still shows green sliver on bottom-right of
+     Inbox badge — bumped to 86×56 (centered at same point → top-left 200,306).
+     Drafts looked clean; left unchanged. */
   #badge-inbox  {
-    left: 206px; top: 310px;
-    width: 74px; height: 48px;
+    left: 200px; top: 306px;
+    width: 86px; height: 56px;
     border-radius: 50%;
   }
   #badge-drafts {
@@ -317,35 +351,27 @@
   .e-loadmore:hover { background: linear-gradient(180deg, #2a5a9a 0%, #1a4a8a 100%); }
   .e-loadmore.loading { opacity: 0.6; cursor: wait; }
 
-  /* === R3.42.5 — Live clock overlay ===
-     Painted skin has a clock graphic at top-right of the body area, but it
-     was static (just art). This overlay covers the painted clock with a
-     live, ticking digital clock matching the painted style: gray sans-serif
-     text on a light-blue background that blends with the chrome behind it.
-     User asked: "should be practical not just painted." Position is
-     measured against the painted clock position in the skin. */
-  #live-clock {
+  /* === R3.42.5 — Live clock ===
+     Originally painted on the chrome but static; R3.42.5 added an overlay
+     covering the painted clock with a live ticking version.
+     R3.42.7 — Body now covers the entire painted preview area, so the
+     painted clock is hidden underneath. The live clock now lives INSIDE
+     the body's header row, anchored top-right. .live-clock class is
+     applied to a span inside #email-body — no longer position:absolute. */
+  .live-clock {
     position: absolute;
-    /* Painted clock sits at approx native x=1265-1410 y=595-635 (where
-       "10:24 AM" rendered in shot_3). Live overlay covers that zone with
-       a transparent background so the chrome behind shows, plus our own
-       ticking text on top.
-       R3.42.6 — Moved down with the body (top 595→645). */
-    left: 1265px;
-    top: 645px;
-    width: 150px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    top: 12px;
+    right: 14px;
+    padding: 4px 12px;
     font-family: 'Tahoma', Arial, sans-serif;
-    font-size: 22px;
+    font-size: 18px;
     font-weight: bold;
-    color: #3a5a8a;
-    background: linear-gradient(180deg, #d8e8f8 0%, #c8dcef 100%);
+    color: #1a3a6a;
+    background: linear-gradient(180deg, #bcd4ec 0%, #88a8c8 100%);
+    border: 1px solid #6a8aaa;
     border-radius: 4px;
     pointer-events: none;
-    z-index: 4;
+    z-index: 5;
     letter-spacing: 0.5px;
   }
 
@@ -431,16 +457,22 @@
      (to 315) so there's a live clock zone above. Body right edge shifted
      IN by 60px (width 910, was 970) so the painted scrollbar+EQ+clock zone
      to the right of the body is not covered and can host live overlays.
-     R3.42.6 — User reports body still covers the painted equalizer and a
-     painted blue icon on the right. Body top pushed further down (630→680),
-     height shrunk (315→265), width trimmed (910→880). Live clock moved
-     down to match new body top. */
+     R3.42.6 — Body top pushed further down (630→680), height shrunk
+     (315→265), width trimmed (910→880). Live clock moved down to match.
+     R3.42.7 — User said "lets remove the painted elements in my skin for
+     the message preview area because its still not fitting right. just
+     replace with yours." So instead of fitting between painted features,
+     the body now COVERS the entire painted preview region: from below the
+     list (y=580) extending right past the painted clock area (width 1105,
+     right edge x=1410, covering all painted FROM/TO/SUBJECT, date, media
+     buttons, splitter, etc.). Live clock now lives INSIDE the body header
+     so the separate #live-clock overlay is removed. */
   #email-body {
     position: absolute;
     left: 305px;
-    top: 680px;
-    width: 880px;
-    height: 265px;
+    top: 580px;
+    width: 1090px;
+    height: 365px;
     background: linear-gradient(180deg, #d8e8f8 0%, #c8dcef 100%);
     overflow-y: auto;
     padding: 14px 24px;
@@ -784,15 +816,15 @@
       <div class="lr-arrow" id="lr-down" onclick="listScrollBy( 180)">▼</div>
     </div>
 
-    <!-- R3.42.5 — Live ticking clock overlay (covers painted clock) -->
-    <div id="live-clock">--:-- --</div>
-
-    <!-- Live email body preview (covers painted sample body) -->
+    <!-- Live email body preview — R3.42.7 now covers entire painted preview area -->
     <div id="email-body">
       <!-- R3.42.6 — Expand/collapse toggle. Clicking promotes the body to
            fullscreen-within-window mode. Title text flips with state. -->
       <div class="b-expand-btn" id="b-expand-btn"
            title="Expand to fill window" onclick="toggleExpand()">⛶</div>
+      <!-- R3.42.7 — Live clock lives inside the body header area now that
+           the body covers the painted clock. Anchored top-right via CSS. -->
+      <div class="live-clock" id="live-clock">--:-- --</div>
       <div class="b-empty">Select a message to read.</div>
     </div>
 
@@ -1433,9 +1465,12 @@ function renderBody(m) {
   // Plain Text is still available via toggle for text-only viewing.
   // R3.42.6 — the Expand button lives inside #email-body and would be wiped
   // by innerHTML replacement; re-inject it as part of every render.
+  // R3.42.7 — Live clock also lives inside the body now (body covers the
+  // painted clock entirely), so we re-inject both per render.
   const hasHtml = !!(m.bodyHtml && m.bodyHtml.length > 50);
-  const expandBtn = `<div class="b-expand-btn" id="b-expand-btn"
-       title="Expand to fill window" onclick="toggleExpand()">⛶</div>`;
+  const overlayBits = `<div class="b-expand-btn" id="b-expand-btn"
+       title="Expand to fill window" onclick="toggleExpand()">⛶</div>
+    <div class="live-clock" id="live-clock">--:-- --</div>`;
   const headerHtml = `
     <div class="b-headers">
       <div><span class="b-label">From:</span> ${escapeHtml(m.from)}</div>
@@ -1453,16 +1488,17 @@ function renderBody(m) {
       .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
       .replace(/\son\w+="[^"]*"/gi, '')
       .replace(/\son\w+='[^']*'/gi, '');
-    b.innerHTML = expandBtn + headerHtml + `<iframe id="b-body-content" sandbox="allow-popups"
+    b.innerHTML = overlayBits + headerHtml + `<iframe id="b-body-content" sandbox="allow-popups"
       style="width:100%; flex:1 1 auto; min-height:200px; border:none; background:#fff; border-radius:4px;"
       srcdoc="${escapeHtmlAttr(safe)}"></iframe>`;
     const htmlBtn = b.querySelector('.b-mode-btn[data-mode="html"]');
     if (htmlBtn) htmlBtn.classList.add('active');
   } else {
     // No HTML body — render plain text as before
-    b.innerHTML = expandBtn + headerHtml + `<div class="b-body" id="b-body-content">${escapeHtml(m.body)}</div>`;
+    b.innerHTML = overlayBits + headerHtml + `<div class="b-body" id="b-body-content">${escapeHtml(m.body)}</div>`;
   }
   b.scrollTop = 0;
+  if (typeof tickClock === 'function') tickClock();
 }
 
 // R3.42.4 — Toggle the body content between plain-text and rich HTML view.
@@ -1669,6 +1705,16 @@ document.addEventListener('keydown', (e) => {
       toggleExpand();
     }
   }
+  // R3.42.7 — Ctrl+Shift+D toggles a debug-overlay class on <body> that
+  // makes every clickable transparent overlay (toolbar buttons, sidebar
+  // folder buttons, window controls, badges) draw a faint hot-pink
+  // outline. Lets the user screenshot exactly where each live overlay
+  // sits vs where the painted button is — invaluable for alignment
+  // measurements without needing the source skin PNG.
+  if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+    document.body.classList.toggle('debug-overlays');
+    e.preventDefault();
+  }
 });
 
 // =============================================================================
@@ -1682,7 +1728,9 @@ function setBodyEmpty(msg) {
   if (!b) return;
   b.innerHTML = `<div class="b-expand-btn" id="b-expand-btn"
        title="Expand to fill window" onclick="toggleExpand()">⛶</div>
+    <div class="live-clock" id="live-clock">--:-- --</div>
     <div class="b-empty">${escapeHtml(msg)}</div>`;
+  if (typeof tickClock === 'function') tickClock();
 }
 
 // =============================================================================
