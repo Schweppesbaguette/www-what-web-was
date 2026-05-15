@@ -329,9 +329,10 @@
     /* Painted clock sits at approx native x=1265-1410 y=595-635 (where
        "10:24 AM" rendered in shot_3). Live overlay covers that zone with
        a transparent background so the chrome behind shows, plus our own
-       ticking text on top. */
+       ticking text on top.
+       R3.42.6 — Moved down with the body (top 595→645). */
     left: 1265px;
-    top: 595px;
+    top: 645px;
     width: 150px;
     height: 36px;
     display: flex;
@@ -429,13 +430,17 @@
      R3.42.5 — Body top shifted down 30px (to 630) and height reduced 30px
      (to 315) so there's a live clock zone above. Body right edge shifted
      IN by 60px (width 910, was 970) so the painted scrollbar+EQ+clock zone
-     to the right of the body is not covered and can host live overlays. */
+     to the right of the body is not covered and can host live overlays.
+     R3.42.6 — User reports body still covers the painted equalizer and a
+     painted blue icon on the right. Body top pushed further down (630→680),
+     height shrunk (315→265), width trimmed (910→880). Live clock moved
+     down to match new body top. */
   #email-body {
     position: absolute;
     left: 305px;
-    top: 630px;
-    width: 910px;
-    height: 315px;
+    top: 680px;
+    width: 880px;
+    height: 265px;
     background: linear-gradient(180deg, #d8e8f8 0%, #c8dcef 100%);
     overflow-y: auto;
     padding: 14px 24px;
@@ -492,6 +497,57 @@
     color: #fff;
     border-color: #88aacc;
   }
+
+  /* === R3.42.6 — Expand button ===
+     User asked: "message preview area too small to read i want to be able
+     to expand that entire window." Rather than making the BrowserWindow
+     resizable (which would require scaling/tiling the painted skin and is
+     a big refactor — see handoff "Maximize button" deferred note), we add
+     a self-contained expand toggle. When activated, #email-body promotes
+     to position:fixed and fills the viewport — covering the entire chrome
+     so the user has the whole 898×673 window to read in. Click again
+     (or Esc) to collapse back to the normal painted-skin layout. */
+  .b-expand-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(180deg, #bcd4ec 0%, #88a8c8 100%);
+    border: 1px solid #6a8aaa;
+    color: #1a3a6a;
+    font-size: 16px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 6;
+    transition: background 0.08s, transform 0.05s;
+    line-height: 1;
+  }
+  .b-expand-btn:hover { background: linear-gradient(180deg, #d0e0f0 0%, #98b8d8 100%); }
+  .b-expand-btn:active { transform: scale(0.94); }
+
+  /* Expanded state — body covers the entire window viewport. We use !important
+     to safely beat the static #email-body block's left/top/width/height. */
+  #email-body.expanded {
+    position: fixed !important;
+    left: 8px !important;
+    top: 8px !important;
+    right: 8px !important;
+    bottom: 8px !important;
+    width: auto !important;
+    height: auto !important;
+    z-index: 9 !important;
+    border: 2px solid #4a7bbe;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    padding: 18px 28px;
+  }
+  /* When expanded, the expand button shows a collapse-glyph instead */
+  #email-body.expanded .b-expand-btn { top: 12px; right: 12px; }
 
   /* === "Connected / Disconnected" status === */
   /* R3.42.1 — Painted skin already has a CONNECTED indicator top-right, so
@@ -733,6 +789,10 @@
 
     <!-- Live email body preview (covers painted sample body) -->
     <div id="email-body">
+      <!-- R3.42.6 — Expand/collapse toggle. Clicking promotes the body to
+           fullscreen-within-window mode. Title text flips with state. -->
+      <div class="b-expand-btn" id="b-expand-btn"
+           title="Expand to fill window" onclick="toggleExpand()">⛶</div>
       <div class="b-empty">Select a message to read.</div>
     </div>
 
@@ -992,7 +1052,7 @@ async function switchFolder(name) {
   document.getElementById('col-from').textContent =
     (name === 'sent' || name === 'drafts') ? 'TO' : 'FROM';
   // Show whatever is cached, plus an empty/loading state if not loaded yet
-  document.getElementById('email-body').innerHTML = '<div class="b-empty">Select a message to read.</div>';
+  setBodyEmpty('Select a message to read.');
   renderList();
   if (!gmailFolders[name].loaded) {
     fetchFolder(name, false);
@@ -1371,7 +1431,11 @@ function renderBody(m) {
   // Marketing emails (Amazon, eBay, Pardot, etc.) are image-only and look
   // like a wall of tracking URLs in plain-text mode — the user wants images.
   // Plain Text is still available via toggle for text-only viewing.
+  // R3.42.6 — the Expand button lives inside #email-body and would be wiped
+  // by innerHTML replacement; re-inject it as part of every render.
   const hasHtml = !!(m.bodyHtml && m.bodyHtml.length > 50);
+  const expandBtn = `<div class="b-expand-btn" id="b-expand-btn"
+       title="Expand to fill window" onclick="toggleExpand()">⛶</div>`;
   const headerHtml = `
     <div class="b-headers">
       <div><span class="b-label">From:</span> ${escapeHtml(m.from)}</div>
@@ -1389,14 +1453,14 @@ function renderBody(m) {
       .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
       .replace(/\son\w+="[^"]*"/gi, '')
       .replace(/\son\w+='[^']*'/gi, '');
-    b.innerHTML = headerHtml + `<iframe id="b-body-content" sandbox="allow-popups"
+    b.innerHTML = expandBtn + headerHtml + `<iframe id="b-body-content" sandbox="allow-popups"
       style="width:100%; flex:1 1 auto; min-height:200px; border:none; background:#fff; border-radius:4px;"
       srcdoc="${escapeHtmlAttr(safe)}"></iframe>`;
     const htmlBtn = b.querySelector('.b-mode-btn[data-mode="html"]');
     if (htmlBtn) htmlBtn.classList.add('active');
   } else {
     // No HTML body — render plain text as before
-    b.innerHTML = headerHtml + `<div class="b-body" id="b-body-content">${escapeHtml(m.body)}</div>`;
+    b.innerHTML = expandBtn + headerHtml + `<div class="b-body" id="b-body-content">${escapeHtml(m.body)}</div>`;
   }
   b.scrollTop = 0;
 }
@@ -1486,7 +1550,7 @@ function actDelete() {
   // Local-only delete (does not actually trash on Gmail server)
   gmailFolders[currentFolder].messages = gmailFolders[currentFolder].messages.filter(x => x.id !== m.id);
   selectedId = null;
-  document.getElementById('email-body').innerHTML = '<div class="b-empty">Message removed from view.</div>';
+  setBodyEmpty('Message removed from view.');
   renderList();
   updateBadges();
 }
@@ -1499,7 +1563,7 @@ function actSendRecv() {
     gmailFolders[currentFolder].loaded = false;
   }
   selectedId = null;
-  document.getElementById('email-body').innerHTML = '<div class="b-empty">Select a message to read.</div>';
+  setBodyEmpty('Select a message to read.');
   renderList();
   fetchFolder(currentFolder, false);
   showToast('Refreshing ' + currentFolder + '…');
@@ -1597,9 +1661,47 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (document.getElementById('compose-modal').classList.contains('show')) {
       closeCompose();
+      return;
+    }
+    // R3.42.6 — Esc also collapses an expanded body view
+    const body = document.getElementById('email-body');
+    if (body && body.classList.contains('expanded')) {
+      toggleExpand();
     }
   }
 });
+
+// =============================================================================
+// R3.42.6 — Body empty-state helper. Preserves the Expand button across
+// innerHTML replacements (the button lives inside #email-body and would be
+// wiped if we just set textContent). Called from switchFolder, actDelete,
+// and actSendRecv.
+// =============================================================================
+function setBodyEmpty(msg) {
+  const b = document.getElementById('email-body');
+  if (!b) return;
+  b.innerHTML = `<div class="b-expand-btn" id="b-expand-btn"
+       title="Expand to fill window" onclick="toggleExpand()">⛶</div>
+    <div class="b-empty">${escapeHtml(msg)}</div>`;
+}
+
+// =============================================================================
+// R3.42.6 — Expand toggle. Promotes #email-body to position:fixed covering
+// the entire viewport (so the user can read full-window) and flips back on
+// second click or Esc. Updates the button glyph (⛶ for expand, ⛶↙ collapse-y).
+// =============================================================================
+function toggleExpand() {
+  const body = document.getElementById('email-body');
+  const btn  = document.getElementById('b-expand-btn');
+  if (!body) return;
+  body.classList.toggle('expanded');
+  const expanded = body.classList.contains('expanded');
+  if (btn) {
+    btn.textContent = expanded ? '🗗' : '⛶';
+    btn.title = expanded ? 'Collapse to normal size (or press Esc)'
+                         : 'Expand to fill window';
+  }
+}
 
 // =============================================================================
 // R3.42.5 — Live clock overlay (replaces painted-only clock graphic)

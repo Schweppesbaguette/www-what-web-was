@@ -270,19 +270,20 @@ input, button, label, canvas, .nodrag {
 
 <!-- R3.42.4 — Shifted up 30px and left 50px. R3.42.3 was still down-right
      of the painted button.
-     R3.42.5 — R3.42.4 over-corrected (now up-and-left of the painted text
-     per user screenshot). Shifted DOWN 15px and RIGHT 70px from R3.42.4,
-     and widened to 320×60 to cover the "Create Account ▶" text + arrow.
-     Net vs R3.42.3: -15 up, +20 right. NOTE: still approximate — without a
-     signon-skin pixel measurement this is best-fit-from-screenshot. -->
+     R3.42.5 — Re-shifted DOWN 15px and RIGHT 70px from R3.42.4, widened to 320×60.
+     R3.42.6 — R3.42.5 had hitbox aligned on the painted text but slightly
+     wider than aesthetically pleasant (extended past "Create" on the left
+     and past the ▶ arrow on the right). Trimmed width 320→240, height
+     60→52, and shifted left 620→650 so it visually wraps the painted text
+     without overflow. -->
 <style>
   #create-acct-overlay:hover { background: rgba(146,255,40,0.18) !important; }
   #create-acct-overlay:active { background: rgba(146,255,40,0.32) !important; }
 </style>
 <div id="create-acct-overlay" class="nodrag" onclick="openSignup()"
   title="Create Account"
-  style="position:absolute; top:855px; left:620px; width:320px; height:60px;
-         cursor:pointer; z-index:3; background:transparent; border-radius:30px;
+  style="position:absolute; top:858px; left:650px; width:240px; height:52px;
+         cursor:pointer; z-index:3; background:transparent; border-radius:26px;
          -webkit-app-region:no-drag;">
 </div>
 <!-- Guest link (only shown if existing local CFG present) -->
