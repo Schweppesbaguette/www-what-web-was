@@ -190,8 +190,10 @@
   }
   /* Centers (measured): Inbox painted "7" disk center = (243, 334),
      Drafts painted "2" disk center = (244, 525).
-     With 40px badge, top-left = center - 20. */
-  #badge-inbox  { left: 223px; top: 314px; }
+     With 40px badge, top-left = center - 20.
+     R3.42.4 — Inbox shifted down 4px because painted bubble extended
+     slightly below my badge in R3.42.3. Drafts unchanged (was correct). */
+  #badge-inbox  { left: 223px; top: 318px; }
   #badge-drafts { left: 224px; top: 505px; }
 
   /* === Email list overlay — covers painted sample rows === */
@@ -200,7 +202,10 @@
      dark blue background that completely hides the painted ones.
      R3.42.3 — corrected bounds: y=236 to y=575 (height 339, was 450 which
      overflowed into the splitter+body area). The splitter bar with green
-     grip handle at y=580-600 stays visible. */
+     grip handle at y=580-600 stays visible.
+     R3.42.4 — Hide the live scrollbar entirely. The painted skin has its
+     own scrollbar graphic (paperclip, !, up/down arrows) on the right edge
+     that should be visible as decoration. Still scrollable via wheel/touchpad. */
   #email-list {
     position: absolute;
     left: 305px;
@@ -210,9 +215,10 @@
     overflow-y: auto;
     overflow-x: hidden;
     background: linear-gradient(180deg, #0a2a55 0%, #051838 100%);
-    scrollbar-width: thin;
-    scrollbar-color: #4a7bbe #0a2a55;
+    scrollbar-width: none;          /* Firefox */
+    -ms-overflow-style: none;        /* IE/old Edge */
   }
+  #email-list::-webkit-scrollbar { display: none; }  /* WebKit/Blink */
   #email-list::-webkit-scrollbar { width: 6px; }
   #email-list::-webkit-scrollbar-track { background: #0a2a55; }
   #email-list::-webkit-scrollbar-thumb { background: #4a7bbe; border-radius: 3px; }
@@ -294,7 +300,8 @@
   /* === Email body preview area === */
   /* R3.42.3 — Bounds y=600-945 covering BOTH the painted "FROM:/TO:/SUBJECT:"
      labels area AND the body content area. The splitter bar at y=575-600
-     (with the green-dot grip handle) stays visible above us. */
+     (with the green-dot grip handle) stays visible above us.
+     R3.42.4 — Scrollbar hidden (painted scrollbar is decorative). */
   #email-body {
     position: absolute;
     left: 305px;
@@ -306,9 +313,10 @@
     padding: 14px 24px;
     color: #1a3a6a;
     box-sizing: border-box;
-    scrollbar-width: thin;
-    scrollbar-color: #6a8aaa #d8e8f8;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
+  #email-body::-webkit-scrollbar { display: none; }
   #email-body::-webkit-scrollbar { width: 6px; }
   #email-body::-webkit-scrollbar-track { background: #d8e8f8; }
   #email-body::-webkit-scrollbar-thumb { background: #6a8aaa; border-radius: 3px; }
@@ -333,6 +341,26 @@
     font-style: italic;
     padding: 40px 0;
     font-size: 24px;
+  }
+  /* R3.42.4 — Toggle buttons for Plain Text / Rich HTML view modes */
+  .b-mode-btn {
+    background: linear-gradient(180deg, #bcd4ec 0%, #88a8c8 100%);
+    border: 1px solid #6a8aaa;
+    color: #1a3a6a;
+    padding: 3px 10px;
+    font-size: 13px;
+    font-family: Tahoma, Arial, sans-serif;
+    border-radius: 3px;
+    cursor: pointer;
+    margin-right: 4px;
+    font-weight: bold;
+    transition: background 0.08s;
+  }
+  .b-mode-btn:hover { background: linear-gradient(180deg, #d0e0f0 0%, #98b8d8 100%); }
+  .b-mode-btn.active {
+    background: linear-gradient(180deg, #1a3a6a 0%, #0a2348 100%);
+    color: #fff;
+    border-color: #88aacc;
   }
 
   /* === "Connected / Disconnected" status === */
@@ -917,11 +945,16 @@ async function fetchFolder(folder, append) {
         new Date(dateStr).toLocaleDateString('en-US', {month:'numeric', day:'numeric', year:'2-digit'}) : '';
 
       let body = '(loading body)';
+      let bodyHtml = '';
       try {
         const fr = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/' + m.id + '?format=full',
           { headers: { Authorization: 'Bearer ' + token } });
         const full = await fr.json();
         body = extractBody(full.payload) || body;
+        // R3.42.4 — Also stash the raw HTML version (if any) so the user
+        // can toggle to a "rich" view that shows images and styling. The
+        // text version stays the default for retro aesthetic + readability.
+        bodyHtml = extractHtml(full.payload) || '';
       } catch(e) {}
 
       newMsgs.push({
@@ -931,7 +964,8 @@ async function fetchFolder(folder, append) {
         subj: getH('Subject') || '(no subject)',
         date: dateShort,
         unread: (msg.labelIds || []).includes('UNREAD'),
-        body
+        body,
+        bodyHtml
       });
     }
 
@@ -1010,18 +1044,49 @@ function decodeB64(data) {
   } catch(e) { return ''; }
 }
 
+// R3.42.4 — Extract the RAW HTML body from a Gmail payload (no conversion
+// to text). Used so the user can toggle the body view between "plain"
+// (htmlToText output, default) and "rich HTML" (the original markup
+// rendered inside a sandboxed iframe).
+function extractHtml(payload) {
+  if (!payload) return '';
+  if (payload.parts) {
+    // Prefer top-level text/html part
+    for (const p of payload.parts) {
+      if (p.mimeType === 'text/html' && p.body && p.body.data) {
+        const d = decodeB64(p.body.data);
+        if (d) return d;
+      }
+    }
+    // Recurse into nested multiparts (e.g. multipart/alternative inside
+    // multipart/mixed) — common for HTML emails with attachments
+    for (const p of payload.parts) {
+      const r = extractHtml(p);
+      if (r) return r;
+    }
+  }
+  // Single-part HTML message
+  if (payload.mimeType === 'text/html' && payload.body && payload.body.data) {
+    return decodeB64(payload.body.data) || '';
+  }
+  return '';
+}
+
 // Convert an HTML email body to a plain-text-ish version suitable for the
 // retro skin. Strategy:
 //   1. Strip <script> and <style> blocks entirely (their content is noise)
 //   2. Convert <br>, </p>, </div>, </h*>, </li>, </tr> to newlines
 //   3. Strip all remaining tags
-//   4. Decode HTML entities
-//   5. Collapse whitespace, dedupe blank lines
+//   4. Decode HTML entities (via DOM textarea trick — handles ALL named entities)
+//   5. Collapse whitespace, dedupe blank lines, drop zero-width chars
 //   6. Trim
 // This produces readable text even from heavily-styled marketing emails.
+// R3.42.4 — Switched from hand-rolled entity map to DOM textarea trick.
+// Previous approach missed &zwnj;, &emsp;, and dozens of other entities
+// commonly used in marketing email padding/spacers.
 function htmlToText(html) {
   if (!html) return '';
-  // Strip script + style blocks (CSS and JS as raw text is what was leaking)
+  // Strip script + style + head blocks (CSS and JS as raw text is what was leaking)
   let text = html
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
@@ -1034,19 +1099,19 @@ function htmlToText(html) {
     .replace(/<hr\s*\/?>/gi, '\n---\n');
   // Strip all remaining tags
   text = text.replace(/<[^>]+>/g, '');
-  // Decode entities (basic set, covers 99% of real emails)
-  const entityMap = {
-    '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'",
-    '&nbsp;': ' ', '&apos;': "'", '&hellip;': '…', '&mdash;': '—', '&ndash;': '–',
-    '&lsquo;': '\u2018', '&rsquo;': '\u2019', '&ldquo;': '\u201C', '&rdquo;': '\u201D',
-    '&copy;': '©', '&reg;': '®', '&trade;': '™', '&deg;': '°',
-    '&middot;': '·', '&bull;': '•',
-  };
-  text = text.replace(/&(amp|lt|gt|quot|#39|nbsp|apos|hellip|mdash|ndash|lsquo|rsquo|ldquo|rdquo|copy|reg|trade|deg|middot|bull);/g,
-    m => entityMap[m] || m);
-  // Numeric entities (&#1234; or &#xAB;)
-  text = text.replace(/&#(\d+);/g, (m, n) => String.fromCharCode(parseInt(n, 10)));
-  text = text.replace(/&#x([0-9a-f]+);/gi, (m, n) => String.fromCharCode(parseInt(n, 16)));
+  // DOM-based entity decoding — handles every named entity (&zwnj;, &emsp;,
+  // &nbsp;, &copy;, etc.) plus numeric (&#1234;) and hex (&#xAB;).
+  // Setting innerHTML on a textarea is safe (textarea doesn't execute its
+  // content) and is the standard quick-decode pattern.
+  try {
+    const ta = document.createElement('textarea');
+    ta.innerHTML = text;
+    text = ta.value;
+  } catch(e) { /* fallback to manual */ }
+  // Strip zero-width characters that survived decoding (zero-width non-joiner,
+  // zero-width space, etc.). Marketing emails use these for tracking pixels
+  // and as padding; they make the body look like garbage when printed.
+  text = text.replace(/[\u200B-\u200D\uFEFF\u2060\u00AD]/g, '');
   // Whitespace cleanup
   text = text.replace(/[ \t]+/g, ' ');       // collapse runs of spaces/tabs
   text = text.replace(/\n[ \t]+/g, '\n');    // strip leading whitespace on lines
@@ -1119,14 +1184,68 @@ function renderList() {
 
 function renderBody(m) {
   const b = document.getElementById('email-body');
-  b.innerHTML = `
+  // R3.42.4 — If the message has an HTML body, show a toggle button so
+  // the user can switch between the clean plain-text view (default) and
+  // the full rich HTML view inside a sandboxed iframe. The iframe loads
+  // via srcdoc + sandbox attributes that block scripts and same-origin
+  // access, so even malicious HTML can't escape into our app. Images CAN
+  // load (allow-images is implied by absence of CSP) so marketing emails
+  // look right.
+  const hasHtml = !!(m.bodyHtml && m.bodyHtml.length > 50);
+  const headerHtml = `
     <div class="b-headers">
       <div><span class="b-label">From:</span> ${escapeHtml(m.from)}</div>
       <div><span class="b-label">Subject:</span> ${escapeHtml(m.subj)}</div>
       <div><span class="b-label">Date:</span> ${escapeHtml(m.date)}</div>
-    </div>
-    <div class="b-body">${escapeHtml(m.body)}</div>`;
+      ${hasHtml ? `<div style="margin-top:6px;">
+        <button class="b-mode-btn" data-mode="text" onclick="setBodyMode('text','${m.id}')">📄 Plain</button>
+        <button class="b-mode-btn" data-mode="html" onclick="setBodyMode('html','${m.id}')">🖼️ Rich HTML</button>
+      </div>` : ''}
+    </div>`;
+  // Default to plain-text view (cleaner for retro aesthetic, faster, safe)
+  b.innerHTML = headerHtml + `<div class="b-body" id="b-body-content">${escapeHtml(m.body)}</div>`;
   b.scrollTop = 0;
+  // Default the toggle button highlight
+  const plainBtn = b.querySelector('.b-mode-btn[data-mode="text"]');
+  if (plainBtn) plainBtn.classList.add('active');
+}
+
+// R3.42.4 — Toggle the body content between plain-text and rich HTML view.
+// Plain mode: the htmlToText() output, rendered as preformatted text.
+// HTML mode: the original HTML inside a sandboxed iframe (no scripts, no
+// same-origin, no top navigation; images allowed). Both modes share the
+// same headers + toggle bar.
+function setBodyMode(mode, msgId) {
+  const m = (gmailFolders[currentFolder].messages || []).find(x => String(x.id) === String(msgId));
+  if (!m) return;
+  const contentEl = document.getElementById('b-body-content');
+  if (!contentEl) return;
+  if (mode === 'html' && m.bodyHtml) {
+    // Strip <script> blocks defensively even though sandbox blocks them.
+    // Also remove on* handlers from the HTML.
+    let safe = m.bodyHtml
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/\son\w+="[^"]*"/gi, '')
+      .replace(/\son\w+='[^']*'/gi, '');
+    // Render inside iframe — srcdoc bypasses CORS for setting content.
+    // sandbox="" with no values = strictest (no scripts, no same-origin,
+    // no forms, no popups). "allow-popups" lets clicking links open in
+    // the default browser via target=_blank.
+    contentEl.outerHTML = `<iframe id="b-body-content" sandbox="allow-popups"
+      style="width:100%; height:240px; border:none; background:#fff; border-radius:4px;"
+      srcdoc="${escapeHtmlAttr(safe)}"></iframe>`;
+  } else {
+    contentEl.outerHTML = `<div class="b-body" id="b-body-content">${escapeHtml(m.body)}</div>`;
+  }
+  // Update active button state
+  document.querySelectorAll('.b-mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+}
+
+// Helper — escape for use inside a quoted HTML attribute (like srcdoc)
+function escapeHtmlAttr(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 function updateBadges() {
