@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>StorageBased — WWW</title>
+<style>
+  /* === Window chassis ===
+     Mirrors the email/CARI pattern: a transparent BrowserWindow with a
+     painted PNG skin scaled by CSS transform on .stage. All overlay coords
+     are expressed in NATIVE skin pixels (1448×1086) and inherit the scale.
+     R3.43 — Native skin size matches email's 1448×1086 (same source dim).
+     Scale chosen as 0.78 → displayed 1129×847. Slightly larger than the
+     email window (898×673) per user request "same as CARI". If CARI is a
+     different size, just adjust the BrowserWindow dims in main.js and the
+     transform scale below to match. */
+  html, body {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    background: transparent;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, sans-serif;
+    color: #fff;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .stage {
+    position: absolute;
+    top: 0; left: 0;
+    width: 1448px;
+    height: 1086px;
+    transform: scale(0.78);
+    transform-origin: 0 0;
+  }
+
+  .skin {
+    position: absolute;
+    top: 0; left: 0;
+    width: 1448px;
+    height: 1086px;
+    background-image: url('assets/storage-skin.png');
+    background-size: 1448px 1086px;
+    background-repeat: no-repeat;
+    pointer-events: none;
+  }
+
+  /* === Drag handle ===
+     The top header strip (white area with the STORAGEBASED wordmark and the
+     top-nav items). User can drag the window by grabbing this strip. Buttons
+     inside it (top-nav items, profile icon) get -webkit-app-region: no-drag
+     individually so clicks aren't swallowed. */
+  .drag-handle {
+    position: absolute;
+    top: 0; left: 0;
+    width: 1448px;
+    height: 122px;
+    -webkit-app-region: drag;
+    pointer-events: none;     /* let hotspots receive events */
+    z-index: 1;
+  }
+
+  /* === Floating window controls (top-right) ===
+     Painted skin has none, so we add our own tiny min/close in the top-right.
+     They sit ABOVE the drag handle so they receive clicks. */
+  .win-ctrl {
+    position: absolute;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    -webkit-app-region: no-drag;
+    z-index: 10;
+    font-size: 14px;
+    font-weight: bold;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    transition: transform 0.05s, filter 0.08s;
+  }
+  .win-ctrl:hover  { filter: brightness(1.15); }
+  .win-ctrl:active { transform: scale(0.92); }
+  #wc-min   { right: 60px; top: 28px; background: #f6c544; color: #5a3a00; }
+  #wc-close { right: 22px; top: 28px; background: #ef4444; color: #fff; }
+
+  /* === Hotspots ===
+     Every clickable region is a transparent .hotspot div placed precisely
+     over the painted graphic. Hover shows a subtle red glow ring matching
+     the StorageBased red accent color. Click → shell.openExternal via IPC.
+     Coordinates measured against the mockup at native 1448×1086. */
+  .hotspot {
+    position: absolute;
+    cursor: pointer;
+    -webkit-app-region: no-drag;
+    z-index: 5;
+    border-radius: 6px;
+    transition: box-shadow 0.12s, background 0.12s;
+  }
+  .hotspot:hover {
+    background: rgba(229, 30, 35, 0.08);
+    box-shadow: 0 0 0 3px rgba(229, 30, 35, 0.35),
+                0 4px 12px rgba(229, 30, 35, 0.20);
+  }
+  .hotspot:active { background: rgba(229, 30, 35, 0.15); }
+
+  /* === Top-nav hotspots (THE STORAGE / SHOP / AD LIBRARY / SERVICES / SUBSCRIBE) ===
+     Sit at y≈70-100. Measured by eyeballing the mockup nav row. */
+  #nav-storage   { left: 519px;  top: 50px; width: 158px; height: 50px; }
+  #nav-shop      { left: 689px;  top: 50px; width: 96px;  height: 50px; }
+  #nav-adlib     { left: 800px;  top: 50px; width: 158px; height: 50px; }
+  #nav-services  { left: 968px;  top: 50px; width: 132px; height: 50px; }
+  #nav-subscribe { left: 1115px; top: 50px; width: 165px; height: 50px; }
+  #nav-profile   { left: 1378px; top: 38px; width: 50px;  height: 50px; border-radius: 50%; }
+
+  /* === WHAT'S NEW ticker (4 items + VIEW ALL on the right) === */
+  #news-1     { left: 250px;  top: 138px; width: 320px; height: 38px; }
+  #news-2     { left: 583px;  top: 138px; width: 295px; height: 38px; }
+  #news-3     { left: 890px;  top: 138px; width: 230px; height: 38px; }
+  #news-4     { left: 1133px; top: 138px; width: 196px; height: 38px; }
+  #news-all   { left: 1340px; top: 138px; width: 95px;  height: 38px; }
+
+  /* === Sidebar: BROWSE ARCHIVE — 7 category rows + THE STORAGE box ===
+     Each row is ~64px tall, starts at y≈285 and stacks down. */
+  #cat-source   { left: 42px; top: 281px;  width: 280px; height: 56px; }
+  #cat-catalogs { left: 42px; top: 348px;  width: 280px; height: 56px; }
+  #cat-paper    { left: 42px; top: 416px;  width: 280px; height: 56px; }
+  #cat-books    { left: 42px; top: 484px;  width: 280px; height: 56px; }
+  #cat-xxl      { left: 42px; top: 552px;  width: 280px; height: 56px; }
+  #cat-stress   { left: 42px; top: 620px;  width: 280px; height: 56px; }
+  #cat-other    { left: 42px; top: 688px;  width: 280px; height: 56px; }
+  #cat-explore  { left: 42px; top: 800px;  width: 280px; height: 95px; }
+
+  /* === Search bar === */
+  #search-input  { left: 364px; top: 220px; width: 590px; height: 64px; cursor: text; }
+  #search-filter { left: 968px; top: 220px; width: 135px; height: 64px; }
+
+  /* === FEATURED ARCHIVE 8 covers ===
+     Two rows of 4. Measured cover bounds from the mockup. */
+  #cover-1 { left: 372px;  top: 327px; width: 156px; height: 246px; }  /* Source 300 */
+  #cover-2 { left: 545px;  top: 327px; width: 156px; height: 246px; }  /* Source 307 */
+  #cover-3 { left: 717px;  top: 327px; width: 156px; height: 246px; }  /* Supreme */
+  #cover-4 { left: 889px;  top: 327px; width: 156px; height: 246px; }  /* BAPE */
+  #cover-5 { left: 372px;  top: 648px; width: 156px; height: 246px; }  /* PAPER */
+  #cover-6 { left: 545px;  top: 648px; width: 156px; height: 246px; }  /* Virgil */
+  #cover-7 { left: 717px;  top: 648px; width: 156px; height: 246px; }  /* XXL */
+  #cover-8 { left: 889px;  top: 648px; width: 156px; height: 246px; }  /* Stress */
+
+  /* "FEATURED ARCHIVE — VIEW ALL" link above the top row of covers */
+  #grid-viewall { left: 950px; top: 290px; width: 110px; height: 30px; }
+
+  /* === Right "Featured" detail panel ===
+     Right side, big featured cover with metadata + VIEW ISSUE + ADD TO COLLECTION */
+  #feat-cover   { left: 1130px; top: 285px; width: 260px; height: 350px; }
+  #feat-view    { left: 1130px; top: 793px; width: 244px; height: 56px; }
+  #feat-collect { left: 1130px; top: 862px; width: 244px; height: 56px; }
+
+  /* === Footer 4-up icons (CURATED ARCHIVE / SEARCH / SAVE / CULTURE) ===
+     These four blurbs at the bottom of the mockup. Useful as informational
+     anchors. Clicking opens the About page on their site (placeholder). */
+  #foot-1 { left: 80px;   top: 960px; width: 320px; height: 110px; }
+  #foot-2 { left: 410px;  top: 960px; width: 320px; height: 110px; }
+  #foot-3 { left: 745px;  top: 960px; width: 320px; height: 110px; }
+  #foot-4 { left: 1080px; top: 960px; width: 320px; height: 110px; }
+
+  /* === Live search input overlay ===
+     Visible only when the search hotspot is focused. We layer a real text
+     input over the painted search-bar area so the user can actually type.
+     The painted graphic acts as the visual chrome. */
+  #live-search {
+    position: absolute;
+    left: 410px; top: 232px;
+    width: 540px; height: 40px;
+    background: transparent;
+    border: none;
+    color: #1a1a1a;
+    font-size: 22px;
+    font-family: inherit;
+    outline: none;
+    -webkit-app-region: no-drag;
+    z-index: 6;
+    pointer-events: none;     /* let hotspot receive clicks until focused */
+  }
+  #live-search.active {
+    pointer-events: auto;
+    background: rgba(255,255,255,0.9);
+    border-radius: 4px;
+    padding: 0 8px;
+    box-sizing: border-box;
+  }
+
+  /* === Status toast === */
+  #toast {
+    position: fixed;
+    left: 50%; bottom: 30px;
+    transform: translateX(-50%);
+    background: rgba(20, 20, 30, 0.92);
+    color: #fff;
+    padding: 12px 22px;
+    border-radius: 6px;
+    font-size: 15px;
+    z-index: 100;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+    border: 1px solid #e51e23;
+    opacity: 0;
+    transition: opacity 0.25s;
+    pointer-events: none;
+    max-width: 80%;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="skin"></div>
+    <div class="drag-handle"></div>
+
+    <!-- Window controls -->
+    <button class="win-ctrl" id="wc-min"   title="Minimize" onclick="winMinimize()">_</button>
+    <button class="win-ctrl" id="wc-close" title="Close"    onclick="winClose()">×</button>
+
+    <!-- Top nav -->
+    <div class="hotspot" id="nav-storage"   title="The Storage" onclick="goExternal('/pages/the-storage')"></div>
+    <div class="hotspot" id="nav-shop"      title="Shop"        onclick="goExternal('/collections/all')"></div>
+    <div class="hotspot" id="nav-adlib"     title="Ad Library"  onclick="goExternal('/pages/ad-library')"></div>
+    <div class="hotspot" id="nav-services"  title="Services"    onclick="goExternal('/pages/services')"></div>
+    <div class="hotspot" id="nav-subscribe" title="Subscribe"   onclick="goExternal('/pages/subscribe')"></div>
+    <div class="hotspot" id="nav-profile"   title="Account"     onclick="goExternal('/account')"></div>
+
+    <!-- WHAT'S NEW ticker -->
+    <div class="hotspot" id="news-1"   title="The Source Magazine Vol. 307 Added"  onclick="goExternal('/products/source-307')"></div>
+    <div class="hotspot" id="news-2"   title="New Catalog: Supreme Spring/Summer 2012" onclick="goExternal('/products/supreme-ss-2012')"></div>
+    <div class="hotspot" id="news-3"   title="XLII Issue 21 Now in Archive"  onclick="goExternal('/products/xxl-21')"></div>
+    <div class="hotspot" id="news-4"   title="Books: Virgil Abloh – Figures of Speech" onclick="goExternal('/products/virgil-abloh-figures-of-speech')"></div>
+    <div class="hotspot" id="news-all" title="View all news"   onclick="goExternal('/blogs/news')"></div>
+
+    <!-- Sidebar categories -->
+    <div class="hotspot" id="cat-source"   title="The Source Magazine — 325 items" onclick="goExternal('/collections/the-source')"></div>
+    <div class="hotspot" id="cat-catalogs" title="Catalogs — 182 items"             onclick="goExternal('/collections/catalogs')"></div>
+    <div class="hotspot" id="cat-paper"    title="PAPER Magazine — 147 items"      onclick="goExternal('/collections/paper')"></div>
+    <div class="hotspot" id="cat-books"    title="Books — 96 items"                 onclick="goExternal('/collections/books')"></div>
+    <div class="hotspot" id="cat-xxl"      title="XXL Magazine — 264 items"         onclick="goExternal('/collections/xxl')"></div>
+    <div class="hotspot" id="cat-stress"   title="Stress Magazine — 58 items"      onclick="goExternal('/collections/stress')"></div>
+    <div class="hotspot" id="cat-other"    title="Other — 119 items"                onclick="goExternal('/collections/other')"></div>
+    <div class="hotspot" id="cat-explore"  title="Explore the full Storage"        onclick="goExternal('/pages/the-storage')"></div>
+
+    <!-- Search -->
+    <div class="hotspot" id="search-input"  title="Search the archive" onclick="focusSearch(event)"></div>
+    <div class="hotspot" id="search-filter" title="Filter results"     onclick="showToast('Filter UI coming in a later round.')"></div>
+    <input type="text" id="live-search" placeholder="" autocomplete="off">
+
+    <!-- Featured Archive grid (8 covers) -->
+    <div class="hotspot" id="grid-viewall" title="View all archive items" onclick="goExternal('/collections/all')"></div>
+    <div class="hotspot" id="cover-1" title="The Source Vol. 300 — May 2003"   onclick="goExternal('/products/source-300')"></div>
+    <div class="hotspot" id="cover-2" title="The Source Vol. 307 — Dec 2004"   onclick="goExternal('/products/source-307')"></div>
+    <div class="hotspot" id="cover-3" title="Supreme — Spring/Summer 2012"     onclick="goExternal('/products/supreme-ss-2012')"></div>
+    <div class="hotspot" id="cover-4" title="A Bathing Ape — 2005 AW Catalog"  onclick="goExternal('/products/bape-2005-aw')"></div>
+    <div class="hotspot" id="cover-5" title="PAPER Magazine — Mar/Apr 2011"    onclick="goExternal('/products/paper-mar-apr-2011')"></div>
+    <div class="hotspot" id="cover-6" title="Virgil Abloh — Figures of Speech" onclick="goExternal('/products/virgil-abloh-figures-of-speech')"></div>
+    <div class="hotspot" id="cover-7" title="XXL Magazine — Issue 21 (Aug 1997)" onclick="goExternal('/products/xxl-21')"></div>
+    <div class="hotspot" id="cover-8" title="Stress Magazine — Issue 12 (2002)"  onclick="goExternal('/products/stress-12')"></div>
+
+    <!-- Right "Featured" detail panel -->
+    <div class="hotspot" id="feat-cover"   title="The Source Vol. 307 — preview" onclick="goExternal('/products/source-307')"></div>
+    <div class="hotspot" id="feat-view"    title="View this issue"               onclick="goExternal('/products/source-307')"></div>
+    <div class="hotspot" id="feat-collect" title="Add to collection (requires account)" onclick="goExternal('/account/register')"></div>
+
+    <!-- Footer 4-up -->
+    <div class="hotspot" id="foot-1" title="About — Curated Archive"   onclick="goExternal('/pages/about')"></div>
+    <div class="hotspot" id="foot-2" title="About — Search & Discover" onclick="goExternal('/pages/about')"></div>
+    <div class="hotspot" id="foot-3" title="About — Save & Organize"   onclick="goExternal('/account')"></div>
+    <div class="hotspot" id="foot-4" title="About — Culture Preserved" onclick="goExternal('/pages/about')"></div>
+  </div>
+
+  <div id="toast"></div>
+
+<script>
+// =============================================================================
+// R3.43 — StorageBased curated front-door widget
+//
+// Architecture (per the build conversation):
+//   - No webview or iframe of storagebased.store inside this window.
+//   - Static painted skin (their mockup) with transparent clickable hotspots
+//     over each cover, sidebar category, top-nav item, news ticker item,
+//     featured panel button, and footer blurb.
+//   - Every hotspot calls goExternal(path), which fires shell.openExternal
+//     via the same IPC bridge the Gmail OAuth flow uses. The user's default
+//     browser opens to https://storagebased.store/<path>.
+//   - Search bar layers a real <input> over the painted search graphic;
+//     Enter key submits as /search?q=<term>.
+//
+// URL placeholders: all paths are Shopify-conventional guesses (e.g.
+// /products/source-307, /collections/catalogs). They probably 404 today
+// because we don't know StorageBased's actual URL scheme. Once the user
+// pastes real URLs we can wire each hotspot's path precisely. The widget
+// itself doesn't break if links 404 — the user just sees a 404 on their
+// site, which is a "data correctness" follow-up, not a build failure.
+// =============================================================================
+
+const STORAGEBASED_BASE = 'https://storagebased.store';
+
+function goExternal(pathOrUrl) {
+  // Accept either a path (/products/…) or a fully-qualified URL.
+  const url = /^https?:\/\//i.test(pathOrUrl)
+    ? pathOrUrl
+    : (STORAGEBASED_BASE + pathOrUrl);
+  try {
+    if (window.electronAPI && typeof window.electronAPI.openExternal === 'function') {
+      window.electronAPI.openExternal(url);
+      showToast('Opening on storagebased.store…');
+    } else {
+      // Fallback for dev / non-Electron contexts
+      window.open(url, '_blank');
+    }
+  } catch (e) {
+    console.warn('openExternal failed:', e);
+    showToast('Could not open browser.');
+  }
+}
+
+function winMinimize() {
+  if (window.electronAPI && window.electronAPI.minimizeStorage) {
+    window.electronAPI.minimizeStorage();
+  }
+}
+function winClose() {
+  if (window.electronAPI && window.electronAPI.closeStorage) {
+    window.electronAPI.closeStorage();
+  }
+}
+
+// === Search: focus the real input, submit on Enter ===
+function focusSearch(e) {
+  const input = document.getElementById('live-search');
+  if (!input) return;
+  input.classList.add('active');
+  input.focus();
+  if (e) e.stopPropagation();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('live-search');
+  if (input) {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const q = input.value.trim();
+        if (q) {
+          goExternal('/search?q=' + encodeURIComponent(q));
+          input.value = '';
+        }
+        input.classList.remove('active');
+        input.blur();
+      } else if (e.key === 'Escape') {
+        input.value = '';
+        input.classList.remove('active');
+        input.blur();
+      }
+    });
+    input.addEventListener('blur', () => {
+      // Brief delay so a click on a different hotspot still registers
+      setTimeout(() => input.classList.remove('active'), 100);
+    });
+  }
+});
+
+// === Toast ===
+let _toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { t.style.opacity = '0'; }, 1800);
+}
+
+// === Esc closes the window — matches CARI/email convention ===
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const input = document.getElementById('live-search');
+    if (input && input.classList.contains('active')) return; // Esc handled by input
+    winClose();
+  }
+});
+</script>
+</body>
+</html>
