@@ -268,23 +268,23 @@ input, button, label, canvas, .nodrag {
   <span class="link-txt" onclick="openSignup()" style="margin-left:6px;">Create one</span>
 </div>
 
-<!-- R3.42.4 — Shifted up 30px and left 50px. R3.42.3 was still down-right
-     of the painted button.
-     R3.42.5 — Re-shifted DOWN 15px and RIGHT 70px from R3.42.4, widened to 320×60.
-     R3.42.6 — Trimmed width 320→240, height 60→52, left 620→650.
-     R3.42.7 — User said "lets center our glowing button left and right on
-     my painted button." Pixel-measured painted "Create Account ▶" lime
-     text in screenshot: spans x=768-1103 (center 935), maps to native
-     x-center ≈ 840 (signon native width 1236). Painted text width ≈ 308
-     native. New hitbox: width 280, centered at native 840 → left 700. Same
-     vertical position. -->
+<!-- R3.42.4 — Shifted up 30px and left 50px. R3.42.3 was still down-right of the painted button.
+     R3.42.5 — DOWN 15px RIGHT 70px width 320×60.
+     R3.42.6 — Trimmed width 320→240, left 620→650 ("slightly too wide").
+     R3.42.7 — Pixel-measured against shot3: painted text center "should be"
+     at native x≈840 → left=700 width=280. WRONG: I miscomputed the screenshot
+     scale ratio. User confirmed result was "way worse than before".
+     R3.42.8.1 — Re-measured against createacct.png: painted lime text spans
+     screenshot x=474-810 (center 624) of 1034-wide screenshot. As a fraction
+     that's 0.603 × signon native width 1236 = native center 746. New hitbox
+     centered there with width 300 → left=596. -->
 <style>
   #create-acct-overlay:hover { background: rgba(146,255,40,0.18) !important; }
   #create-acct-overlay:active { background: rgba(146,255,40,0.32) !important; }
 </style>
 <div id="create-acct-overlay" class="nodrag" onclick="openSignup()"
   title="Create Account"
-  style="position:absolute; top:858px; left:700px; width:280px; height:52px;
+  style="position:absolute; top:858px; left:596px; width:300px; height:52px;
          cursor:pointer; z-index:3; background:transparent; border-radius:26px;
          -webkit-app-region:no-drag;">
 </div>

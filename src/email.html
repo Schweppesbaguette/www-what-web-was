@@ -538,7 +538,11 @@
      a self-contained expand toggle. When activated, #email-body promotes
      to position:fixed and fills the viewport — covering the entire chrome
      so the user has the whole 898×673 window to read in. Click again
-     (or Esc) to collapse back to the normal painted-skin layout. */
+     (or Esc) to collapse back to the normal painted-skin layout.
+     R3.42.8.1 — When expanded, the button restyles into a clear red
+     "✕ Close" badge with text so it's unmistakable as a close affordance.
+     User screenshot showed the bare ⛶/🗗 glyph wasn't readable as "close"
+     and the font was rendering 🗗 as an empty rectangle. */
   .b-expand-btn {
     position: absolute;
     top: 6px;
@@ -578,8 +582,27 @@
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     padding: 18px 28px;
   }
-  /* When expanded, the expand button shows a collapse-glyph instead */
-  #email-body.expanded .b-expand-btn { top: 12px; right: 12px; }
+  /* R3.42.8.1 — Bigger, more obvious close button in expanded state. Red
+     gradient + "✕ Close" text makes it unmistakable. Plain × character
+     renders in every font, unlike the prior 🗗 collapse glyph which the
+     system font didn't have. */
+  #email-body.expanded .b-expand-btn {
+    top: 12px;
+    right: 12px;
+    width: auto;
+    height: 32px;
+    padding: 0 14px;
+    font-size: 16px;
+    font-family: Tahoma, Arial, sans-serif;
+    background: linear-gradient(180deg, #ff6b6b 0%, #c53030 100%);
+    border-color: #8a1010;
+    color: #fff;
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  }
+  #email-body.expanded .b-expand-btn:hover {
+    background: linear-gradient(180deg, #ff8a8a 0%, #d04040 100%);
+  }
 
   /* === "Connected / Disconnected" status === */
   /* R3.42.1 — Painted skin already has a CONNECTED indicator top-right, so
@@ -888,6 +911,7 @@ let gmailFolders = {
   inbox:  { messages: [], pageToken: null, loaded: false },
   sent:   { messages: [], pageToken: null, loaded: false },
   drafts: { messages: [], pageToken: null, loaded: false },
+  trash:  { messages: [], pageToken: null, loaded: false },  // R3.42.8
 };
 let currentFolder = 'inbox';
 let selectedId = null;
@@ -1067,11 +1091,8 @@ async function fetchProfile() {
 // Folder switching
 // =============================================================================
 async function switchFolder(name) {
-  if (name === 'trash') {
-    // Trash isn't fully integrated yet — let the user know
-    showToast('Trash view coming soon.');
-    return;
-  }
+  // R3.42.8 — trash now loads like any other folder (was "coming soon" toast).
+  // The `in:trash` query handles fetch in fetchFolder via the QUERIES map.
   if (!gmailFolders[name]) return;
   if (name === currentFolder && gmailFolders[name].loaded) return;
   currentFolder = name;
@@ -1123,10 +1144,13 @@ async function fetchFolder(folder, append) {
   if (!token) { setStatus(false); return; }
   gmailToken = token;
 
-  const QUERIES = { inbox: 'in:inbox', sent: 'in:sent', drafts: 'in:drafts' };
+  const QUERIES = { inbox: 'in:inbox', sent: 'in:sent', drafts: 'in:drafts', trash: 'in:trash' };
   const q = QUERIES[folder] || 'in:inbox';
   const PAGE_SIZE = 25;
   const params = new URLSearchParams({ maxResults: String(PAGE_SIZE), q });
+  // R3.42.8 — Gmail's messages.list excludes trash by default even when the
+  // query is `in:trash`. Have to explicitly opt in.
+  if (folder === 'trash') params.set('includeSpamTrash', 'true');
   if (append && gmailFolders[folder].pageToken) {
     params.set('pageToken', gmailFolders[folder].pageToken);
   }
@@ -1580,15 +1604,192 @@ function actForward() {
   openCompose({ to: '', subj: 'Fwd: ' + m.subj, body: '\n\n--- Forwarded ---\n' + m.body });
 }
 
-function actDelete() {
+// =============================================================================
+// R3.42.8 — Real server-side delete.
+//
+// Previous behavior (R3.42 through R3.42.7): "delete" only removed the
+// message from the local in-memory cache. Reopening the window or refreshing
+// brought it right back; it never actually left the Gmail server. User asked
+// for this to "actually work" across all platforms (web/iOS/Android), which
+// means hitting Gmail's `users.messages.trash` endpoint.
+//
+// Behavior now:
+//   1. Optimistically remove the message from the local cache (instant UX).
+//   2. POST to messages.trash — adds the TRASH label, removes from inbox/etc.
+//      This change is what propagates to other devices.
+//   3. Show an undo toast for 6 seconds. Clicking it untrashes the message.
+//   4. If the API call fails: restore the message in the local cache and
+//      surface the error so the user knows nothing was deleted server-side.
+//
+// Scope note: trash requires `gmail.modify` or `https://mail.google.com/`.
+// `sendCompose` already works (which needs the same scope tier), so the
+// existing OAuth grant should cover this. If we get a 403, the toast will
+// tell the user to disconnect+reconnect Gmail to grant the wider scope.
+// =============================================================================
+async function actDelete() {
   const m = getSelected();
   if (!m) { showToast('Select a message first.'); return; }
-  // Local-only delete (does not actually trash on Gmail server)
-  gmailFolders[currentFolder].messages = gmailFolders[currentFolder].messages.filter(x => x.id !== m.id);
+  if (!m.gmailId) {
+    // Defensive: messages always have a gmailId from fetchFolder; this only
+    // fires if something upstream stripped it. Fall back to local-only.
+    gmailFolders[currentFolder].messages =
+      gmailFolders[currentFolder].messages.filter(x => x.id !== m.id);
+    selectedId = null;
+    setBodyEmpty('Message removed from view.');
+    renderList(); updateBadges();
+    showToast('Removed from view (no Gmail ID — not trashed on server).');
+    return;
+  }
+
+  const sourceFolder = currentFolder;
+  const sourceIdx = gmailFolders[sourceFolder].messages.findIndex(x => x.id === m.id);
+
+  // 1. Optimistic remove
+  gmailFolders[sourceFolder].messages =
+    gmailFolders[sourceFolder].messages.filter(x => x.id !== m.id);
   selectedId = null;
-  setBodyEmpty('Message removed from view.');
-  renderList();
-  updateBadges();
+  setBodyEmpty('Moving to Trash…');
+  renderList(); updateBadges();
+
+  // 2. Server trash
+  let token = await getValidAccessToken();
+  if (!token) {
+    // Restore on auth failure
+    restoreLocally(sourceFolder, sourceIdx, m);
+    showToast('Gmail session expired. Reconnect and try again.');
+    return;
+  }
+  const trashUrl = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/'
+                 + encodeURIComponent(m.gmailId) + '/trash';
+  try {
+    let res = await fetch(trashUrl, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (res.status === 401) {
+      // Token may have expired between selection and click — force refresh.
+      const t = getTokens(); if (t) { t.expiresAt = 0; setTokens(t); }
+      token = await getValidAccessToken();
+      if (token) {
+        res = await fetch(trashUrl, {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + token }
+        });
+      }
+    }
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      const errMsg = (errBody.error && errBody.error.message) || ('HTTP ' + res.status);
+      restoreLocally(sourceFolder, sourceIdx, m);
+      if (res.status === 403) {
+        showToast('Gmail says no permission to trash. Disconnect + reconnect Gmail to grant the modify scope.');
+      } else {
+        showToast('Trash failed: ' + errMsg);
+      }
+      return;
+    }
+    // Success — also push the message into the local Trash folder cache so
+    // it's there immediately if the user switches to Trash. We just append;
+    // the next real fetch of trash will reconcile.
+    if (gmailFolders.trash) {
+      gmailFolders.trash.messages.unshift({ ...m, unread: false });
+    }
+    // 3. Undo affordance — clicking the toast untrashes.
+    showUndoToast('Moved to Trash.', async () => {
+      await untrashMessage(m, sourceFolder, sourceIdx);
+    });
+    // Trigger a fresh INBOX label fetch so the toolbar badge updates without
+    // waiting for the 60s background poll cycle.
+    bumpUnreadAfterChange();
+  } catch (e) {
+    restoreLocally(sourceFolder, sourceIdx, m);
+    showToast('Network error trashing message: ' + (e && e.message || 'unknown'));
+  }
+}
+
+// Pull a message back into a folder at its original index (or end if index
+// is out of range now). Used both for failed-trash rollback and for undo.
+function restoreLocally(folder, idx, m) {
+  if (!gmailFolders[folder]) return;
+  const list = gmailFolders[folder].messages;
+  if (idx < 0 || idx > list.length) list.push(m);
+  else list.splice(idx, 0, m);
+  // Re-render only if user is currently viewing this folder
+  if (currentFolder === folder) {
+    renderList(); updateBadges();
+  }
+}
+
+// Restore a trashed message via Gmail untrash. Used by the undo toast.
+async function untrashMessage(m, originalFolder, originalIdx) {
+  const token = await getValidAccessToken();
+  if (!token) { showToast('Gmail session expired.'); return; }
+  const url = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/'
+            + encodeURIComponent(m.gmailId) + '/untrash';
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      showToast('Restore failed: ' + ((errBody.error && errBody.error.message) || ('HTTP ' + res.status)));
+      return;
+    }
+    // Pull back out of local trash cache
+    if (gmailFolders.trash) {
+      gmailFolders.trash.messages = gmailFolders.trash.messages
+        .filter(x => x.gmailId !== m.gmailId);
+    }
+    // Put it back in its original folder (we tracked the index when we deleted)
+    restoreLocally(originalFolder, originalIdx, m);
+    showToast('Restored.');
+    bumpUnreadAfterChange();
+  } catch (e) {
+    showToast('Network error restoring message: ' + (e && e.message || 'unknown'));
+  }
+}
+
+// Nudge the unread count broadcast right after a change so index.html's
+// toolbar badge updates immediately rather than 60s later. Writes the
+// current local count to localStorage where index.html polls it.
+function bumpUnreadAfterChange() {
+  try {
+    const inboxUnread = gmailFolders.inbox.messages.filter(x => x.unread).length;
+    localStorage.setItem('www_gmail_unread', String(inboxUnread));
+  } catch (e) {}
+}
+
+// Toast with a click-to-undo affordance. Different from showToast because
+// this one is clickable, sticks around for 6s, and has a visibly different
+// style so it's obvious you can interact with it.
+function showUndoToast(msg, undoFn) {
+  let t = document.getElementById('undo-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'undo-toast';
+    t.style.cssText = `
+      position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+      background: rgba(20, 50, 100, 0.95); color: #fff; padding: 12px 24px;
+      border-radius: 6px; font-size: 18px; z-index: 100;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      border: 1px solid #4a7bbe; cursor: pointer; user-select: none;
+      transition: opacity 0.3s;
+    `;
+    document.body.appendChild(t);
+  }
+  t.innerHTML = `${escapeHtml(msg)} &nbsp; <span style="color:#88c8ff; text-decoration:underline;">↶ Undo</span>`;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t.onclick = () => {
+    t.style.opacity = '0';
+    t.onclick = null;
+    if (typeof undoFn === 'function') undoFn();
+  };
+  t._timer = setTimeout(() => {
+    t.style.opacity = '0';
+    t.onclick = null;
+  }, 6000);
 }
 
 function actSendRecv() {
@@ -1736,7 +1937,11 @@ function setBodyEmpty(msg) {
 // =============================================================================
 // R3.42.6 — Expand toggle. Promotes #email-body to position:fixed covering
 // the entire viewport (so the user can read full-window) and flips back on
-// second click or Esc. Updates the button glyph (⛶ for expand, ⛶↙ collapse-y).
+// second click or Esc.
+// R3.42.8.1 — User screenshot in expanded mode showed the 🗗 glyph as an
+// empty rectangle (font missing). Switched to "✕ Close" text + CSS-driven
+// red-button styling (.expanded .b-expand-btn) so the close affordance is
+// unmistakable. Plain × renders in every font.
 // =============================================================================
 function toggleExpand() {
   const body = document.getElementById('email-body');
@@ -1745,7 +1950,7 @@ function toggleExpand() {
   body.classList.toggle('expanded');
   const expanded = body.classList.contains('expanded');
   if (btn) {
-    btn.textContent = expanded ? '🗗' : '⛶';
+    btn.textContent = expanded ? '✕ Close' : '⛶';
     btn.title = expanded ? 'Collapse to normal size (or press Esc)'
                          : 'Expand to fill window';
   }
